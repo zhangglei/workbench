@@ -42,7 +42,8 @@
             showContent: true,
             newTab: true,
             visibleToAll: true,
-            comments: []
+            comments: [],
+            attachments: []
           });
         });
         oldLinks.forEach(function (l) {
@@ -54,7 +55,8 @@
             showContent: true,
             newTab: l.newTab !== false,
             visibleToAll: true,
-            comments: []
+            comments: [],
+            attachments: []
           });
         });
         modules = [defaultModule];
@@ -70,12 +72,13 @@
               return {
                 id: it.id,
                 title: (it.title || it.alias || '').trim() || '未命名',
-                url: (it.url || '').trim(),
-                content: (it.content || '').trim(),
+            url: (it.url || '').trim(),
+            content: (it.content || '').trim(),
                 showContent: it.showContent !== false,
                 newTab: it.newTab !== false,
                 visibleToAll: it.visibleToAll !== false,
-                comments: Array.isArray(it.comments) ? it.comments : []
+            comments: Array.isArray(it.comments) ? it.comments : [],
+            attachments: Array.isArray(it.attachments) ? it.attachments : []
               };
             })
           };
@@ -238,6 +241,88 @@
     if (modal) modal.classList.remove('show');
   }
 
+  var editingAttachments = [];
+
+  function renderAttachmentsList() {
+    var list = document.getElementById('itemAttachmentsList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!editingAttachments || !editingAttachments.length) {
+      list.innerHTML = '<p class="setting-hint">暂无已导入文件</p>';
+      return;
+    }
+    editingAttachments.forEach(function (att) {
+      var row = document.createElement('div');
+      row.className = 'attachment-row';
+      row.innerHTML =
+        '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
+        '<button type="button" class="btn btn-secondary btn-sm btn-open-attachment" data-aid="' + escapeHtml(att.id) + '">查看/编辑</button>' +
+        '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
+      list.appendChild(row);
+    });
+    list.querySelectorAll('.btn-open-attachment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var aid = btn.getAttribute('data-aid');
+        var att = editingAttachments.find(function (x) { return x.id === aid; });
+        if (att) openAttachmentWindow(att);
+      });
+    });
+    list.querySelectorAll('.btn-del-attachment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var aid = btn.getAttribute('data-aid');
+        editingAttachments = editingAttachments.filter(function (x) { return x.id !== aid; });
+        renderAttachmentsList();
+      });
+    });
+  }
+
+  function openAttachmentWindow(att) {
+    var win = window.open('', '_blank');
+    if (!win) return;
+    var safeName = (att.name || '文件');
+    var lang = (att.type || '').toLowerCase();
+    var content = att.content || '';
+    var html =
+      '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+      '<title>' + safeName + '</title>' +
+      '<style>body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}'+
+      '.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}'+
+      '.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}'+
+      '.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}'+
+      '.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}'+
+      '.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}'+
+      'table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}</style></head>' +
+      '<body><div class="toolbar"><span>' + safeName + '</span><input id="searchBox" placeholder="搜索…"><button id="btnSave">保存</button></div>' +
+      '<div class="editor" id="editorWrap"></div>' +
+      '<script>' +
+      'var attId=' + JSON.stringify(att.id) + ';' +
+      'var type=' + JSON.stringify(lang) + ';' +
+      'var raw=' + JSON.stringify(content) + ';' +
+      'var wrap=document.getElementById("editorWrap");' +
+      'var isCsv=type==="csv";' +
+      'if(isCsv){' +
+        'var rows=raw.split(/\\r?\\n/).map(function(r){return r.split(",");});' +
+        'var tbl=document.createElement("table");' +
+        'rows.forEach(function(r){var tr=document.createElement("tr");r.forEach(function(c){var td=document.createElement("td");td.textContent=c;tr.appendChild(td);});tbl.appendChild(tr);});' +
+        'wrap.appendChild(tbl);' +
+      '}else{' +
+        'var ta=document.createElement("textarea");ta.id="editor";ta.value=raw;wrap.appendChild(ta);' +
+      '}' +
+      'document.getElementById("btnSave").onclick=function(){' +
+        'var data=isCsv?Array.from(wrap.querySelectorAll("tr")).map(function(tr){return Array.from(tr.cells).map(function(td){return td.textContent;}).join(",");}).join("\\n"):document.getElementById("editor").value;' +
+        'if(window.opener && window.opener.workbenchUpdateAttachmentContent){window.opener.workbenchUpdateAttachmentContent(attId,data);}' +
+        'alert("已保存");' +
+      '};' +
+      'document.getElementById("searchBox").oninput=function(){' +
+        'var q=this.value.toLowerCase();' +
+        'if(!isCsv){var ta=document.getElementById("editor");var text=ta.value;var idx=text.toLowerCase().indexOf(q);if(q && idx>=0){ta.focus();ta.setSelectionRange(idx,idx+q.length);}return;}' +
+        'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
+      '};' +
+      '<\/script></body></html>';
+    win.document.write(html);
+    win.document.close();
+  }
+
   function openItemModal(moduleId, item) {
     var titleEl = document.getElementById('itemModalTitle');
     var idEl = document.getElementById('itemId');
@@ -258,6 +343,9 @@
     var itemVisibleEl = document.getElementById('itemVisibleToAll');
     if (itemVisibleEl) itemVisibleEl.checked = item ? (item.visibleToAll !== false) : true;
     document.getElementById('itemImportFile').value = '';
+    editingAttachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
+    if (item && !Array.isArray(item.attachments)) item.attachments = editingAttachments;
+    renderAttachmentsList();
     var modal = document.getElementById('itemModal');
     if (modal) modal.classList.add('show');
   }
@@ -683,7 +771,7 @@
         var it = mod.items.find(function (x) { return x.id === itemId; });
         if (it) { it.title = title; it.url = url; it.content = content; it.showContent = showContent; it.visibleToAll = visibleToAll; it.newTab = newTab; }
       } else {
-        mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, comments: [] });
+        mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, comments: [], attachments: editingAttachments.slice() });
       }
       persistState();
       renderModules();
@@ -697,10 +785,17 @@
       if (!file) return;
       var reader = new FileReader();
       reader.onload = function () {
-        var contentEl = document.getElementById('itemContent');
-        var current = (contentEl.value || '').trim();
         var add = typeof reader.result === 'string' ? reader.result : '';
-        contentEl.value = current ? (current + '\n\n' + add) : add;
+        var extMatch = (file.name || '').split('.');
+        var ext = extMatch.length > 1 ? extMatch.pop().toLowerCase() : '';
+        editingAttachments = editingAttachments || [];
+        editingAttachments.push({
+          id: id(),
+          name: file.name || ('文件.' + (ext || 'txt')),
+          type: ext,
+          content: add
+        });
+        renderAttachmentsList();
       };
       reader.readAsText(file, 'UTF-8');
       this.value = '';
@@ -975,6 +1070,7 @@
       if (data) {
         state = migrateState(data);
         if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+        if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
       }
       applyLayout();
@@ -1012,9 +1108,10 @@
       .then(function (text) {
         if (!text || text === 'null') return;
         var data = JSON.parse(text);
-        if (data && (data.modules || data.layout || data.allowedUsers != null)) {
+        if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+          if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
           applyLayout();
           applyBackground();

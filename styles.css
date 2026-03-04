@@ -516,6 +516,26 @@ body[data-bg-type="image"] {
   margin-bottom: 10px;
 }
 
+.item-attachments {
+  margin-top: 10px;
+}
+
+.attachment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.attachment-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 .comment-item .btn-delete-comment {
   margin-left: 8px;
