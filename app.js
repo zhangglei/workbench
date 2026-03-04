@@ -114,7 +114,24 @@
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
-  var CLOUD_STATE_URL = '/.netlify/functions/workbench-state';
+  var CLOUD_STATE_URLS = [
+    '/.netlify/functions/workbench-state',
+    '/api/workbench-state'
+  ];
+
+  async function fetchFirstOk(urls, init) {
+    var lastErr = null;
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var res = await fetch(urls[i], init);
+        if (res && res.ok) return { res: res, url: urls[i] };
+        lastErr = new Error('HTTP ' + (res ? res.status : 'unknown'));
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('All endpoints failed');
+  }
 
   function persistState() {
     var toSave = {
@@ -137,7 +154,7 @@
         localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
         localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
       } catch (_) {}
-      fetch(CLOUD_STATE_URL, {
+      fetchFirstOk(CLOUD_STATE_URLS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave)
@@ -1051,6 +1068,22 @@
     img.src = url;
   });
 
+  var btnExportState = document.getElementById('btnExportState');
+  if (btnExportState) btnExportState.addEventListener('click', exportStateToFile);
+  var btnImportState = document.getElementById('btnImportState');
+  var importStateFile = document.getElementById('importStateFile');
+  if (btnImportState && importStateFile) {
+    btnImportState.addEventListener('click', function () { importStateFile.click(); });
+    importStateFile.addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      importStateFromFile(f)
+        .then(function () { alert('导入成功'); })
+        .catch(function () { alert('导入失败：文件格式不正确'); })
+        .finally(function () { importStateFile.value = ''; });
+    });
+  }
+
   bindModuleModal();
   bindItemModal();
   bindCommentsModal();
@@ -1097,14 +1130,8 @@
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
-    fetch(CLOUD_STATE_URL)
-      .then(function (res) {
-        if (!res.ok) {
-          showCloudSyncUnavailable();
-          return Promise.reject(new Error(res.status));
-        }
-        return res.text();
-      })
+    fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
+      .then(function (pair) { return pair.res.text(); })
       .then(function (text) {
         if (!text || text === 'null') return;
         var data = JSON.parse(text);
@@ -1125,10 +1152,66 @@
     if (document.getElementById('cloudSyncHint')) return;
     var hint = document.createElement('div');
     hint.id = 'cloudSyncHint';
-    hint.innerHTML = '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请用 <strong>Git 关联</strong> 此项目到 Netlify 并部署（含 <code>netlify/functions/workbench-state.mjs</code>）；若已关联仍显示本地模式，请在 Netlify 后台查看 Functions 部署与日志。<button type="button" class="cloud-sync-hint-close">×</button>';
+    hint.innerHTML = '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请确认已部署云端接口：Netlify（<code>/.netlify/functions/workbench-state</code>）或 Vercel（<code>/api/workbench-state</code>）或 Cloudflare Pages Functions（同路径）。<button type="button" class="cloud-sync-hint-close">×</button>';
     hint.className = 'cloud-sync-hint';
     hint.querySelector('.cloud-sync-hint-close').onclick = function () { hint.remove(); };
     var app = document.getElementById('app');
     if (app && app.firstChild) app.insertBefore(hint, app.firstChild);
+  }
+
+  // 供附件/外部窗口保存回写
+  window.workbenchUpdateAttachmentContent = function (attId, newContent) {
+    try {
+      state.modules.forEach(function (m) {
+        (m.items || []).forEach(function (it) {
+          var list = it.attachments || [];
+          var a = list.find(function (x) { return x.id === attId; });
+          if (a) a.content = String(newContent == null ? '' : newContent);
+        });
+      });
+      persistState();
+    } catch (_) {}
+  };
+
+  function exportStateToFile() {
+    var toSave = {
+      layout: state.layout,
+      bg: state.bg,
+      modules: state.modules,
+      allowedUsers: state.allowedUsers,
+      guestUsers: state.guestUsers || '',
+      collapsedModules: state.collapsedModules || {}
+    };
+    var blob = new Blob([JSON.stringify(toSave, null, 2)], { type: 'application/json;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'workbench-state.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function importStateFromFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var text = typeof reader.result === 'string' ? reader.result : '';
+          var data = JSON.parse(text);
+          state = migrateState(data);
+          if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+          if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
+          if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
+          persistState();
+          applyLayout();
+          applyBackground();
+          renderModules();
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsText(file, 'UTF-8');
+    });
   }
 })();
