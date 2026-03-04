@@ -1,0 +1,41 @@
+{
+  "name": "workbench",
+  "version": "1.0.0",
+  "description": "我的工作台 - 可在 Windows 安装的桌面软件，手机可安装 PWA",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "build:win": "electron-builder --win",
+    "build:win:dir": "electron-builder --win --dir"
+  },
+  "build": {
+    "appId": "workbench.app",
+    "productName": "我的工作台",
+    "directories": { "output": "dist" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "app.js",
+      "manifest.json"
+    ],
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["zh_CN"],
+      "shortcutName": "我的工作台"
+    }
+  },
+  "dependencies": {
+    "@netlify/blobs": "^10.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的工作台</title>
+  <meta name="theme-color" content="#1a1b26">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="工作台">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1 class="title" id="headerTitle">我的工作台</h1>
+      <div class="header-right">
+        <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
+        <span class="user-area" id="userArea">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>
+        </span>
+        <button type="button" class="btn btn-icon" id="btnSettings" title="设置" style="display: none;">⚙️</button>
+      </div>
+    </header>
+
+    <main class="main" id="mainGrid"></main>
+
+    <footer class="footer" id="footerBar">
+      <button type="button" class="btn btn-primary" id="btnAddModule">+ 添加模块</button>
+    </footer>
+  </div>
+
+  <!-- 设置面板 -->
+  <aside class="panel" id="settingsPanel">
+    <div class="panel-header">
+      <h2>设置</h2>
+      <button type="button" class="btn btn-icon btn-close" id="btnCloseSettings">×</button>
+    </div>
+    <div class="panel-body">
+      <section class="setting-section">
+        <h3>允许编辑的用户（每行 用户名:密码）</h3>
+        <p class="setting-hint">未配置时默认 admin:admin，可在此修改或添加多行。</p>
+        <textarea id="allowedUsers" rows="4" placeholder="admin:admin&#10;user:123456"></textarea>
+      </section>
+      <section class="setting-section">
+        <h3>排版</h3>
+        <label>列数 <input type="number" id="layoutCols" min="1" max="6" value="3"></label>
+        <label>间距 <input type="number" id="layoutGap" min="0" max="48" value="16"> px</label>
+        <label>对齐 <select id="layoutAlign">
+          <option value="start">左对齐</option>
+          <option value="center">居中</option>
+          <option value="end">右对齐</option>
+        </select></label>
+      </section>
+      <section class="setting-section">
+        <h3>背景</h3>
+        <label>类型 <select id="bgType">
+          <option value="color">纯色</option>
+          <option value="image">图片</option>
+          <option value="gradient">渐变</option>
+        </select></label>
+        <div id="bgColorWrap">
+          <label>颜色 <input type="color" id="bgColor" value="#1a1b26"></label>
+        </div>
+        <div id="bgImageWrap" class="hidden">
+          <p class="setting-label">资源库（点击即换）</p>
+          <div class="bg-gallery" id="bgGallery"></div>
+          <label class="mt">本地上传 <input type="file" id="bgImageFile" accept="image/*"></label>
+          <p class="setting-hint" id="bgUploadHint"></p>
+          <label class="mt">自定义图片地址 <input type="url" id="bgImage" placeholder="https://..."></label>
+        </div>
+        <div id="bgGradientWrap" class="hidden">
+          <label>渐变 CSS <input type="text" id="bgGradient" placeholder="linear-gradient(...)"></label>
+        </div>
+      </section>
+      <section class="setting-section" id="dataPathSection" style="display: none;">
+        <h3>数据保存路径</h3>
+        <label>目录 <input type="text" id="dataPathInput" readonly></label>
+        <button type="button" class="btn btn-secondary" id="btnChooseDataPath">选择文件夹</button>
+      </section>
+      <button type="button" class="btn btn-secondary" id="btnApplySettings">应用设置</button>
+    </div>
+  </aside>
+  <div class="overlay" id="settingsOverlay"></div>
+
+  <!-- 添加/编辑 模块 弹窗 -->
+  <div class="modal" id="moduleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="moduleModalTitle">添加模块</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseModuleModal">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="moduleId">
+        <label>模块名称 <input type="text" id="moduleName" placeholder="例如：办公与任务"></label>
+        <label>映射到本机路径（选填，仅桌面版可同步） <input type="text" id="moduleMappedPath" placeholder="例如：D:\Vault\办公 或 \\电脑名\共享\文件夹"></label>
+        <p class="setting-hint">填写后，该路径下的每个文件夹将显示为小模块，支持多级；仅在本机安装的桌面版中生效。</p>
+        <label><input type="checkbox" id="moduleVisibleToAll"> 对所有人可见（不勾选则仅登录后可见）</label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelModule">取消</button>
+        <button type="button" class="btn btn-primary" id="btnSaveModule">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑 内容（网页）弹窗 -->
+  <div class="modal" id="itemModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="itemModalTitle">添加内容</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseItemModal">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="itemId">
+        <input type="hidden" id="itemModuleId">
+        <input type="file" id="itemImportFile" accept=".txt,.csv,.md,.json" style="display: none;">
+        <label>显示名称 <input type="text" id="itemTitle" placeholder="例如：工时系统"></label>
+        <label>网址（选填） <input type="url" id="itemUrl" placeholder="https://..."></label>
+        <label>说明或正文（选填） <textarea id="itemContent" rows="4" placeholder="可写文字、链接等"></textarea></label>
+        <label><input type="checkbox" id="itemShowContent" checked> 在列表中显示说明/正文</label>
+        <div class="item-content-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnImportContent">导入 txt/csv/md 文件</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnExportContent">导出为 .txt</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnExportMd">导出为 .md</button>
+        </div>
+        <label><input type="checkbox" id="itemVisibleToAll"> 对所有人可见（不勾选则仅登录后可见）</label>
+        <label><input type="checkbox" id="itemNewTab" checked> 在新标签页打开</label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelItem">取消</button>
+        <button type="button" class="btn btn-primary" id="btnSaveItem">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 查看内容（只读）弹窗 -->
+  <div class="modal" id="viewContentModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="viewContentTitle">查看内容</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseViewContentModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="view-content-body" id="viewContentBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评论 弹窗 -->
+  <div class="modal" id="commentsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>评论</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseCommentsModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="commentsList"></div>
+        <div class="comment-form">
+          <input type="text" id="commentNickname" placeholder="昵称（选填，默认游客）" maxlength="20">
+          <input type="text" id="commentInput" placeholder="输入评论…">
+          <button type="button" class="btn btn-primary btn-sm" id="btnAddComment">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 登录 弹窗 -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>登录</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseLoginModal">×</button>
+      </div>
+      <form id="loginForm" class="modal-body" action="javascript:;">
+        <label>用户名 <input type="text" id="loginUser" placeholder="用户名" autocomplete="username"></label>
+        <label>密码 <input type="password" id="loginPass" placeholder="密码" autocomplete="current-password"></label>
+        <p class="setting-hint" id="loginHint"></p>
+      </form>
+      <div class="modal-footer">
+        <button type="submit" form="loginForm" class="btn btn-primary" id="btnDoLogin">登录</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
