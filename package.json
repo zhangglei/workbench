@@ -32,7 +32,8 @@
     }
   },
   "dependencies": {
-    "@netlify/blobs": "^10.0.0"
+    "@netlify/blobs": "^10.0.0",
+    "@vercel/kv": "^3.0.0"
   },
   "devDependencies": {
     "electron": "^28.0.0",

@@ -119,17 +119,23 @@
     '/api/workbench-state'
   ];
 
+  var lastCloudSyncError = '';
+
   async function fetchFirstOk(urls, init) {
     var lastErr = null;
     for (var i = 0; i < urls.length; i++) {
       try {
         var res = await fetch(urls[i], init);
-        if (res && res.ok) return { res: res, url: urls[i] };
+        if (res && res.ok) {
+          lastCloudSyncError = '';
+          return { res: res, url: urls[i] };
+        }
         lastErr = new Error('HTTP ' + (res ? res.status : 'unknown'));
       } catch (e) {
         lastErr = e;
       }
     }
+    lastCloudSyncError = String(lastErr && lastErr.message ? lastErr.message : lastErr || '');
     throw lastErr || new Error('All endpoints failed');
   }
 
@@ -1152,7 +1158,11 @@
     if (document.getElementById('cloudSyncHint')) return;
     var hint = document.createElement('div');
     hint.id = 'cloudSyncHint';
-    hint.innerHTML = '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请确认已部署云端接口：Netlify（<code>/.netlify/functions/workbench-state</code>）或 Vercel（<code>/api/workbench-state</code>）或 Cloudflare Pages Functions（同路径）。<button type="button" class="cloud-sync-hint-close">×</button>';
+    var err = lastCloudSyncError ? ('<div class="setting-hint" style="margin-top:6px;">云端接口错误：<code>' + escapeHtml(lastCloudSyncError) + '</code></div>') : '';
+    hint.innerHTML =
+      '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请确认已部署云端接口：Netlify（<code>/.netlify/functions/workbench-state</code>）或 Vercel（<code>/api/workbench-state</code>）或 Cloudflare Pages Functions（同路径）。' +
+      err +
+      '<button type="button" class="cloud-sync-hint-close">×</button>';
     hint.className = 'cloud-sync-hint';
     hint.querySelector('.cloud-sync-hint-close').onclick = function () { hint.remove(); };
     var app = document.getElementById('app');
