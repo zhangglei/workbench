@@ -21,10 +21,11 @@
 
   /** 将旧版 state（modules+links 扁平）转为新版（模块为基本，网页为模块下 items） */
   function migrateState(data) {
-    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '' };
+    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '', guestUsers: '' };
     var layout = data.layout || defaultLayout;
     var bg = data.bg || defaultBg;
     var allowedUsers = data.allowedUsers || '';
+    var guestUsers = data.guestUsers || '';
     var modules = [];
     var oldModules = data.modules || [];
     var oldLinks = data.links || [];
@@ -81,7 +82,7 @@
         });
       }
     }
-    return { layout: layout, bg: bg, modules: modules, allowedUsers: allowedUsers };
+    return { layout: layout, bg: bg, modules: modules, allowedUsers: allowedUsers, guestUsers: guestUsers };
   }
 
   function load(key, fallback) {
@@ -97,6 +98,7 @@
   state.layout = load(STORAGE_LAYOUT, defaultLayout);
   state.bg = load(STORAGE_BG, defaultBg);
   state.allowedUsers = load('workbench_allowed_users', '');
+  state.guestUsers = state.guestUsers || '';
   state.collapsedModules = state.collapsedModules || {};
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
@@ -117,6 +119,7 @@
       bg: state.bg,
       modules: state.modules,
       allowedUsers: state.allowedUsers,
+      guestUsers: state.guestUsers || '',
       collapsedModules: state.collapsedModules || {}
     };
     if (window.workbenchApi) {
@@ -129,7 +132,7 @@
       try {
         localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(state.layout));
         localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
-        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, collapsedModules: state.collapsedModules || {} }));
+        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
       } catch (_) {}
       fetch(CLOUD_STATE_URL, {
         method: 'POST',
@@ -729,7 +732,7 @@
       var nick = (document.getElementById('commentNickname') && document.getElementById('commentNickname').value || '').trim() || '游客';
       if (currentUser) nick = currentUser;
       if (!canComment()) {
-        alert('请先登录后再发表评论。可使用默认游客账号：用户名 admin，密码 admin。');
+        alert('请先登录后再发表评论。');
         closeCommentsModal();
         openLoginModal();
         return;
@@ -770,17 +773,20 @@
     function performLogin() {
       var user = (document.getElementById('loginUser').value || '').trim();
       var pass = (document.getElementById('loginPass').value || '').trim();
-      var allowed = (state.allowedUsers || '').split('\n').map(function (line) {
+      var guestList = (state.guestUsers || '').split('\n').map(function (line) {
+        var parts = (line || '').trim().split(':');
+        return { user: parts[0] || '', pass: parts[1] || '', role: 'guest' };
+      }).filter(function (x) { return x.user && x.pass; });
+      var adminList = (state.allowedUsers || '').split('\n').map(function (line) {
         var parts = (line || '').trim().split(':');
         return { user: parts[0] || '', pass: parts[1] || '', role: 'admin' };
-      }).filter(function (x) { return x.user; });
-      if (allowed.length === 0) {
-        allowed = [
-          { user: 'admin', pass: 'admin', role: 'guest' },
-          { user: '123', pass: '123', role: 'admin' }
-        ];
+      }).filter(function (x) { return x.user && x.pass; });
+      if (guestList.length === 0 && adminList.length === 0) {
+        guestList = [{ user: 'admin', pass: 'admin', role: 'guest' }];
+        adminList = [{ user: '123', pass: '123', role: 'admin' }];
       }
-      var matched = allowed.find(function (x) { return x.user === user && x.pass === pass; });
+      var all = guestList.concat(adminList);
+      var matched = all.find(function (x) { return x.user === user && x.pass === pass; });
       if (matched) {
         currentUser = user;
         currentRole = matched.role || 'admin';
@@ -847,7 +853,8 @@
     document.getElementById('bgColor').value = state.bg.color;
     document.getElementById('bgImage').value = state.bg.image || '';
     document.getElementById('bgGradient').value = state.bg.gradient || '';
-    document.getElementById('allowedUsers').value = state.allowedUsers || '';
+    document.getElementById('guestUsers').value = state.guestUsers || '';
+    document.getElementById('adminUsers').value = state.allowedUsers || '';
     if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
       document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
     } else {
@@ -910,7 +917,8 @@
       image: urlInput || (keepUploaded ? state.bg.image : ''),
       gradient: (document.getElementById('bgGradient').value || '').trim() || defaultBg.gradient
     };
-    state.allowedUsers = (document.getElementById('allowedUsers').value || '').trim();
+    state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
+    state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
     persistState();
     applyLayout();
     applyBackground();
