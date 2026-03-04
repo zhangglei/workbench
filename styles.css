@@ -70,6 +70,12 @@ body[data-bg-type="image"] {
 .cloud-sync-hint .cloud-sync-hint-close:hover {
   opacity: 0.8;
 }
+.cloud-sync-hint code {
+  font-size: 0.85em;
+  padding: 0 4px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
 
 /* 头部 */
 .header {

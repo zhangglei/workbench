@@ -976,7 +976,7 @@
     if (document.getElementById('cloudSyncHint')) return;
     var hint = document.createElement('div');
     hint.id = 'cloudSyncHint';
-    hint.innerHTML = '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。若需多设备同步，请用 <strong>Git 关联</strong> 此项目到 Netlify 再部署（拖拽更新不会发布云端接口）。<button type="button" class="cloud-sync-hint-close">×</button>';
+    hint.innerHTML = '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请用 <strong>Git 关联</strong> 此项目到 Netlify 并部署（含 <code>netlify/functions/workbench-state.mjs</code>）；若已关联仍显示本地模式，请在 Netlify 后台查看 Functions 部署与日志。<button type="button" class="cloud-sync-hint-close">×</button>';
     hint.className = 'cloud-sync-hint';
     hint.querySelector('.cloud-sync-hint-close').onclick = function () { hint.remove(); };
     var app = document.getElementById('app');

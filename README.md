@@ -42,7 +42,7 @@
    - 保存并部署。  
 3. 部署完成后，打开你的 **https://xxx.netlify.app**，**任意设备、任意网段**都会看到同一份工作台数据。  
    **若站点之前是拖拽创建的**：在 Netlify 里进入该站点 → **Site configuration → Build & deploy → Link repository**，关联你的 GitHub/GitLab 仓库并保存，再在 **Deploys** 里点 **Trigger deploy**，即可在不改网址的前提下启用云端同步。  
-   若页面上出现「当前为本地模式」的提示，说明云端接口未生效，请确认已用 Git 关联且仓库中包含 `netlify/functions` 文件夹。
+   若页面上出现「当前为本地模式」的提示，说明云端接口未生效：请确认已用 Git 关联、仓库中包含 `netlify/functions/workbench-state.mjs`（云端使用 Netlify Functions 2.0 + Blobs，该格式下 Blobs 会自动配置），并在 Netlify 的 **Functions** 页查看该函数是否部署成功。
 
 ### 方式 3：Vercel（免费）
 
