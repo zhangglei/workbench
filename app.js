@@ -5,6 +5,7 @@
   const STORAGE_BG = 'workbench_bg';
   const STORAGE_STATE = 'workbench_state';
   const STORAGE_USER = 'workbench_user';
+  const STORAGE_USER_ROLE = 'workbench_user_role';
 
   const defaultLayout = { cols: 3, gap: 16, align: 'start' };
   const defaultBg = {
@@ -106,6 +107,7 @@
     state.collapsedModules = raw.collapsedModules || {};
   }
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
+  var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
   var CLOUD_STATE_URL = '/.netlify/functions/workbench-state';
 
@@ -138,6 +140,10 @@
   }
 
   function canEdit() {
+    return currentRole === 'admin';
+  }
+
+  function canComment() {
     return !!currentUser;
   }
 
@@ -146,6 +152,8 @@
   var headerTitle = document.getElementById('headerTitle');
   var userArea = document.getElementById('userArea');
   var footerBar = document.getElementById('footerBar');
+  var appRoot = document.getElementById('app');
+  var loginOverlay = document.getElementById('loginOverlay');
 
   var BG_LIBRARY = (function () {
     function svgDataUri(svg) {
@@ -338,15 +346,26 @@
       row.draggable = canEdit();
       var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + escapeHtml(it.title || '') + '</a>') : escapeHtml(it.title || '');
       var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(escapeHtml(it.content)) + '</span>') : '';
+      var actionsHtml;
+      if (canEdit()) {
+        actionsHtml =
+          '<div class="item-actions">' +
+            '<button type="button" class="btn btn-icon small btn-edit-item" title="编辑">✏️</button>' +
+            '<button type="button" class="btn btn-icon small btn-comment-item" title="评论">💬</button>' +
+            '<button type="button" class="btn btn-icon small btn-danger btn-delete-item" title="删除">🗑️</button>' +
+          '</div>';
+      } else {
+        actionsHtml =
+          '<div class="item-actions">' +
+            '<button type="button" class="btn btn-icon small btn-comment-item" title="评论">💬</button>' +
+            (it.comments && it.comments.length ? '<span class="comment-badge">' + it.comments.length + '</span>' : '') +
+          '</div>';
+      }
       row.innerHTML =
         '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIcon + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
         '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : escapeHtml(it.title || '')) + '</span>' + tooltipDesc + '</span>' +
-        (canEdit() ? '<div class="item-actions">' +
-          '<button type="button" class="btn btn-icon small btn-edit-item" title="编辑">✏️</button>' +
-          '<button type="button" class="btn btn-icon small btn-comment-item" title="评论">💬</button>' +
-          '<button type="button" class="btn btn-icon small btn-danger btn-delete-item" title="删除">🗑️</button>' +
-        '</div>' : (it.comments && it.comments.length ? ' <span class="comment-badge">' + it.comments.length + '</span>' : ''));
+        actionsHtml;
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
           if (e.target.closest('.item-actions')) return;
@@ -709,6 +728,12 @@
       if (!text) return;
       var nick = (document.getElementById('commentNickname') && document.getElementById('commentNickname').value || '').trim() || '游客';
       if (currentUser) nick = currentUser;
+      if (!canComment()) {
+        alert('请先登录后再发表评论。可使用默认游客账号：用户名 admin，密码 admin。');
+        closeCommentsModal();
+        openLoginModal();
+        return;
+      }
       target.item.comments = target.item.comments || [];
       target.item.comments.push({ id: id(), user: nick, text: text, time: new Date().toLocaleString() });
       persistState();
@@ -725,13 +750,21 @@
     document.getElementById('btnLogin').addEventListener('click', function () {
       if (currentUser) {
         currentUser = '';
+        currentRole = '';
         localStorage.removeItem(STORAGE_USER);
+        localStorage.removeItem(STORAGE_USER_ROLE);
         updateUserUI();
         renderModules();
       } else {
         openLoginModal();
       }
     });
+    var overlayBtn = document.getElementById('btnOverlayLogin');
+    if (overlayBtn) {
+      overlayBtn.addEventListener('click', function () {
+        openLoginModal();
+      });
+    }
     document.getElementById('btnCloseLoginModal').addEventListener('click', closeLoginModal);
     document.getElementById('loginModal').addEventListener('click', function (e) { if (e.target.id === 'loginModal') closeLoginModal(); });
     function performLogin() {
@@ -739,13 +772,20 @@
       var pass = (document.getElementById('loginPass').value || '').trim();
       var allowed = (state.allowedUsers || '').split('\n').map(function (line) {
         var parts = (line || '').trim().split(':');
-        return { user: parts[0] || '', pass: parts[1] || '' };
+        return { user: parts[0] || '', pass: parts[1] || '', role: 'admin' };
       }).filter(function (x) { return x.user; });
-      if (allowed.length === 0) allowed = [{ user: 'admin', pass: 'admin' }];
-      var ok = allowed.some(function (x) { return x.user === user && x.pass === pass; });
-      if (ok) {
+      if (allowed.length === 0) {
+        allowed = [
+          { user: 'admin', pass: 'admin', role: 'guest' },
+          { user: '123', pass: '123', role: 'admin' }
+        ];
+      }
+      var matched = allowed.find(function (x) { return x.user === user && x.pass === pass; });
+      if (matched) {
         currentUser = user;
+        currentRole = matched.role || 'admin';
         localStorage.setItem(STORAGE_USER, user);
+        localStorage.setItem(STORAGE_USER_ROLE, currentRole);
         closeLoginModal();
         updateUserUI();
         renderModules();
@@ -763,13 +803,17 @@
     var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.style.display = canEdit() ? '' : 'none';
     if (footerBar) footerBar.style.display = canEdit() ? '' : 'none';
+    if (appRoot) appRoot.style.display = currentUser ? '' : 'none';
+    if (loginOverlay) loginOverlay.style.display = currentUser ? 'none' : '';
     if (!userArea) return;
     if (currentUser) {
       userArea.innerHTML = '<span class="user-name">' + escapeHtml(currentUser) + '</span> <button type="button" class="btn btn-secondary btn-sm" id="btnLogout">退出</button>';
       var logout = document.getElementById('btnLogout');
       if (logout) logout.addEventListener('click', function () {
         currentUser = '';
+        currentRole = '';
         localStorage.removeItem(STORAGE_USER);
+        localStorage.removeItem(STORAGE_USER_ROLE);
         updateUserUI();
         renderModules();
       });

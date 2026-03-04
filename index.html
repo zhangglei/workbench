@@ -11,6 +11,15 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-overlay-inner">
+      <h2>请先登录</h2>
+      <p>请输入账号密码后使用工作台。</p>
+      <button type="button" class="btn btn-primary" id="btnOverlayLogin">登录</button>
+      <p class="login-overlay-hint">默认游客：admin / admin，默认管理员：123 / 123</p>
+    </div>
+  </div>
+
   <div id="app">
     <header class="header">
       <h1 class="title" id="headerTitle">我的工作台</h1>
@@ -38,9 +47,9 @@
     </div>
     <div class="panel-body">
       <section class="setting-section">
-        <h3>允许编辑的用户（每行 用户名:密码）</h3>
-        <p class="setting-hint">未配置时默认 admin:admin，可在此修改或添加多行。</p>
-        <textarea id="allowedUsers" rows="4" placeholder="admin:admin&#10;user:123456"></textarea>
+        <h3>允许登录的用户（每行 用户名:密码）</h3>
+        <p class="setting-hint">未配置时默认：游客 admin:admin，管理员 123:123；如需自定义，在此按行配置用户名与密码。</p>
+        <textarea id="allowedUsers" rows="4" placeholder="admin:admin&#10;123:123"></textarea>
       </section>
       <section class="setting-section">
         <h3>排版</h3>
