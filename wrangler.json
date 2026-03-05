@@ -1,0 +1,13 @@
+{
+  "name": "workbench",
+  "type": "javascript",
+  "main": "dist/index.html",
+  "compatibility_date": "2026-03-05",
+  "build": {
+    "command": "npm install && npm run build",
+    "cwd": "."
+  },
+  "observability": {
+    "enabled": false
+  }
+}

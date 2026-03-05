@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "Workbench Pages Configuration",
+  "routes": [
+    {
+      "pattern": "/",
+      "platform": {
+        "asset": "index.html"
+      }
+    },
+    {
+      "pattern": "/*",
+      "platform": {
+        "asset": "index.html"
+      }
+    }
+  ]
+}

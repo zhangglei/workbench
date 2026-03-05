@@ -27,7 +27,8 @@ const filesToCopy = [
   '构建安装包.bat',
   'netlify.toml',
   'README.md',
-  'wrangler.toml'
+  'wrangler.toml',
+  'wrangler.json'
 ];
 
 // 图标文件
@@ -65,6 +66,14 @@ if (!process.env.CF_PAGES && !process.env.CLOUDFLARE_PAGES) {
     const destNetlifyFunctionsDir = path.join(destDir, 'netlify', 'functions');
     copyDirRecursive(netlifyFunctionsDir, destNetlifyFunctionsDir);
   }
+}
+
+// 复制 public 目录（用于Cloudflare Pages配置）
+const publicDir = path.join(srcDir, 'public');
+if (fs.existsSync(publicDir)) {
+  const destPublicDir = path.join(destDir, 'public');
+  copyDirRecursive(publicDir, destPublicDir);
+  console.log('Copied public directory with _routes.json');
 }
 
 console.log('Build completed!');

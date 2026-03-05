@@ -1,12 +1,7 @@
 name = "workbench"
 compatibility_date = "2026-03-05"
+main = "dist/index.html"
 
-# Cloudflare Pages 构建配置
-[build]
-command = "npm install && npm run build"
-publish = "dist"
-
-# Pages Functions 配置
-[functions]
-directory = ""
-node_compat = true
+[[env.production.routes]]
+pattern = "*"
+zone_name = "example.com"
