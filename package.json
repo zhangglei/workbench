@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "serve": "node server.js",
+    "build": "node copy-static.js",
     "build:win": "electron-builder --win",
     "build:win:dir": "electron-builder --win --dir"
   },
@@ -38,5 +39,8 @@
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
+  },
+  "overrides": {
+    "glob": "^11.0.0"
   }
 }
