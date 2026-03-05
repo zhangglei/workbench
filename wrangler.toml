@@ -1,8 +1,6 @@
 name = "workbench"
 compatibility_date = "2026-03-05"
 
-# Cloudflare Pages 静态资源配置
+# Cloudflare Pages 构建配置
 [build]
 command = "npm install && npm run build"
-
-[env.production]
