@@ -26,7 +26,8 @@ const filesToCopy = [
   'uninstall-autostart.bat',
   '构建安装包.bat',
   'netlify.toml',
-  'README.md'
+  'README.md',
+  'wrangler.toml'
 ];
 
 // 图标文件
@@ -57,10 +58,13 @@ if (fs.existsSync(apiDir)) {
 }
 
 // 复制 netlify/functions 目录（如果存在）
-const netlifyFunctionsDir = path.join(srcDir, 'netlify', 'functions');
-if (fs.existsSync(netlifyFunctionsDir)) {
-  const destNetlifyFunctionsDir = path.join(destDir, 'netlify', 'functions');
-  copyDirRecursive(netlifyFunctionsDir, destNetlifyFunctionsDir);
+// 如果是 Cloudflare Pages 部署，跳过复制函数目录
+if (!process.env.CF_PAGES && !process.env.CLOUDFLARE_PAGES) {
+  const netlifyFunctionsDir = path.join(srcDir, 'netlify', 'functions');
+  if (fs.existsSync(netlifyFunctionsDir)) {
+    const destNetlifyFunctionsDir = path.join(destDir, 'netlify', 'functions');
+    copyDirRecursive(netlifyFunctionsDir, destNetlifyFunctionsDir);
+  }
 }
 
 console.log('Build completed!');

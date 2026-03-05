@@ -1,0 +1,19 @@
+name = "workbench"
+compatibility_date = "2026-03-05"
+
+[pages]
+# 构建输出目录
+output_directory = "dist"
+# 禁用 Pages Functions
+functions_directory = ""
+# 构建命令（可选，Cloudflare Pages 会使用自己的构建命令）
+build_command = "npm run build"
+
+# 静态站点配置
+[build]
+command = "npm run build"
+publish = "dist"
+
+# 禁用 Workers Functions
+[functions]
+directory = ""
