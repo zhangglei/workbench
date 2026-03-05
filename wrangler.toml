@@ -1,7 +1,2 @@
 name = "workbench"
 compatibility_date = "2026-03-05"
-main = "dist/index.html"
-
-[[env.production.routes]]
-pattern = "*"
-zone_name = "example.com"

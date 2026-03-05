@@ -27,8 +27,7 @@ const filesToCopy = [
   '构建安装包.bat',
   'netlify.toml',
   'README.md',
-  'wrangler.toml',
-  'wrangler.json'
+  'wrangler.toml'
 ];
 
 // 图标文件
