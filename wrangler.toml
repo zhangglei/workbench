@@ -15,5 +15,5 @@ directory = "./functions"
 
 # KV Namespace 绑定
 [[kv_namespaces]]
-binding = "WORKBENCH_STATE"
+binding = "workbench_state_kv"
 id = "a254b77e1ce24e468e6fbb1dcbd6d56b"

@@ -1,5 +1,3 @@
-// 使用内存存储作为临时解决方案
-let memoryStorage = {};
 const STORE_KEY = 'state';
 
 const CORS_HEADERS = {
@@ -10,7 +8,7 @@ const CORS_HEADERS = {
 };
 
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const method = request.method || 'GET';
 
   // 处理OPTIONS请求（预检请求）
@@ -18,15 +16,26 @@ export async function onRequest(context) {
     return new Response('', { status: 204, headers: CORS_HEADERS });
   }
 
+  // 使用在Cloudflare Pages中配置的KV Namespace
+  const kv = env.workbench_state_kv;  // 使用您配置的绑定名称
+
+  if (!kv) {
+    return new Response(
+      JSON.stringify({ error: 'workbench_state_kv KV binding is not configured.' }),
+      { status: 500, headers: CORS_HEADERS }
+    );
+  }
+
   try {
     if (method === 'GET') {
-      const data = memoryStorage[STORE_KEY] || 'null';
-      return new Response(data, { status: 200, headers: CORS_HEADERS });
+      const data = await kv.get(STORE_KEY);
+      const body = data != null ? data : 'null';
+      return new Response(body, { status: 200, headers: CORS_HEADERS });
     }
 
     if (method === 'POST') {
       const body = await request.text();
-      memoryStorage[STORE_KEY] = body || 'null';
+      await kv.put(STORE_KEY, body || 'null');
       return new Response('{}', { status: 200, headers: CORS_HEADERS });
     }
 
