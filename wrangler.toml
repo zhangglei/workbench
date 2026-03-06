@@ -8,3 +8,12 @@ command = "npm install && npm run build"
 # 静态资源配置
 [assets]
 directory = "./dist"
+
+# Functions 配置
+[functions]
+directory = "./functions"
+
+# KV Namespace 绑定
+[[kv_namespaces]]
+binding = "WORKBENCH_STATE"
+id = "a254b77e1ce24e468e6fbb1dcbd6d56b"
