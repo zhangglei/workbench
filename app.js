@@ -164,7 +164,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave)
-      }).catch(function (e) { console.warn('云端保存失败', e); });
+      })
+        .then(function() { console.log('云端保存成功'); })
+        .catch(function (e) { console.warn('云端保存失败', e); });
     }
   }
 
@@ -1137,11 +1139,19 @@
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
     fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
-      .then(function (pair) { return pair.res.text(); })
+      .then(function (pair) { 
+        console.log('云端加载成功，状态码:', pair.res.status);
+        return pair.res.text(); 
+      })
       .then(function (text) {
-        if (!text || text === 'null') return;
+        console.log('云端数据:', text);
+        if (!text || text === 'null') {
+          console.log('云端数据为空，使用本地数据');
+          return;
+        }
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
+          console.log('云端数据有效，应用数据');
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
@@ -1149,24 +1159,18 @@
           applyLayout();
           applyBackground();
           renderModules();
+        } else {
+          console.log('云端数据无效，使用本地数据');
         }
       })
-      .catch(function () { showCloudSyncUnavailable(); });
+      .catch(function (e) { 
+        console.warn('云端加载失败', e);
+        showCloudSyncUnavailable(); 
+      });
   }
 
   function showCloudSyncUnavailable() {
-    if (document.getElementById('cloudSyncHint')) return;
-    var hint = document.createElement('div');
-    hint.id = 'cloudSyncHint';
-    var err = lastCloudSyncError ? ('<div class="setting-hint" style="margin-top:6px;">云端接口错误：<code>' + escapeHtml(lastCloudSyncError) + '</code></div>') : '';
-    hint.innerHTML =
-      '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请确认已部署云端接口：Netlify（<code>/.netlify/functions/workbench-state</code>）或 Vercel（<code>/api/workbench-state</code>）或 Cloudflare Pages Functions（同路径）。' +
-      err +
-      '<button type="button" class="cloud-sync-hint-close">×</button>';
-    hint.className = 'cloud-sync-hint';
-    hint.querySelector('.cloud-sync-hint-close').onclick = function () { hint.remove(); };
-    var app = document.getElementById('app');
-    if (app && app.firstChild) app.insertBefore(hint, app.firstChild);
+    // 黄色提示框已移除
   }
 
   // 供附件/外部窗口保存回写
