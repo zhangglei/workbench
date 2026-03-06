@@ -164,7 +164,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave)
-      }).catch(function (e) { console.warn('云端保存失败', e); });
+      })
+        .then(function() { console.log('云端保存成功'); })
+        .catch(function (e) { console.warn('云端保存失败', e); });
     }
   }
 
@@ -1137,11 +1139,19 @@
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
     fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
-      .then(function (pair) { return pair.res.text(); })
+      .then(function (pair) { 
+        console.log('云端加载成功，状态码:', pair.res.status);
+        return pair.res.text(); 
+      })
       .then(function (text) {
-        if (!text || text === 'null') return;
+        console.log('云端数据:', text);
+        if (!text || text === 'null') {
+          console.log('云端数据为空，使用本地数据');
+          return;
+        }
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
+          console.log('云端数据有效，应用数据');
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
@@ -1149,9 +1159,14 @@
           applyLayout();
           applyBackground();
           renderModules();
+        } else {
+          console.log('云端数据无效，使用本地数据');
         }
       })
-      .catch(function () { showCloudSyncUnavailable(); });
+      .catch(function (e) { 
+        console.warn('云端加载失败', e);
+        showCloudSyncUnavailable(); 
+      });
   }
 
   function showCloudSyncUnavailable() {
