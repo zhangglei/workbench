@@ -115,8 +115,8 @@
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
   var CLOUD_STATE_URLS = [
-    '/.netlify/functions/workbench-state',
-    '/api/workbench-state'
+    '/api/workbench-state',
+    '/.netlify/functions/workbench-state'
   ];
 
   var lastCloudSyncError = '';
