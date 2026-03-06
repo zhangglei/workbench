@@ -125,17 +125,23 @@
     var lastErr = null;
     for (var i = 0; i < urls.length; i++) {
       try {
+        console.log('尝试连接云端接口:', urls[i]);
         var res = await fetch(urls[i], init);
+        console.log('云端接口响应状态:', res.status, res.statusText);
         if (res && res.ok) {
           lastCloudSyncError = '';
+          console.log('云端接口连接成功:', urls[i]);
           return { res: res, url: urls[i] };
         }
-        lastErr = new Error('HTTP ' + (res ? res.status : 'unknown'));
+        lastErr = new Error('HTTP ' + (res ? res.status : 'unknown') + ' - ' + (res ? res.statusText : 'no response'));
+        console.error('云端接口响应错误:', lastErr.message);
       } catch (e) {
         lastErr = e;
+        console.error('云端接口连接失败:', urls[i], e.message);
       }
     }
     lastCloudSyncError = String(lastErr && lastErr.message ? lastErr.message : lastErr || '');
+    console.error('所有云端接口都失败了:', lastCloudSyncError);
     throw lastErr || new Error('All endpoints failed');
   }
 
