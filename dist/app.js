@@ -1155,18 +1155,7 @@
   }
 
   function showCloudSyncUnavailable() {
-    if (document.getElementById('cloudSyncHint')) return;
-    var hint = document.createElement('div');
-    hint.id = 'cloudSyncHint';
-    var err = lastCloudSyncError ? ('<div class="setting-hint" style="margin-top:6px;">云端接口错误：<code>' + escapeHtml(lastCloudSyncError) + '</code></div>') : '';
-    hint.innerHTML =
-      '当前为<strong>本地模式</strong>，其他设备看不到本机添加的内容。请确认已部署云端接口：Netlify（<code>/.netlify/functions/workbench-state</code>）或 Vercel（<code>/api/workbench-state</code>）或 Cloudflare Pages Functions（同路径）。' +
-      err +
-      '<button type="button" class="cloud-sync-hint-close">×</button>';
-    hint.className = 'cloud-sync-hint';
-    hint.querySelector('.cloud-sync-hint-close').onclick = function () { hint.remove(); };
-    var app = document.getElementById('app');
-    if (app && app.firstChild) app.insertBefore(hint, app.firstChild);
+    // 黄色提示框已移除
   }
 
   // 供附件/外部窗口保存回写

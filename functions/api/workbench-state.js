@@ -10,8 +10,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   const method = request.method || 'GET';
 
-  // 需要在 Cloudflare Pages / Workers 的项目设置里
-  // 绑定一个 KV Namespace，变量名为 WORKBENCH_STATE
+  // 使用在wrangler.toml中配置的KV Namespace
   const kv = env.WORKBENCH_STATE;
 
   if (!kv) {

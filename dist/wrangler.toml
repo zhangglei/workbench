@@ -1,19 +1,19 @@
 name = "workbench"
 compatibility_date = "2026-03-05"
 
-[pages]
-# 构建输出目录
-output_directory = "dist"
-# 禁用 Pages Functions
-functions_directory = ""
-# 构建命令（可选，Cloudflare Pages 会使用自己的构建命令）
-build_command = "npm run build"
-
-# 静态站点配置
+# Cloudflare Pages 构建配置
 [build]
-command = "npm run build"
-publish = "dist"
+command = "npm install && npm run build"
 
-# 禁用 Workers Functions
+# 静态资源配置
+[assets]
+directory = "./dist"
+
+# Functions 配置
 [functions]
-directory = ""
+directory = "./functions"
+
+# KV Namespace 绑定
+[[kv_namespaces]]
+binding = "WORKBENCH_STATE"
+id = "a254b77e1ce24e468e6fbb1dcbd6d56b"
