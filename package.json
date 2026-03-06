@@ -6,6 +6,8 @@
   "scripts": {
     "start": "electron .",
     "serve": "node server.js",
+    "build": "node copy-static.js",
+    "build:cloudflare": "node copy-static.js",
     "build:win": "electron-builder --win",
     "build:win:dir": "electron-builder --win --dir"
   },
@@ -36,7 +38,7 @@
     "@vercel/kv": "^3.0.0"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^30.0.0",
+    "electron-builder": "^25.0.0"
   }
 }
