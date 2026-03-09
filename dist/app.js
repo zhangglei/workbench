@@ -315,7 +315,8 @@
     var safeName = (att.name || '文件');
     var lang = (att.type || '').toLowerCase();
     var content = att.content || '';
-    var canEditFile = canEdit();
+    // 在父窗口判断权限，避免子窗口跨域/上下文问题
+    var canEditFile = (typeof canEdit === 'function') && canEdit();
     
     // 使用textarea方式传递内容，避免script标签破坏HTML
     var html = '<!doctype html>' +
@@ -457,15 +458,24 @@
     win.document.close();
   }
 
+  // 解码HTML实体
+  function decodeHtmlEntities(str) {
+    var textarea = document.createElement('textarea');
+    textarea.innerHTML = str;
+    return textarea.value;
+  }
+
   window.openAttachmentById = function(attId) {
+    var decodedId = decodeHtmlEntities(attId);
     var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === attId; });
+    var att = attachments.find(function(a) { return a.id === decodedId; });
     if (att) openAttachmentWindow(att);
   };
 
   window.exportAttachmentById = function(attId) {
+    var decodedId = decodeHtmlEntities(attId);
     var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === attId; });
+    var att = attachments.find(function(a) { return a.id === decodedId; });
     if (att) exportAttachment(att);
   };
 
