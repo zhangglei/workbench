@@ -282,6 +282,7 @@
       row.innerHTML =
         '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
         '<button type="button" class="btn btn-secondary btn-sm btn-open-attachment" data-aid="' + escapeHtml(att.id) + '">查看/编辑</button>' +
+        '<button type="button" class="btn btn-info btn-sm btn-export-attachment" data-aid="' + escapeHtml(att.id) + '">导出</button>' +
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
@@ -291,6 +292,13 @@
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
         if (att) openAttachmentWindow(att);
+      });
+    });
+    list.querySelectorAll('.btn-export-attachment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var aid = btn.getAttribute('data-aid');
+        var att = editingAttachments.find(function (x) { return x.id === aid; });
+        if (att) exportAttachment(att);
       });
     });
     list.querySelectorAll('.btn-del-attachment').forEach(function (btn) {
@@ -367,13 +375,65 @@
     if (!attachments.length) return;
     var win = window.open('', '_blank');
     if (!win) return;
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}</style></head><body><h2>附件列表</h2><ul>';
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
     attachments.forEach(function(att) {
-      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong> <a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a></li>';
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
+              '<a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a> | ' +
+              '<a href="javascript:;" onclick="window.opener.exportAttachment(' + JSON.stringify(att) + ')">导出</a></li>';
     });
     html += '</ul></body></html>';
     win.document.write(html);
     win.document.close();
+  }
+
+  function exportAttachment(att) {
+    if (!att || !att.content) {
+      alert('附件内容为空，无法导出');
+      return;
+    }
+    
+    var content = att.content;
+    var filename = att.name || 'exported_file.txt';
+    var mimeType = 'text/plain';
+    
+    // 根据文件类型设置不同的MIME类型
+    var ext = (att.type || '').toLowerCase();
+    switch(ext) {
+      case 'csv':
+        mimeType = 'text/csv';
+        break;
+      case 'md':
+        mimeType = 'text/markdown';
+        break;
+      case 'html':
+        mimeType = 'text/html';
+        break;
+      case 'json':
+        mimeType = 'application/json';
+        break;
+      default:
+        mimeType = 'text/plain';
+    }
+    
+    // 创建Blob对象
+    var blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+    
+    // 创建下载链接
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    
+    // 添加到DOM并触发点击
+    document.body.appendChild(a);
+    a.click();
+    
+    // 清理
+    setTimeout(function() {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   function openItemModal(moduleId, item) {
