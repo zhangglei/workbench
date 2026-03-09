@@ -283,13 +283,7 @@
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
-    // 添加导出和查看所有附件按钮
-    var buttonRow = document.createElement('div');
-    buttonRow.className = 'attachment-row attachment-buttons';
-    buttonRow.innerHTML =
-      '<button type="button" class="btn btn-secondary btn-sm" id="btnExportAllAttachments">导出所有附件</button>' +
-      '<button type="button" class="btn btn-secondary btn-sm" id="btnViewAllAttachments">查看所有附件</button>';
-    list.appendChild(buttonRow);
+
     list.querySelectorAll('.btn-open-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
@@ -304,31 +298,7 @@
         renderAttachmentsList();
       });
     });
-    // 为新增按钮添加事件监听
-    document.getElementById('btnExportAllAttachments').addEventListener('click', function() {
-      if (!editingAttachments || editingAttachments.length === 0) return;
-      editingAttachments.forEach(function(att) {
-        var blob = new Blob([att.content || ''], { type: 'text/plain;charset=utf-8' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = att.name || ('附件_' + att.id + '.txt');
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-    });
-    document.getElementById('btnViewAllAttachments').addEventListener('click', function() {
-      if (!editingAttachments || editingAttachments.length === 0) return;
-      var win = window.open('', '_blank');
-      if (!win) return;
-      var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>所有附件</title><style>body{font-family:sans-serif;margin:20px;}</style></head><body><h2>已导入的附件</h2><ul>';
-      editingAttachments.forEach(function(att) {
-        html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong> <a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a></li>';
-      });
-      html += '</ul></body></html>';
-      win.document.write(html);
-      win.document.close();
-    });
+
   }
 
   function openAttachmentWindow(att) {
@@ -374,6 +344,20 @@
         'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
       '};' +
       '<\/script></body></html>';
+    win.document.write(html);
+    win.document.close();
+  }
+
+  function openAttachmentsModal(item) {
+    var attachments = item.attachments || [];
+    if (!attachments.length) return;
+    var win = window.open('', '_blank');
+    if (!win) return;
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}</style></head><body><h2>附件列表</h2><ul>';
+    attachments.forEach(function(att) {
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong> <a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a></li>';
+    });
+    html += '</ul></body></html>';
     win.document.write(html);
     win.document.close();
   }
@@ -493,17 +477,20 @@
       var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + escapeHtml(it.title || '') + '</a>') : escapeHtml(it.title || '');
       var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(escapeHtml(it.content)) + '</span>') : '';
       var actionsHtml;
+      var hasAttachments = it.attachments && it.attachments.length > 0;
       if (canEdit()) {
         actionsHtml =
           '<div class="item-actions">' +
             '<button type="button" class="btn btn-icon small btn-edit-item" title="编辑">✏️</button>' +
             '<button type="button" class="btn btn-icon small btn-comment-item" title="评论">💬</button>' +
+            (hasAttachments ? '<button type="button" class="btn btn-icon small btn-attachment-item" title="附件">📎</button>' : '') +
             '<button type="button" class="btn btn-icon small btn-danger btn-delete-item" title="删除">🗑️</button>' +
           '</div>';
       } else {
         actionsHtml =
           '<div class="item-actions">' +
             '<button type="button" class="btn btn-icon small btn-comment-item" title="评论">💬</button>' +
+            (hasAttachments ? '<button type="button" class="btn btn-icon small btn-attachment-item" title="附件">📎</button>' : '') +
             (it.comments && it.comments.length ? '<span class="comment-badge">' + it.comments.length + '</span>' : '') +
           '</div>';
       }
@@ -536,6 +523,9 @@
       });
       row.querySelectorAll('.btn-comment-item').forEach(function (btn) {
         btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openCommentsModal(it, mod.id); });
+      });
+      row.querySelectorAll('.btn-attachment-item').forEach(function (btn) {
+        btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openAttachmentsModal(it); });
       });
       if (canEdit()) {
         row.addEventListener('dragstart', function (e) {
