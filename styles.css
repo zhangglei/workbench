@@ -189,6 +189,11 @@ body[data-bg-type="image"] {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+  flex: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .card-actions {
