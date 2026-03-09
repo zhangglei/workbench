@@ -472,13 +472,29 @@ ${canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9
     if (!attachments.length) return;
     var win = window.open('', '_blank');
     if (!win) return;
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}</style></head><body><h2>附件列表</h2><ul>';
+    // 将附件数据存储在父窗口，子窗口通过ID访问
+    window._currentAttachments = attachments;
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
     attachments.forEach(function(att) {
-      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong> <a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a></li>';
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
+              '<a href="javascript:;" onclick="window.opener.openAttachmentById(' + JSON.stringify(att.id) + ')">查看/编辑</a> | ' +
+              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(' + JSON.stringify(att.id) + ')">导出</a></li>';
     });
     html += '</ul></body></html>';
     win.document.write(html);
     win.document.close();
+  }
+
+  function openAttachmentById(attId) {
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === attId; });
+    if (att) openAttachmentWindow(att);
+  }
+
+  function exportAttachmentById(attId) {
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === attId; });
+    if (att) exportAttachment(att);
   }
 
   function openItemModal(moduleId, item) {
