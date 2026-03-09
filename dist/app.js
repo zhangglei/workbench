@@ -441,11 +441,16 @@
     if (!win) return;
     // 将附件数据存储在父窗口，子窗口通过ID访问
     window._currentAttachments = attachments;
+    // 对ID进行HTML编码，避免引号破坏onclick属性
+    function encodeAttr(str) {
+      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
     var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
     attachments.forEach(function(att) {
+      var encodedId = encodeAttr(att.id || '');
       html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="window.opener.openAttachmentById(' + JSON.stringify(att.id) + ')">查看/编辑</a> | ' +
-              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(' + JSON.stringify(att.id) + ')">导出</a></li>';
+              '<a href="javascript:;" onclick="window.opener.openAttachmentById(\'' + encodedId + '\')">查看/编辑</a> | ' +
+              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(\'' + encodedId + '\')">导出</a></li>';
     });
     html += '</ul></body></html>';
     win.document.write(html);
