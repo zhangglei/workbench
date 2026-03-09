@@ -365,7 +365,8 @@
         'if(!isCsv){var ta=document.getElementById("editor");var text=ta.value;var idx=text.toLowerCase().indexOf(q);if(q && idx>=0){ta.focus();ta.setSelectionRange(idx,idx+q.length);}return;}' +
         'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
       '};' +
-      '<\/script></body></html>';
+      '<\/script>' +
+      '</body></html>';
     win.document.write(html);
     win.document.close();
   }
