@@ -103,13 +103,16 @@
   state.allowedUsers = load('workbench_allowed_users', '');
   state.guestUsers = state.guestUsers || '';
   state.collapsedModules = state.collapsedModules || {};
+  state.emailNotify = state.emailNotify || { enabled: false, emails: '', serviceId: '', templateId: '', publicKey: '' };
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
     if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
+    if (raw.emailNotify) state.emailNotify = raw.emailNotify;
   } else if (raw) {
     state = migrateState({ layout: state.layout, bg: state.bg, modules: raw.modules || [], links: raw.links || [], allowedUsers: state.allowedUsers });
     state.collapsedModules = raw.collapsedModules || {};
+    if (raw.emailNotify) state.emailNotify = raw.emailNotify;
   }
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
@@ -146,7 +149,8 @@
       modules: state.modules,
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {}
+      collapsedModules: state.collapsedModules || {},
+      emailNotify: state.emailNotify || { enabled: false, emails: '', serviceId: '', templateId: '', publicKey: '' }
     };
     if (window.workbenchApi) {
       window.workbenchApi.saveState(toSave).catch(function (e) { console.error(e); });
@@ -158,7 +162,7 @@
       try {
         localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(state.layout));
         localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
-        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
+        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {}, emailNotify: state.emailNotify }));
       } catch (_) {}
       fetchFirstOk(CLOUD_STATE_URLS, {
         method: 'POST',
@@ -985,9 +989,53 @@
         return;
       }
       target.item.comments = target.item.comments || [];
-      target.item.comments.push({ id: id(), user: nick, text: text, time: new Date().toLocaleString() });
+      var commentId = id();
+      target.item.comments.push({ id: commentId, user: nick, text: text, time: new Date().toLocaleString() });
       persistState();
+      // 发送邮件通知
+      sendCommentNotification(target.item, target.moduleId, nick, text);
       openCommentsModal(target.item, target.moduleId);
+    });
+  }
+
+  // 发送评论邮件通知
+  function sendCommentNotification(item, moduleId, commentUser, commentText) {
+    if (!state.emailNotify || !state.emailNotify.enabled) return;
+    var cfg = state.emailNotify;
+    if (!cfg.emails || !cfg.serviceId || !cfg.templateId || !cfg.publicKey) return;
+    
+    // 获取模块名称
+    var mod = state.modules.find(function(m) { return m.id === moduleId; });
+    var moduleName = mod ? (mod.name || '未命名模块') : '未知模块';
+    var itemTitle = item.title || '未命名内容';
+    
+    // 分割多个邮箱
+    var emails = cfg.emails.split('\n').map(function(e) { return e.trim(); }).filter(function(e) { return e && e.indexOf('@') > 0; });
+    if (!emails.length) return;
+    
+    // 初始化 EmailJS
+    if (typeof emailjs !== 'undefined' && !window._emailjsInitialized) {
+      emailjs.init(cfg.publicKey);
+      window._emailjsInitialized = true;
+    }
+    if (typeof emailjs === 'undefined') {
+      console.warn('EmailJS SDK 未加载');
+      return;
+    }
+    
+    // 给每个邮箱发送通知
+    emails.forEach(function(email) {
+      var templateParams = {
+        to_email: email,
+        module_name: moduleName,
+        item_title: itemTitle,
+        comment_user: commentUser,
+        comment_text: commentText,
+        comment_time: new Date().toLocaleString()
+      };
+      emailjs.send(cfg.serviceId, cfg.templateId, templateParams)
+        .then(function() { console.log('邮件已发送给', email); })
+        .catch(function(err) { console.error('邮件发送失败', email, err); });
     });
   }
 
@@ -1152,6 +1200,11 @@
     document.getElementById('bgGradient').value = state.bg.gradient || '';
     document.getElementById('guestUsers').value = state.guestUsers || '';
     document.getElementById('adminUsers').value = state.allowedUsers || '';
+    document.getElementById('enableEmailNotify').checked = state.emailNotify && state.emailNotify.enabled || false;
+    document.getElementById('notifyEmails').value = state.emailNotify && state.emailNotify.emails || '';
+    document.getElementById('emailjsServiceId').value = state.emailNotify && state.emailNotify.serviceId || '';
+    document.getElementById('emailjsTemplateId').value = state.emailNotify && state.emailNotify.templateId || '';
+    document.getElementById('emailjsPublicKey').value = state.emailNotify && state.emailNotify.publicKey || '';
     if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
       document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
     } else {
@@ -1216,6 +1269,13 @@
     };
     state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
     state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
+    state.emailNotify = {
+      enabled: document.getElementById('enableEmailNotify').checked,
+      emails: (document.getElementById('notifyEmails').value || '').trim(),
+      serviceId: (document.getElementById('emailjsServiceId').value || '').trim(),
+      templateId: (document.getElementById('emailjsTemplateId').value || '').trim(),
+      publicKey: (document.getElementById('emailjsPublicKey').value || '').trim()
+    };
     persistState();
     applyLayout();
     applyBackground();
