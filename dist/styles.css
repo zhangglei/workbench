@@ -901,3 +901,56 @@ body[data-bg-type="image"] {
     --layout-cols: 2;
   }
 }
+
+/* 可编辑标题样式 */
+.editable-title-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editable-title-wrapper .title-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.editable-title-wrapper .btn-edit-title {
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  background: rgba(192, 202, 245, 0.1);
+  color: #c0caf5;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.editable-title-wrapper .btn-edit-title:hover {
+  background: rgba(192, 202, 245, 0.2);
+}
+
+.title-edit-input {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: rgba(36, 40, 59, 0.8);
+  color: #c0caf5;
+  border: 1px solid #7aa2f7;
+  border-radius: 6px;
+  padding: 2px 8px;
+  min-width: 200px;
+}
+
+/* 附件按钮行 */
+.attachment-buttons {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(192, 202, 245, 0.1);
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.attachment-buttons button {
+  flex-shrink: 0;
+}

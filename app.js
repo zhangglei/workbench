@@ -285,6 +285,13 @@
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
+    // 添加导出和查看所有附件按钮
+    var buttonRow = document.createElement('div');
+    buttonRow.className = 'attachment-row attachment-buttons';
+    buttonRow.innerHTML =
+      '<button type="button" class="btn btn-secondary btn-sm" id="btnExportAllAttachments">导出所有附件</button>' +
+      '<button type="button" class="btn btn-secondary btn-sm" id="btnViewAllAttachments">查看所有附件</button>';
+    list.appendChild(buttonRow);
     list.querySelectorAll('.btn-open-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
@@ -298,6 +305,31 @@
         editingAttachments = editingAttachments.filter(function (x) { return x.id !== aid; });
         renderAttachmentsList();
       });
+    });
+    // 为新增按钮添加事件监听
+    document.getElementById('btnExportAllAttachments').addEventListener('click', function() {
+      if (!editingAttachments || editingAttachments.length === 0) return;
+      editingAttachments.forEach(function(att) {
+        var blob = new Blob([att.content || ''], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = att.name || ('附件_' + att.id + '.txt');
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    });
+    document.getElementById('btnViewAllAttachments').addEventListener('click', function() {
+      if (!editingAttachments || editingAttachments.length === 0) return;
+      var win = window.open('', '_blank');
+      if (!win) return;
+      var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>所有附件</title><style>body{font-family:sans-serif;margin:20px;}</style></head><body><h2>已导入的附件</h2><ul>';
+      editingAttachments.forEach(function(att) {
+        html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong> <a href="javascript:;" onclick="window.opener.openAttachmentWindow(' + JSON.stringify(att) + ')">查看/编辑</a></li>';
+      });
+      html += '</ul></body></html>';
+      win.document.write(html);
+      win.document.close();
     });
   }
 
@@ -818,7 +850,7 @@
       if (!mod.items) mod.items = [];
       if (itemId) {
         var it = mod.items.find(function (x) { return x.id === itemId; });
-        if (it) { it.title = title; it.url = url; it.content = content; it.showContent = showContent; it.visibleToAll = visibleToAll; it.newTab = newTab; }
+        if (it) { it.title = title; it.url = url; it.content = content; it.showContent = showContent; it.visibleToAll = visibleToAll; it.newTab = newTab; it.attachments = editingAttachments.slice(); }
       } else {
         mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, comments: [], attachments: editingAttachments.slice() });
       }
@@ -849,19 +881,7 @@
       reader.readAsText(file, 'UTF-8');
       this.value = '';
     });
-    function doExport(ext) {
-      var title = (document.getElementById('itemTitle').value || '').trim() || '内容';
-      var content = (document.getElementById('itemContent').value || '').trim();
-      var name = title.replace(/[\\/:*?"<>|]/g, '_') + ext;
-      var blob = new Blob([content], { type: ext === '.md' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8' });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-    document.getElementById('btnExportContent').addEventListener('click', function () { doExport('.txt'); });
-    document.getElementById('btnExportMd').addEventListener('click', function () { doExport('.md'); });
+
   }
 
   function bindCommentsModal() {
@@ -950,6 +970,56 @@
   }
 
   function updateUserUI() {
+    // 更新标题
+    var headerTitle = document.getElementById('headerTitle');
+    if (headerTitle) {
+      var customTitle = localStorage.getItem('workbench_custom_title');
+      var titleText = customTitle || '我的工作台';
+      headerTitle.textContent = titleText;
+      // 如果是管理员，使标题可编辑
+      if (canEdit() && !headerTitle.classList.contains('editable-setup')) {
+        headerTitle.classList.add('editable-setup');
+        // 创建可编辑的包装器
+        var wrapper = document.createElement('span');
+        wrapper.className = 'editable-title-wrapper';
+        wrapper.innerHTML = '<span class="title-text">' + escapeHtml(titleText) + '</span> <button type="button" class="btn btn-icon small btn-edit-title" title="修改标题">✏️</button>';
+        headerTitle.innerHTML = '';
+        headerTitle.appendChild(wrapper);
+        // 添加编辑事件
+        wrapper.querySelector('.btn-edit-title').addEventListener('click', function() {
+          var textSpan = wrapper.querySelector('.title-text');
+          var currentText = textSpan.textContent;
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.value = currentText;
+          input.className = 'title-edit-input';
+          // 替换文本为输入框
+          textSpan.replaceWith(input);
+          input.focus();
+          input.select();
+          // 保存和取消处理
+          function save() {
+            var newText = input.value.trim();
+            if (newText) {
+              textSpan.textContent = newText;
+              // 更新页面标题和存储
+              document.title = newText + ' - 我的工作台';
+              localStorage.setItem('workbench_custom_title', newText);
+            }
+            input.replaceWith(textSpan);
+          }
+          function cancel() {
+            input.replaceWith(textSpan);
+          }
+          input.addEventListener('blur', save);
+          input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') save();
+            if (e.key === 'Escape') cancel();
+          });
+        });
+      }
+    }
+
     var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.style.display = canEdit() ? '' : 'none';
     if (footerBar) footerBar.style.display = canEdit() ? '' : 'none';
@@ -1210,6 +1280,7 @@
       persistState();
     } catch (_) {}
   };
+  window.openAttachmentWindow = openAttachmentWindow;
 
   function exportStateToFile() {
     var toSave = {
