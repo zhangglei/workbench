@@ -409,17 +409,17 @@
     win.document.close();
   }
 
-  function openAttachmentById(attId) {
+  window.openAttachmentById = function(attId) {
     var attachments = window._currentAttachments || [];
     var att = attachments.find(function(a) { return a.id === attId; });
     if (att) openAttachmentWindow(att);
-  }
+  };
 
-  function exportAttachmentById(attId) {
+  window.exportAttachmentById = function(attId) {
     var attachments = window._currentAttachments || [];
     var att = attachments.find(function(a) { return a.id === attId; });
     if (att) exportAttachment(att);
-  }
+  };
 
   function exportAttachment(att) {
     if (!att || !att.content) {
