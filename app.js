@@ -317,103 +317,70 @@
     var safeName = (att.name || '文件');
     var lang = (att.type || '').toLowerCase();
     var content = att.content || '';
-    var canEditFile = canEdit(); // 检查是否有编辑权限
+    var canEditFile = canEdit();
     
-    // 简化HTML构建，避免复杂的JavaScript拼接
-    var html = `
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<title>${safeName}</title>
-<style>
-body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}
-.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}
-.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}
-.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}
-.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}
-.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}
-table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}
-.readonly{background:#2a2e3f !important;color:#a9b1d6 !important;border-color:#565f89 !important;}
-</style>
-</head>
-<body>
-<div class="toolbar">
-<span>${safeName}</span>
-<input id="searchBox" placeholder="搜索…">
-${canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9b1d6;font-size:0.85rem;">只读模式</span>'}
-</div>
-<div class="editor" id="editorWrap"></div>
-<script>
-(function() {
-    var attId = ${JSON.stringify(att.id)};
-    var type = ${JSON.stringify(lang)};
-    var raw = ${JSON.stringify(content)};
-    var canEdit = ${JSON.stringify(canEditFile)};
-    var wrap = document.getElementById("editorWrap");
-    var isCsv = type === "csv";
-    
-    if (isCsv) {
-        var rows = raw.split(/\\r?\\n/).map(function(r) { return r.split(","); });
-        var tbl = document.createElement("table");
-        rows.forEach(function(r) {
-            var tr = document.createElement("tr");
-            r.forEach(function(c) {
-                var td = document.createElement("td");
-                td.textContent = c;
-                tr.appendChild(td);
-            });
-            tbl.appendChild(tr);
-        });
-        wrap.appendChild(tbl);
-        if (!canEdit) {
-            tbl.style.pointerEvents = "none";
-            tbl.classList.add("readonly");
-        }
-    } else {
-        var ta = document.createElement("textarea");
-        ta.id = "editor";
-        ta.value = raw;
-        if (!canEdit) {
-            ta.readOnly = true;
-            ta.classList.add("readonly");
-        }
-        wrap.appendChild(ta);
-    }
-    
-    if (canEdit) {
-        document.getElementById("btnSave").onclick = function() {
-            var data = isCsv ? Array.from(wrap.querySelectorAll("tr")).map(function(tr) {
-                return Array.from(tr.cells).map(function(td) { return td.textContent; }).join(",");
-            }).join("\\n") : document.getElementById("editor").value;
-            if (window.opener && window.opener.workbenchUpdateAttachmentContent) {
-                window.opener.workbenchUpdateAttachmentContent(attId, data);
-            }
-            alert("已保存");
-        };
-    }
-    
-    document.getElementById("searchBox").oninput = function() {
-        var q = this.value.toLowerCase();
-        if (!isCsv) {
-            var ta = document.getElementById("editor");
-            var text = ta.value;
-            var idx = text.toLowerCase().indexOf(q);
-            if (q && idx >= 0) {
-                ta.focus();
-                ta.setSelectionRange(idx, idx + q.length);
-            }
-            return;
-        }
-        Array.from(wrap.querySelectorAll("tr")).forEach(function(tr) {
-            var t = tr.textContent.toLowerCase();
-            tr.style.display = !q || t.indexOf(q) !== -1 ? "" : "none";
-        });
-    };
-})();
-</script>
-</body>
-</html>`;
+    // 使用textarea方式传递内容，避免script标签破坏HTML
+    var html = '<!doctype html>' +
+      '<html lang="zh-CN">' +
+      '<head>' +
+      '<meta charset="utf-8">' +
+      '<title>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</title>' +
+      '<style>' +
+      'body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}' +
+      '.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}' +
+      '.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}' +
+      '.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}' +
+      '.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}' +
+      '.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}' +
+      'table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}' +
+      '.readonly{background:#2a2e3f !important;color:#a9b1d6 !important;border-color:#565f89 !important;}' +
+      '#dataTransfer{display:none;}' +
+      '</style>' +
+      '</head>' +
+      '<body>' +
+      '<div class="toolbar">' +
+      '<span>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</span>' +
+      '<input id="searchBox" placeholder="搜索…">' +
+      (canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9b1d6;font-size:0.85rem;">只读模式</span>') +
+      '</div>' +
+      '<div class="editor" id="editorWrap"></div>' +
+      '<textarea id="dataTransfer" data-aid="' + (att.id || '').replace(/"/g, '&quot;') + '" data-type="' + lang + '">' + content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>' +
+      '<script>' +
+      '(function() {' +
+      'var ta = document.getElementById("dataTransfer");' +
+      'var attId = ta.getAttribute("data-aid");' +
+      'var type = ta.getAttribute("data-type");' +
+      'var raw = ta.value;' +
+      'var canEdit = ' + JSON.stringify(canEditFile) + ';' +
+      'var wrap = document.getElementById("editorWrap");' +
+      'var isCsv = type === "csv";' +
+      'if(isCsv){' +
+      'var rows = raw.split(/\\r?\\n/).map(function(r){return r.split(",");});' +
+      'var tbl = document.createElement("table");' +
+      'rows.forEach(function(r){var tr = document.createElement("tr");r.forEach(function(c){var td = document.createElement("td");td.textContent = c;tr.appendChild(td);});tbl.appendChild(tr);});' +
+      'wrap.appendChild(tbl);' +
+      'if(!canEdit){tbl.style.pointerEvents="none";tbl.classList.add("readonly");}' +
+      '}else{' +
+      'var editor = document.createElement("textarea");editor.id="editor";editor.value=raw;' +
+      'if(!canEdit){editor.readOnly=true;editor.classList.add("readonly");}' +
+      'wrap.appendChild(editor);' +
+      '}' +
+      'if(canEdit){' +
+      'document.getElementById("btnSave").onclick=function(){' +
+      'var data=isCsv?Array.from(wrap.querySelectorAll("tr")).map(function(tr){return Array.from(tr.cells).map(function(td){return td.textContent;}).join(",");}).join("\\n"):document.getElementById("editor").value;' +
+      'if(window.opener&&window.opener.workbenchUpdateAttachmentContent){window.opener.workbenchUpdateAttachmentContent(attId,data);}' +
+      'alert("已保存");' +
+      '};' +
+      '}' +
+      'document.getElementById("searchBox").oninput=function(){' +
+      'var q=this.value.toLowerCase();' +
+      'if(!isCsv){var editor=document.getElementById("editor");var text=editor.value;var idx=text.toLowerCase().indexOf(q);if(q&&idx>=0){editor.focus();editor.setSelectionRange(idx,idx+q.length);}return;}' +
+      'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
+      '};' +
+      '})();' +
+      '</script>' +
+      '</body>' +
+      '</html>';
     
     win.document.write(html);
     win.document.close();
