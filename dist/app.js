@@ -115,8 +115,8 @@
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
   var CLOUD_STATE_URLS = [
-    '/api/workbench-state',
-    '/.netlify/functions/workbench-state'
+    '/.netlify/functions/workbench-state',
+    '/api/workbench-state'
   ];
 
   var lastCloudSyncError = '';
@@ -164,9 +164,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave)
-      })
-        .then(function() { console.log('云端保存成功'); })
-        .catch(function (e) { console.warn('云端保存失败', e); });
+      }).catch(function (e) { console.warn('云端保存失败', e); });
     }
   }
 
@@ -386,41 +384,6 @@
     win.document.close();
   }
 
-  function openAttachmentsModal(item) {
-    var attachments = item.attachments || [];
-    if (!attachments.length) return;
-    var win = window.open('', '_blank');
-    if (!win) return;
-    // 将附件数据存储在父窗口，子窗口通过ID访问
-    window._currentAttachments = attachments;
-    // 对ID进行HTML编码，避免引号破坏onclick属性
-    function encodeAttr(str) {
-      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
-    attachments.forEach(function(att) {
-      var encodedId = encodeAttr(att.id || '');
-      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="window.opener.openAttachmentById(\'' + encodedId + '\')">查看/编辑</a> | ' +
-              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(\'' + encodedId + '\')">导出</a></li>';
-    });
-    html += '</ul></body></html>';
-    win.document.write(html);
-    win.document.close();
-  }
-
-  window.openAttachmentById = function(attId) {
-    var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === attId; });
-    if (att) openAttachmentWindow(att);
-  };
-
-  window.exportAttachmentById = function(attId) {
-    var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === attId; });
-    if (att) exportAttachment(att);
-  };
-
   function exportAttachment(att) {
     if (!att || !att.content) {
       alert('附件内容为空，无法导出');
@@ -470,6 +433,41 @@
       URL.revokeObjectURL(url);
     }, 100);
   }
+
+  function openAttachmentsModal(item) {
+    var attachments = item.attachments || [];
+    if (!attachments.length) return;
+    var win = window.open('', '_blank');
+    if (!win) return;
+    // 将附件数据存储在父窗口，子窗口通过ID访问
+    window._currentAttachments = attachments;
+    // 对ID进行HTML编码，避免引号破坏onclick属性
+    function encodeAttr(str) {
+      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
+    attachments.forEach(function(att) {
+      var encodedId = encodeAttr(att.id || '');
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
+              '<a href="javascript:;" onclick="window.opener.openAttachmentById(\'' + encodedId + '\')">查看/编辑</a> | ' +
+              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(\'' + encodedId + '\')">导出</a></li>';
+    });
+    html += '</ul></body></html>';
+    win.document.write(html);
+    win.document.close();
+  }
+
+  window.openAttachmentById = function(attId) {
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === attId; });
+    if (att) openAttachmentWindow(att);
+  };
+
+  window.exportAttachmentById = function(attId) {
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === attId; });
+    if (att) exportAttachment(att);
+  };
 
   function openItemModal(moduleId, item) {
     var titleEl = document.getElementById('itemModalTitle');
@@ -1306,19 +1304,11 @@
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
     fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
-      .then(function (pair) { 
-        console.log('云端加载成功，状态码:', pair.res.status);
-        return pair.res.text(); 
-      })
+      .then(function (pair) { return pair.res.text(); })
       .then(function (text) {
-        console.log('云端数据:', text);
-        if (!text || text === 'null') {
-          console.log('云端数据为空，使用本地数据');
-          return;
-        }
+        if (!text || text === 'null') return;
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
-          console.log('云端数据有效，应用数据');
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
@@ -1326,14 +1316,9 @@
           applyLayout();
           applyBackground();
           renderModules();
-        } else {
-          console.log('云端数据无效，使用本地数据');
         }
       })
-      .catch(function (e) { 
-        console.warn('云端加载失败', e);
-        showCloudSyncUnavailable(); 
-      });
+      .catch(function () { showCloudSyncUnavailable(); });
   }
 
   function showCloudSyncUnavailable() {
