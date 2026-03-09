@@ -280,6 +280,7 @@
       row.innerHTML =
         '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
         '<button type="button" class="btn btn-secondary btn-sm btn-open-attachment" data-aid="' + escapeHtml(att.id) + '">查看/编辑</button>' +
+        '<button type="button" class="btn btn-info btn-sm btn-export-attachment" data-aid="' + escapeHtml(att.id) + '">导出</button>' +
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
@@ -289,6 +290,13 @@
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
         if (att) openAttachmentWindow(att);
+      });
+    });
+    list.querySelectorAll('.btn-export-attachment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var aid = btn.getAttribute('data-aid');
+        var att = editingAttachments.find(function (x) { return x.id === aid; });
+        if (att) exportAttachment(att);
       });
     });
     list.querySelectorAll('.btn-del-attachment').forEach(function (btn) {
@@ -307,45 +315,156 @@
     var safeName = (att.name || '文件');
     var lang = (att.type || '').toLowerCase();
     var content = att.content || '';
-    var html =
-      '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
-      '<title>' + safeName + '</title>' +
-      '<style>body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}'+
-      '.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}'+
-      '.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}'+
-      '.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}'+
-      '.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}'+
-      '.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}'+
-      'table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}</style></head>' +
-      '<body><div class="toolbar"><span>' + safeName + '</span><input id="searchBox" placeholder="搜索…"><button id="btnSave">保存</button></div>' +
-      '<div class="editor" id="editorWrap"></div>' +
-      '<script>' +
-      'var attId=' + JSON.stringify(att.id) + ';' +
-      'var type=' + JSON.stringify(lang) + ';' +
-      'var raw=' + JSON.stringify(content) + ';' +
-      'var wrap=document.getElementById("editorWrap");' +
-      'var isCsv=type==="csv";' +
-      'if(isCsv){' +
-        'var rows=raw.split(/\\r?\\n/).map(function(r){return r.split(",");});' +
-        'var tbl=document.createElement("table");' +
-        'rows.forEach(function(r){var tr=document.createElement("tr");r.forEach(function(c){var td=document.createElement("td");td.textContent=c;tr.appendChild(td);});tbl.appendChild(tr);});' +
-        'wrap.appendChild(tbl);' +
-      '}else{' +
-        'var ta=document.createElement("textarea");ta.id="editor";ta.value=raw;wrap.appendChild(ta);' +
-      '}' +
-      'document.getElementById("btnSave").onclick=function(){' +
-        'var data=isCsv?Array.from(wrap.querySelectorAll("tr")).map(function(tr){return Array.from(tr.cells).map(function(td){return td.textContent;}).join(",");}).join("\\n"):document.getElementById("editor").value;' +
-        'if(window.opener && window.opener.workbenchUpdateAttachmentContent){window.opener.workbenchUpdateAttachmentContent(attId,data);}' +
-        'alert("已保存");' +
-      '};' +
-      'document.getElementById("searchBox").oninput=function(){' +
-        'var q=this.value.toLowerCase();' +
-        'if(!isCsv){var ta=document.getElementById("editor");var text=ta.value;var idx=text.toLowerCase().indexOf(q);if(q && idx>=0){ta.focus();ta.setSelectionRange(idx,idx+q.length);}return;}' +
-        'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
-      '};' +
-      '<\/script></body></html>';
+    var canEditFile = canEdit(); // 检查是否有编辑权限
+    
+    // 简化HTML构建，避免复杂的JavaScript拼接
+    var html = `
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>${safeName}</title>
+<style>
+body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}
+.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}
+.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}
+.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}
+.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}
+.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}
+table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}
+.readonly{background:#2a2e3f !important;color:#a9b1d6 !important;border-color:#565f89 !important;}
+</style>
+</head>
+<body>
+<div class="toolbar">
+<span>${safeName}</span>
+<input id="searchBox" placeholder="搜索…">
+${canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9b1d6;font-size:0.85rem;">只读模式</span>'}
+</div>
+<div class="editor" id="editorWrap"></div>
+<script>
+(function() {
+    var attId = ${JSON.stringify(att.id)};
+    var type = ${JSON.stringify(lang)};
+    var raw = ${JSON.stringify(content)};
+    var canEdit = ${JSON.stringify(canEditFile)};
+    var wrap = document.getElementById("editorWrap");
+    var isCsv = type === "csv";
+    
+    if (isCsv) {
+        var rows = raw.split(/\\r?\\n/).map(function(r) { return r.split(","); });
+        var tbl = document.createElement("table");
+        rows.forEach(function(r) {
+            var tr = document.createElement("tr");
+            r.forEach(function(c) {
+                var td = document.createElement("td");
+                td.textContent = c;
+                tr.appendChild(td);
+            });
+            tbl.appendChild(tr);
+        });
+        wrap.appendChild(tbl);
+        if (!canEdit) {
+            tbl.style.pointerEvents = "none";
+            tbl.classList.add("readonly");
+        }
+    } else {
+        var ta = document.createElement("textarea");
+        ta.id = "editor";
+        ta.value = raw;
+        if (!canEdit) {
+            ta.readOnly = true;
+            ta.classList.add("readonly");
+        }
+        wrap.appendChild(ta);
+    }
+    
+    if (canEdit) {
+        document.getElementById("btnSave").onclick = function() {
+            var data = isCsv ? Array.from(wrap.querySelectorAll("tr")).map(function(tr) {
+                return Array.from(tr.cells).map(function(td) { return td.textContent; }).join(",");
+            }).join("\\n") : document.getElementById("editor").value;
+            if (window.opener && window.opener.workbenchUpdateAttachmentContent) {
+                window.opener.workbenchUpdateAttachmentContent(attId, data);
+            }
+            alert("已保存");
+        };
+    }
+    
+    document.getElementById("searchBox").oninput = function() {
+        var q = this.value.toLowerCase();
+        if (!isCsv) {
+            var ta = document.getElementById("editor");
+            var text = ta.value;
+            var idx = text.toLowerCase().indexOf(q);
+            if (q && idx >= 0) {
+                ta.focus();
+                ta.setSelectionRange(idx, idx + q.length);
+            }
+            return;
+        }
+        Array.from(wrap.querySelectorAll("tr")).forEach(function(tr) {
+            var t = tr.textContent.toLowerCase();
+            tr.style.display = !q || t.indexOf(q) !== -1 ? "" : "none";
+        });
+    };
+})();
+</script>
+</body>
+</html>`;
+    
     win.document.write(html);
     win.document.close();
+  }
+
+  function exportAttachment(att) {
+    if (!att || !att.content) {
+      alert('附件内容为空，无法导出');
+      return;
+    }
+    
+    var content = att.content;
+    var filename = att.name || 'exported_file.txt';
+    var mimeType = 'text/plain';
+    
+    // 根据文件类型设置不同的MIME类型
+    var ext = (att.type || '').toLowerCase();
+    switch(ext) {
+      case 'csv':
+        mimeType = 'text/csv';
+        break;
+      case 'md':
+        mimeType = 'text/markdown';
+        break;
+      case 'html':
+        mimeType = 'text/html';
+        break;
+      case 'json':
+        mimeType = 'application/json';
+        break;
+      default:
+        mimeType = 'text/plain';
+    }
+    
+    // 创建Blob对象
+    var blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+    
+    // 创建下载链接
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    
+    // 添加到DOM并触发点击
+    document.body.appendChild(a);
+    a.click();
+    
+    // 清理
+    setTimeout(function() {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
 
   function openAttachmentsModal(item) {
