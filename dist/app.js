@@ -314,6 +314,8 @@
   }
 
   function openAttachmentWindow(att) {
+    console.log('openAttachmentWindow called', att.name, 'canEdit():', canEdit());
+    console.log('currentRole:', currentRole);
     var win = window.open('', '_blank');
     if (!win) return;
     var safeName = (att.name || '文件');
@@ -321,6 +323,7 @@
     var content = att.content || '';
     // 在父窗口判断权限，避免子窗口跨域/上下文问题
     var canEditFile = (typeof canEdit === 'function') && canEdit();
+    console.log('canEditFile:', canEditFile);
     
     // 使用textarea方式传递内容，避免script标签破坏HTML
     var html = '<!doctype html>' +
@@ -354,7 +357,7 @@
       'var attId = ta.getAttribute("data-aid");' +
       'var type = ta.getAttribute("data-type");' +
       'var raw = ta.value;' +
-      'var canEdit = ' + JSON.stringify(canEditFile) + ';' +
+      'var canEdit = ' + canEditFile + ';' +
       'var wrap = document.getElementById("editorWrap");' +
       'var isCsv = type === "csv";' +
       'if(isCsv){' +
@@ -441,9 +444,13 @@
 
   function openAttachmentsModal(item) {
     var attachments = item.attachments || [];
+    console.log('openAttachmentsModal called', attachments.length, 'attachments');
     if (!attachments.length) return;
     var win = window.open('', '_blank');
-    if (!win) return;
+    if (!win) {
+      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
+      return;
+    }
     // 将附件数据存储在父窗口，子窗口通过ID访问
     window._currentAttachments = attachments;
     // 对ID进行HTML编码，避免引号破坏onclick属性
@@ -457,7 +464,11 @@
               '<a href="javascript:;" onclick="window.opener.openAttachmentById(\'' + encodedId + '\')">查看/编辑</a> | ' +
               '<a href="javascript:;" onclick="window.opener.exportAttachmentById(\'' + encodedId + '\')">导出</a></li>';
     });
-    html += '</ul></body></html>';
+    html += '</ul><script>' +
+            'console.log("附件列表窗口加载，window.opener:", window.opener);' +
+            'window.addEventListener("error", function(e) { console.error("全局错误:", e.message, e.filename, e.lineno); });' +
+            'document.addEventListener("click", function(e) { if (e.target.tagName === "A") { console.log("链接被点击:", e.target.textContent, "window.opener:", window.opener); } });' +
+            '</script></body></html>';
     win.document.write(html);
     win.document.close();
   }
@@ -470,10 +481,21 @@
   }
 
   window.openAttachmentById = function(attId) {
-    var decodedId = decodeHtmlEntities(attId);
-    var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === decodedId; });
-    if (att) openAttachmentWindow(att);
+    console.log('openAttachmentById called', attId);
+    try {
+      var decodedId = decodeHtmlEntities(attId);
+      var attachments = window._currentAttachments || [];
+      console.log('decodedId:', decodedId, 'attachments count:', attachments.length);
+      var att = attachments.find(function(a) { return a.id === decodedId; });
+      console.log('found attachment:', att ? att.name : 'none');
+      if (att) {
+        openAttachmentWindow(att);
+      } else {
+        console.error('未找到附件，ID:', decodedId, '所有ID:', attachments.map(a => a.id));
+      }
+    } catch (err) {
+      console.error('openAttachmentById 出错:', err.message, err.stack);
+    }
   };
 
   window.exportAttachmentById = function(attId) {
