@@ -317,7 +317,10 @@
     console.log('openAttachmentWindow called', att.name, 'canEdit():', canEdit());
     console.log('currentRole:', currentRole);
     var win = window.open('', '_blank');
-    if (!win) return;
+    if (!win) {
+      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
+      return;
+    }
     var safeName = (att.name || '文件');
     var lang = (att.type || '').toLowerCase();
     var content = att.content || '';
@@ -461,8 +464,8 @@
     attachments.forEach(function(att) {
       var encodedId = encodeAttr(att.id || '');
       html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="window.opener.openAttachmentById(\'' + encodedId + '\')">查看/编辑</a> | ' +
-              '<a href="javascript:;" onclick="window.opener.exportAttachmentById(\'' + encodedId + '\')">导出</a></li>';
+              '<a href="javascript:;" onclick="console.log(\'点击查看/编辑，encodedId:\', \'' + encodedId + '\'); if (window.opener && window.opener.openAttachmentById) { window.opener.openAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 openAttachmentById 不可用\', window.opener); }">查看/编辑</a> | ' +
+              '<a href="javascript:;" onclick="console.log(\'点击导出，encodedId:\', \'' + encodedId + '\'); if (window.opener && window.opener.exportAttachmentById) { window.opener.exportAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 exportAttachmentById 不可用\', window.opener); }">导出</a></li>';
     });
     html += '</ul><script>' +
             'console.log("附件列表窗口加载，window.opener:", window.opener);' +
