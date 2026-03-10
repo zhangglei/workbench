@@ -290,14 +290,14 @@
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) openAttachmentViewModal(att);
+        if (att) openAttachmentViewWindow(att);
       });
     });
     list.querySelectorAll('.btn-edit-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) openAttachmentEditModal(att, function (newContent) {
+        if (att) openAttachmentEditWindow(att, function (newContent) {
           att.content = newContent;
         });
       });
@@ -314,27 +314,212 @@
 
 
 
-  function openAttachmentViewModal(att) {
-    var modal = document.getElementById('attachmentViewModal');
-    var title = document.getElementById('attachmentViewTitle');
-    var content = document.getElementById('attachmentViewContent');
-    if (!modal) return;
-    if (title) title.textContent = '查看文件：' + (att.name || '未命名');
-    if (content) content.textContent = att.content || '（文件内容为空）';
-    modal.classList.add('show');
+  function buildAttachmentViewHtml(att) {
+    var name = att.name || '未命名';
+    var content = att.content || '';
+    var ext = (att.type || '').toLowerCase();
+    var bodyHtml = '';
+
+    if (ext === 'md') {
+      // Markdown：简单规则渲染
+      function mdToHtml(md) {
+        var lines = md.split('\n');
+        var out = [];
+        var inCode = false;
+        var inTable = false;
+        lines.forEach(function(line) {
+          if (line.startsWith('```')) {
+            if (inCode) { out.push('</code></pre>'); inCode = false; }
+            else { out.push('<pre><code>'); inCode = true; }
+            return;
+          }
+          if (inCode) { out.push(escapeHtml(line)); return; }
+          // table
+          if (/^\|/.test(line)) {
+            if (!inTable) { out.push('<table>'); inTable = true; }
+            var cells = line.replace(/^\||\|$/g, '').split('|');
+            if (/^[\s\|\-:]+$/.test(line)) { return; }
+            out.push('<tr>' + cells.map(function(c){ return '<td>' + escapeHtml(c.trim()) + '</td>'; }).join('') + '</tr>');
+            return;
+          } else if (inTable) { out.push('</table>'); inTable = false; }
+          // headings
+          var hm = line.match(/^(#{1,6})\s+(.*)/);
+          if (hm) { var lv = hm[1].length; out.push('<h' + lv + '>' + escapeHtml(hm[2]) + '</h' + lv + '>'); return; }
+          // hr
+          if (/^---+$/.test(line.trim())) { out.push('<hr>'); return; }
+          // blockquote
+          var bqm = line.match(/^>\s?(.*)/);
+          if (bqm) { out.push('<blockquote>' + escapeHtml(bqm[1]) + '</blockquote>'); return; }
+          // list
+          var ulm = line.match(/^[\-\*\+]\s+(.*)/);
+          if (ulm) { out.push('<li>' + escapeHtml(ulm[1]) + '</li>'); return; }
+          var olm = line.match(/^\d+\.\s+(.*)/);
+          if (olm) { out.push('<li>' + escapeHtml(olm[1]) + '</li>'); return; }
+          // empty
+          if (!line.trim()) { out.push('<br>'); return; }
+          // inline: bold, italic, code, link
+          var p = escapeHtml(line)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code>$1</code>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+          out.push('<p>' + p + '</p>');
+        });
+        if (inCode) out.push('</code></pre>');
+        if (inTable) out.push('</table>');
+        return out.join('\n');
+      }
+      bodyHtml = '<article class="md-body">' + mdToHtml(content) + '</article>';
+    } else if (ext === 'csv') {
+      // CSV：渲染为表格
+      var rows = content.split('\n').filter(function(r){ return r.trim(); });
+      var tableRows = rows.map(function(row, i) {
+        var tag = i === 0 ? 'th' : 'td';
+        var cells = row.split(',').map(function(c){ return '<' + tag + '>' + escapeHtml(c.trim().replace(/^"|"$/g,'')) + '</' + tag + '>'; }).join('');
+        return '<tr>' + cells + '</tr>';
+      }).join('');
+      bodyHtml = '<div class="csv-wrap"><table class="csv-table">' + tableRows + '</table></div>';
+    } else if (ext === 'json') {
+      // JSON：高亮显示
+      var formatted = content;
+      try { formatted = JSON.stringify(JSON.parse(content), null, 2); } catch(e) {}
+      function jsonHighlight(str) {
+        return escapeHtml(str).replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          function(match) {
+            var cls = 'json-num';
+            if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+            else if (/true|false/.test(match)) cls = 'json-bool';
+            else if (/null/.test(match)) cls = 'json-null';
+            return '<span class="' + cls + '">' + match + '</span>';
+          }
+        );
+      }
+      bodyHtml = '<pre class="json-pre">' + jsonHighlight(formatted) + '</pre>';
+    } else {
+      // txt / 其他：原文等宽
+      bodyHtml = '<pre class="txt-pre">' + escapeHtml(content) + '</pre>';
+    }
+
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+      '<title>' + escapeHtml(name) + '</title>' +
+      '<style>' +
+        'body{font-family:system-ui,sans-serif;margin:0;background:#1a1b26;color:#c0caf5;min-height:100vh;}' +
+        '.toolbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:#16161e;border-bottom:1px solid #2a2b3d;position:sticky;top:0;z-index:10;}' +
+        '.toolbar h1{margin:0;font-size:1rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7aa2f7;}' +
+        '.btn{cursor:pointer;border:none;border-radius:6px;padding:5px 14px;font-size:0.85rem;font-family:inherit;}' +
+        '.btn-export{background:#9ece6a;color:#1a1b26;font-weight:600;}' +
+        '.btn-export:hover{background:#b9f27c;}' +
+        '.content{padding:24px 32px;max-width:1000px;margin:0 auto;}' +
+        /* markdown */
+        '.md-body h1,.md-body h2,.md-body h3,.md-body h4,.md-body h5,.md-body h6{color:#7aa2f7;margin-top:1.2em;margin-bottom:.4em;}' +
+        '.md-body p{line-height:1.8;margin:.6em 0;}' +
+        '.md-body a{color:#73daca;text-decoration:underline;}' +
+        '.md-body code{background:#24283b;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:.9em;}' +
+        '.md-body pre{background:#24283b;padding:14px;border-radius:8px;overflow-x:auto;}' +
+        '.md-body pre code{background:none;padding:0;}' +
+        '.md-body blockquote{border-left:3px solid #7aa2f7;margin:0;padding:4px 16px;color:#a9b1d6;}' +
+        '.md-body table{border-collapse:collapse;width:100%;margin:1em 0;}' +
+        '.md-body td,.md-body th{border:1px solid #2a2b3d;padding:6px 12px;}' +
+        '.md-body th{background:#24283b;color:#7aa2f7;}' +
+        '.md-body hr{border:none;border-top:1px solid #2a2b3d;margin:1.5em 0;}' +
+        '.md-body li{margin:.3em 0;line-height:1.7;}' +
+        /* csv */
+        '.csv-wrap{overflow-x:auto;}' +
+        '.csv-table{border-collapse:collapse;width:100%;font-size:.88rem;}' +
+        '.csv-table th{background:#24283b;color:#7aa2f7;padding:8px 14px;border:1px solid #2a2b3d;text-align:left;}' +
+        '.csv-table td{padding:7px 14px;border:1px solid #2a2b3d;}' +
+        '.csv-table tr:hover td{background:rgba(122,162,247,.08);}' +
+        /* json */
+        '.json-pre{background:#24283b;padding:20px;border-radius:8px;overflow-x:auto;line-height:1.6;font-size:.88rem;font-family:"Cascadia Code",Consolas,monospace;}' +
+        '.json-key{color:#7aa2f7;}.json-str{color:#9ece6a;}.json-num{color:#ff9e64;}.json-bool{color:#bb9af7;}.json-null{color:#f7768e;}' +
+        /* txt */
+        '.txt-pre{background:#24283b;padding:20px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;line-height:1.7;font-size:.88rem;font-family:"Cascadia Code",Consolas,monospace;}' +
+      '</style></head><body>' +
+      '<div class="toolbar"><h1>' + escapeHtml(name) + '</h1>' +
+      '<button class="btn btn-export" onclick="doExport()">导出</button>' +
+      '</div>' +
+      '<div class="content">' + bodyHtml + '</div>' +
+      '<script>' +
+        'var _attContent=' + JSON.stringify(content) + ';' +
+        'var _attName=' + JSON.stringify(att.name || 'file.txt') + ';' +
+        'var _attMime=' + JSON.stringify(
+          ext === 'csv' ? 'text/csv' :
+          ext === 'md' ? 'text/markdown' :
+          ext === 'json' ? 'application/json' :
+          ext === 'html' ? 'text/html' : 'text/plain'
+        ) + ';' +
+        'function doExport(){' +
+          'var blob=new Blob([_attContent],{type:_attMime+";charset=utf-8"});' +
+          'var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=_attName;a.click();' +
+        '}' +
+      '<\/script>' +
+      '</body></html>';
   }
 
-  function openAttachmentEditModal(att, onSave) {
-    var modal = document.getElementById('attachmentEditModal');
-    var title = document.getElementById('attachmentEditTitle');
-    var textarea = document.getElementById('attachmentEditContent');
-    if (!modal) return;
-    if (title) title.textContent = '编辑文件：' + (att.name || '未命名');
-    if (textarea) textarea.value = att.content || '';
-    modal._onSave = onSave;
-    modal._att = att;
-    modal.classList.add('show');
+  function buildAttachmentEditHtml(att) {
+    var name = att.name || '未命名';
+    var content = att.content || '';
+    var ext = (att.type || '').toLowerCase();
+    var mode = (ext === 'json' || ext === 'js' || ext === 'html' || ext === 'css') ? ext : 'text';
+
+    return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+      '<title>编辑：' + escapeHtml(name) + '</title>' +
+      '<style>' +
+        'body{font-family:system-ui,sans-serif;margin:0;background:#1a1b26;color:#c0caf5;height:100vh;display:flex;flex-direction:column;}' +
+        '.toolbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:#16161e;border-bottom:1px solid #2a2b3d;flex-shrink:0;}' +
+        '.toolbar h1{margin:0;font-size:1rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7aa2f7;}' +
+        '.btn{cursor:pointer;border:none;border-radius:6px;padding:5px 14px;font-size:0.85rem;font-family:inherit;font-weight:600;}' +
+        '.btn-save{background:#7aa2f7;color:#1a1b26;}.btn-save:hover{background:#89b4ff;}' +
+        '.btn-cancel{background:#414868;color:#c0caf5;}.btn-cancel:hover{background:#555878;}' +
+        '.status{font-size:.8rem;color:#9ece6a;display:none;}' +
+        'textarea{flex:1;width:100%;box-sizing:border-box;background:#24283b;color:#c0caf5;border:none;padding:20px 24px;font-family:"Cascadia Code",Consolas,monospace;font-size:.9rem;line-height:1.7;resize:none;outline:none;}' +
+      '</style></head><body>' +
+      '<div class="toolbar"><h1>编辑：' + escapeHtml(name) + '</h1>' +
+      '<span class="status" id="statusMsg">✓ 已保存</span>' +
+      '<button class="btn btn-cancel" onclick="window.close()">关闭</button>' +
+      '<button class="btn btn-save" onclick="doSave()">保存到工作台</button>' +
+      '</div>' +
+      '<textarea id="editor" spellcheck="false">' + escapeHtml(content) + '</textarea>' +
+      '<script>' +
+        'var _attId=' + JSON.stringify(att.id || '') + ';' +
+        'function doSave(){' +
+          'var val=document.getElementById("editor").value;' +
+          'if(window.opener&&window.opener.updateAttachmentContent){' +
+            'window.opener.updateAttachmentContent(_attId,val);' +
+            'var s=document.getElementById("statusMsg");s.style.display="inline";setTimeout(function(){s.style.display="none";},2000);' +
+          '}else{alert("无法连接到工作台窗口，请确认原窗口未关闭。");}' +
+        '}' +
+        'document.getElementById("editor").addEventListener("keydown",function(e){' +
+          'if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();doSave();}' +
+        '});' +
+      '<\/script>' +
+      '</body></html>';
   }
+
+  function openAttachmentViewWindow(att) {
+    var win = window.open('', '_blank');
+    if (!win) { alert('弹出窗口被阻止，请允许弹出窗口后重试。'); return; }
+    win.document.write(buildAttachmentViewHtml(att));
+    win.document.close();
+  }
+
+  function openAttachmentEditWindow(att, onSave) {
+    window._updateAttachmentCallbacks = window._updateAttachmentCallbacks || {};
+    window._updateAttachmentCallbacks[att.id] = onSave;
+    var win = window.open('', '_blank');
+    if (!win) { alert('弹出窗口被阻止，请允许弹出窗口后重试。'); return; }
+    win.document.write(buildAttachmentEditHtml(att));
+    win.document.close();
+  }
+
+  window.updateAttachmentContent = function(attId, newContent) {
+    var cb = (window._updateAttachmentCallbacks || {})[attId];
+    if (typeof cb === 'function') {
+      cb(newContent);
+      delete window._updateAttachmentCallbacks[attId];
+    }
+  };
 
   function openAttachmentsModal(item) {
     var attachments = item.attachments || [];
@@ -350,20 +535,29 @@
           row.className = 'attachment-row';
           row.innerHTML =
             '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
-            '<button type="button" class="btn btn-info btn-sm btn-view-att-list" data-aid="' + escapeHtml(att.id) + '">查看</button>';
+            '<button type="button" class="btn btn-info btn-sm btn-view-att-list" data-aid="' + escapeHtml(att.id) + '">查看</button>' +
+            '<button type="button" class="btn btn-secondary btn-sm btn-export-att-list" data-aid="' + escapeHtml(att.id) + '">导出</button>';
           listEl.appendChild(row);
         });
         listEl.querySelectorAll('.btn-view-att-list').forEach(function (btn) {
           btn.addEventListener('click', function () {
             var aid = btn.getAttribute('data-aid');
             var att = attachments.find(function (x) { return x.id === aid; });
-            if (att) openAttachmentViewModal(att);
+            if (att) openAttachmentViewWindow(att);
+          });
+        });
+        listEl.querySelectorAll('.btn-export-att-list').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var aid = btn.getAttribute('data-aid');
+            var att = attachments.find(function (x) { return x.id === aid; });
+            if (att) exportAttachment(att);
           });
         });
       }
       modal.classList.add('show');
       return;
     }
+    // 降级：新窗口打开附件列表
     var win = window.open('', '_blank');
     if (!win) {
       console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
@@ -373,11 +567,22 @@
     function encodeAttr(str) {
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;display:flex;align-items:center;gap:10px;}strong{flex:1;}</style></head><body><h2>附件列表</h2><ul>';
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title>' +
+      '<style>body{font-family:system-ui,sans-serif;margin:0;background:#1a1b26;color:#c0caf5;}' +
+      'h2{margin:0;padding:16px 24px;background:#16161e;border-bottom:1px solid #2a2b3d;font-size:1.1rem;color:#7aa2f7;}' +
+      'ul{list-style:none;padding:16px 24px;margin:0;}' +
+      'li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #2a2b3d;}' +
+      'strong{flex:1;font-weight:normal;}' +
+      'a{cursor:pointer;padding:4px 12px;border-radius:6px;font-size:.85rem;text-decoration:none;font-weight:600;}' +
+      '.a-view{background:#7aa2f7;color:#1a1b26;}.a-export{background:#9ece6a;color:#1a1b26;}' +
+      '</style></head><body>' +
+      '<h2>附件列表</h2><ul>';
     attachments.forEach(function(att) {
       var encodedId = encodeAttr(att.id || '');
       html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong>' +
-              '<a href="javascript:;" onclick="if (window.opener && window.opener.viewAttachmentById) { window.opener.viewAttachmentById(\'' + encodedId + '\'); } else { console.error(\'viewAttachmentById 不可用\'); }">查看</a></li>';
+        '<a class="a-view" href="javascript:;" onclick="if(window.opener&&window.opener.viewAttachmentById){window.opener.viewAttachmentById(\'' + encodedId + '\');}">查看</a>' +
+        '<a class="a-export" href="javascript:;" onclick="if(window.opener&&window.opener.exportAttachmentById){window.opener.exportAttachmentById(\'' + encodedId + '\');}">导出</a>' +
+        '</li>';
     });
     html += '</ul></body></html>';
     win.document.write(html);
@@ -417,7 +622,7 @@
     var decodedId = decodeHtmlEntities(attId);
     var attachments = window._currentAttachments || [];
     var att = attachments.find(function(a) { return a.id === decodedId; });
-    if (att) openAttachmentViewModal(att);
+    if (att) openAttachmentViewWindow(att);
   };
 
   function exportAttachment(att) {
@@ -990,27 +1195,7 @@
   }
 
   function bindAttachmentModals() {
-    var viewModal = document.getElementById('attachmentViewModal');
-    var editModal = document.getElementById('attachmentEditModal');
     var listModal = document.getElementById('attachmentsListModal');
-    if (viewModal) {
-      document.getElementById('btnCloseAttachmentViewModal').addEventListener('click', function () { viewModal.classList.remove('show'); });
-      viewModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentViewModal') viewModal.classList.remove('show'); });
-    }
-    if (editModal) {
-      document.getElementById('btnCloseAttachmentEditModal').addEventListener('click', function () { editModal.classList.remove('show'); });
-      document.getElementById('btnCancelAttachmentEdit').addEventListener('click', function () { editModal.classList.remove('show'); });
-      editModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentEditModal') editModal.classList.remove('show'); });
-      document.getElementById('btnSaveAttachmentEdit').addEventListener('click', function () {
-        var textarea = document.getElementById('attachmentEditContent');
-        var newContent = textarea ? textarea.value : '';
-        if (typeof editModal._onSave === 'function') {
-          editModal._onSave(newContent);
-        }
-        editModal.classList.remove('show');
-        renderAttachmentsList();
-      });
-    }
     if (listModal) {
       document.getElementById('btnCloseAttachmentsListModal').addEventListener('click', function () { listModal.classList.remove('show'); });
       listModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentsListModal') listModal.classList.remove('show'); });
