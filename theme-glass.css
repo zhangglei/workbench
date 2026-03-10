@@ -1079,3 +1079,570 @@ mark {
     font-size: 1.25rem !important;
   }
 }
+
+
+/* ================================================================
+   §33  设置面板（侧边栏）深度优化
+   ----------------------------------------------------------------
+   目标：分区卡片化、输入框统一规格、操作按钮行布局、
+         顶部彩线、section 之间有视觉分隔。
+   ================================================================ */
+
+/* 面板整体 */
+.panel {
+  width: 340px !important;
+  max-width: 92vw !important;
+}
+
+/* 面板顶栏：彩线 + 标题加粗 */
+.panel-header {
+  position: relative !important;
+  padding: 16px 20px !important;
+}
+
+.panel-header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary) 0%, #b96eff 50%, #66D1FF 100%);
+  pointer-events: none;
+}
+
+.panel-header h2 {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* 面板主体滚动区 */
+.panel-body {
+  padding: 16px 16px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+/* 每个 section 变成独立卡片 */
+.setting-section {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+/* section 标题：左侧彩色竖线 */
+.setting-section h3 {
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: var(--primary) !important;
+  margin: 0 !important;
+  padding-left: 8px !important;
+  border-left: 2px solid var(--primary) !important;
+  line-height: 1.4 !important;
+}
+
+/* 提示文字 */
+.setting-hint {
+  font-size: 0.78rem !important;
+  line-height: 1.55 !important;
+  color: var(--text-muted) !important;
+  margin: 0 !important;
+}
+
+/* label 行 */
+.setting-section label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.85rem !important;
+  color: var(--text-content) !important;
+  flex-wrap: wrap !important;
+}
+
+/* 输入框统一高度 */
+.setting-section input[type="number"],
+.setting-section input[type="text"],
+.setting-section input[type="url"],
+.setting-section select,
+.setting-section textarea {
+  flex: 1 !important;
+  min-width: 0 !important;
+  padding: 7px 10px !important;
+  font-size: 0.85rem !important;
+  line-height: 1.4 !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  border-radius: 8px !important;
+  color: var(--text-title) !important;
+  transition: border-color var(--ease), box-shadow var(--ease) !important;
+  font-family: inherit !important;
+}
+
+.setting-section textarea {
+  resize: vertical !important;
+  min-height: 72px !important;
+  line-height: 1.6 !important;
+  font-family: "Cascadia Code", Consolas, monospace !important;
+  font-size: 0.82rem !important;
+}
+
+.setting-section input:focus,
+.setting-section textarea:focus,
+.setting-section select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+/* 颜色选择器 */
+.setting-section input[type="color"] {
+  width: 36px !important;
+  height: 28px !important;
+  padding: 2px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  flex: none !important;
+}
+
+/* 文件上传 */
+.setting-section input[type="file"] {
+  font-size: 0.8rem !important;
+  color: var(--text-muted) !important;
+  padding: 4px 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* 操作按钮行（数据迁移等） */
+.setting-section .item-content-actions {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+/* 背景图库 */
+.bg-gallery {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.bg-gallery img,
+.bg-gallery .bg-thumb {
+  width: 56px !important;
+  height: 40px !important;
+  border-radius: 6px !important;
+  object-fit: cover !important;
+  cursor: pointer !important;
+  border: 2px solid transparent !important;
+  transition: border-color var(--ease), transform var(--ease) !important;
+}
+
+.bg-gallery img:hover,
+.bg-gallery .bg-thumb:hover {
+  border-color: var(--primary) !important;
+  transform: scale(1.06) !important;
+}
+
+/* 应用设置按钮 */
+#btnApplySettings {
+  margin-top: 4px !important;
+  width: 100% !important;
+  padding: 10px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  border-radius: 10px !important;
+}
+
+/* 数据路径输入框只读样式 */
+#dataPathInput[readonly] {
+  opacity: 0.7 !important;
+  cursor: default !important;
+}
+
+
+/* ================================================================
+   §34  评论弹窗深度优化
+   ----------------------------------------------------------------
+   目标：评论列表气泡化、输入区域独立卡片、发送按钮全宽。
+   ================================================================ */
+
+/* 评论弹窗宽度 */
+#commentsModal .modal-content {
+  max-width: 480px !important;
+}
+
+/* 评论列表区域 */
+#commentsList {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  max-height: 320px !important;
+  overflow-y: auto !important;
+  padding: 4px 2px 8px !important;
+  margin-bottom: 12px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255,255,255,0.15) transparent !important;
+}
+
+#commentsList::-webkit-scrollbar {
+  width: 4px;
+}
+#commentsList::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+/* 单条评论：气泡卡片 */
+.comment-item {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  border-bottom: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+/* 评论头部：昵称 + 时间 */
+.comment-item .comment-meta,
+.comment-item > *:first-child {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+/* 评论昵称 */
+.comment-nick,
+.comment-item strong,
+.comment-item b {
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: var(--primary) !important;
+}
+
+/* 评论时间 */
+.comment-time {
+  font-size: 0.75rem !important;
+  color: var(--text-muted) !important;
+}
+
+/* 评论正文 */
+.comment-text,
+.comment-item p,
+.comment-item span:not(.comment-time):not(.comment-nick) {
+  font-size: 0.875rem !important;
+  color: var(--text-content) !important;
+  line-height: 1.6 !important;
+  word-break: break-word !important;
+}
+
+/* 空评论提示 */
+#commentsList:empty::before {
+  content: "暂无评论，来发表第一条吧 ✨";
+  display: block;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 24px 0;
+}
+
+/* 评论输入区：独立卡片 */
+.comment-form {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+/* 昵称 + 内容输入框 */
+.comment-form input[type="text"],
+#commentNickname,
+#commentInput {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 9px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  background: rgba(255,255,255,0.07) !important;
+  color: var(--text-title) !important;
+  font-size: 0.875rem !important;
+  font-family: inherit !important;
+  transition: border-color var(--ease), box-shadow var(--ease) !important;
+}
+
+.comment-form input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+/* 发送按钮：全宽 */
+#btnAddComment {
+  width: 100% !important;
+  padding: 9px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  letter-spacing: 0.02em !important;
+}
+
+
+/* ================================================================
+   §35  编辑内容弹窗（itemModal）深度优化
+   ----------------------------------------------------------------
+   目标：表单字段分组、标签样式统一、checkbox 行更美观、
+         附件区域有独立背景、底部按钮行布局。
+   ================================================================ */
+
+/* 弹窗宽度 */
+#itemModal .modal-content {
+  max-width: 560px !important;
+}
+
+/* modal-body 内部间距 */
+#itemModal .modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 20px !important;
+}
+
+/* label 行 */
+#itemModal .modal-body label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+
+/* checkbox label 改为横排 */
+#itemModal .modal-body label:has(input[type="checkbox"]) {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.875rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--text-content) !important;
+  font-weight: 400 !important;
+  cursor: pointer !important;
+}
+
+/* 输入框 */
+#itemModal .modal-body input[type="text"],
+#itemModal .modal-body input[type="url"],
+#itemModal .modal-body textarea {
+  padding: 9px 12px !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  color: var(--text-title) !important;
+  transition: border-color var(--ease), box-shadow var(--ease) !important;
+  font-family: inherit !important;
+}
+
+#itemModal .modal-body textarea {
+  resize: vertical !important;
+  min-height: 80px !important;
+  line-height: 1.6 !important;
+}
+
+#itemModal .modal-body input:focus,
+#itemModal .modal-body textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+/* 导入文件按钮行 */
+.item-content-actions {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+/* 附件区域：独立卡片 */
+.item-attachments {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+}
+
+.item-attachments .setting-hint {
+  font-size: 0.78rem !important;
+  margin-bottom: 6px !important;
+}
+
+/* 附件行 */
+.attachment-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+}
+
+.attachment-row:last-child {
+  border-bottom: none !important;
+}
+
+.attachment-name {
+  flex: 1 !important;
+  font-size: 0.82rem !important;
+  color: var(--text-content) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 弹窗底部按钮 */
+#itemModal .modal-footer {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  padding: 14px 20px !important;
+}
+
+/* 模块弹窗同样优化 */
+#moduleModal .modal-content {
+  max-width: 460px !important;
+}
+
+#moduleModal .modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 20px !important;
+}
+
+#moduleModal .modal-body label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+
+#moduleModal .modal-body label:has(input[type="checkbox"]) {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.875rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--text-content) !important;
+  font-weight: 400 !important;
+}
+
+#moduleModal .modal-body input[type="text"] {
+  padding: 9px 12px !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  color: var(--text-title) !important;
+  font-family: inherit !important;
+}
+
+#moduleModal .modal-body input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+
+/* ================================================================
+   §36  登录弹窗（loginModal）优化
+   ================================================================ */
+#loginModal .modal-content {
+  max-width: 400px !important;
+}
+
+#loginModal .modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 20px !important;
+}
+
+#loginModal .modal-body label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+
+#loginModal .modal-body input {
+  padding: 9px 12px !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.13) !important;
+  color: var(--text-title) !important;
+  font-family: inherit !important;
+}
+
+#loginModal .modal-body input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+
+/* ================================================================
+   §37  折叠动画（展开/收缩模块内容区）
+   ----------------------------------------------------------------
+   配合问题3的 JS 修复，用 CSS 过渡代替重渲染。
+   ================================================================ */
+.module-card .module-items {
+  overflow: hidden !important;
+  transition: max-height 0.28s cubic-bezier(.4,0,.2,1),
+              opacity     0.22s ease !important;
+  max-height: 2000px !important;   /* 足够大的值，确保展开时不截断 */
+  opacity: 1 !important;
+}
+
+.module-card.collapsed .module-items {
+  max-height: 0 !important;
+  opacity: 0 !important;
+}
+
+/* 折叠时隐藏"添加内容"按钮 */
+.module-card.collapsed .btn-add-item {
+  display: none !important;
+}
+
+/* 折叠按钮旋转动画 */
+.btn-collapse {
+  transition: transform 0.22s ease !important;
+}
+
+.module-card.collapsed .btn-collapse {
+  /* 已通过 JS 更新文字，此处保留以备 CSS-only 场景 */
+}
