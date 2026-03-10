@@ -606,31 +606,183 @@ mark {
 
 
 /* ================================================================
-   §18  登录遮罩（Glass 暗色）
+   §18  登录遮罩 — 完整登录卡片（Glass 暗色）
+   ----------------------------------------------------------------
+   修复：去掉 .login-overlay 上的 !important，
+   让 app.js 的 loginOverlay.style.display 能正常控制显示/隐藏。
    ================================================================ */
+
+/* ── 全屏遮罩层：不加 !important，JS 可以用 style.display 覆盖 ── */
 .login-overlay {
-  background: rgba(0,0,0,0.55) !important;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  /* 背景：插画上叠加深色渐变，突出登录卡片 */
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.60) 0%,
+    rgba(10, 15, 35, 0.72) 100%
+  );
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  /* pointer-events 由 JS 控制，此处不设 none */
 }
 
+/* ── 登录卡片主体 ── */
 .login-overlay-inner {
-  background: rgba(14, 18, 32, 0.90) !important;
-  border: 1px solid var(--card-border) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 16px;
+  padding: 40px 36px 32px;
+  border-radius: 20px;
+  background: rgba(12, 16, 30, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.60),
+    0 0 0 1px rgba(255,255,255,0.05) inset !important;
   color: var(--text-title) !important;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.55) !important;
+  /* 进入动画 */
+  animation: login-card-enter 0.4s cubic-bezier(.22, 1, .36, 1) both;
 }
 
+@keyframes login-card-enter {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* 顶部彩色装饰线（与顶栏风格一致） */
+.login-overlay-inner::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(90deg, var(--primary) 0%, #b96eff 50%, #66D1FF 100%);
+}
+
+/* ── 标题区 ── */
 .login-overlay-inner h2 {
+  margin: 0 0 6px;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
   color: var(--text-title) !important;
+  text-align: center;
+  letter-spacing: -0.01em;
 }
 
-.login-overlay-inner p {
-  color: var(--text-content) !important;
-}
-
-.login-overlay-hint {
+/* 副标题 */
+.login-overlay-inner > p:first-of-type {
+  margin: 0 0 28px;
+  font-size: 0.875rem !important;
   color: var(--text-muted) !important;
+  text-align: center;
+}
+
+/* ── 注入的登录表单（由 theme-glass.js 动态插入） ── */
+.login-overlay-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.login-overlay-form .login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-overlay-form .login-field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.login-overlay-form .login-field input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.07);
+  color: var(--text-title);
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  box-sizing: border-box;
+}
+
+.login-overlay-form .login-field input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
+.login-overlay-form .login-field input:focus {
+  border-color: var(--primary);
+  background: rgba(255,255,255,0.10);
+  box-shadow: 0 0 0 3px rgba(128,184,255,0.22);
+}
+
+/* 错误提示 */
+.login-overlay-error {
+  font-size: 0.82rem;
+  color: #f87171;
+  text-align: center;
+  min-height: 18px;
+  margin-top: -6px;
+}
+
+/* 登录按钮（覆盖原有 btn-primary 在此场景的样式） */
+.login-overlay-inner .btn-overlay-submit {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 16px rgba(64,150,255,0.40);
+  transition: filter 0.18s ease, transform 0.10s ease, box-shadow 0.18s ease;
+  font-family: inherit;
+}
+
+.login-overlay-inner .btn-overlay-submit:hover {
+  filter: brightness(1.10);
+  box-shadow: 0 6px 24px rgba(64,150,255,0.55);
+}
+
+.login-overlay-inner .btn-overlay-submit:active {
+  transform: scale(0.97);
+}
+
+/* 加载状态 */
+.login-overlay-inner .btn-overlay-submit.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* 底部提示文字 */
+.login-overlay-hint {
+  display: block;
+  text-align: center;
+  font-size: 0.78rem !important;
+  color: var(--text-muted) !important;
+  margin-top: 16px;
+}
+
+/* 隐藏原始的"登录"按钮（由 JS 注入的表单替代） */
+.login-overlay-inner > .btn-primary#btnOverlayLogin {
+  display: none !important;
 }
 
 
@@ -890,5 +1042,40 @@ mark {
   .main {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
     gap: 18px !important;
+  }
+}
+
+
+/* ================================================================
+   §31  登录卡片抖动动画（登录失败时触发）
+   ================================================================ */
+@keyframes glass-shake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-8px); }
+  30%  { transform: translateX(7px); }
+  45%  { transform: translateX(-6px); }
+  60%  { transform: translateX(5px); }
+  75%  { transform: translateX(-3px); }
+  90%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+.login-overlay-inner.glass-shake {
+  animation: glass-shake 0.45s cubic-bezier(.36,.07,.19,.97) both !important;
+}
+
+
+/* ================================================================
+   §32  登录遮罩移动端适配
+   ================================================================ */
+@media (max-width: 480px) {
+  .login-overlay-inner {
+    margin: 12px !important;
+    padding: 32px 20px 24px !important;
+    border-radius: 16px !important;
+  }
+
+  .login-overlay-inner h2 {
+    font-size: 1.25rem !important;
   }
 }

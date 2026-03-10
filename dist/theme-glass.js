@@ -347,3 +347,209 @@
   }
 
 })();
+
+
+/* ================================================================
+   登录遮罩增强模块（独立 IIFE，不影响主模块）
+   ----------------------------------------------------------------
+   功能：
+   1. 在 .login-overlay-inner 中注入完整的用户名/密码表单，
+      替代原来只有一个"登录"按钮的简陋布局。
+   2. 表单提交时调用 app.js 原有的 performLogin 逻辑（通过触发
+      loginForm 的 submit 事件，完全复用原有验证代码）。
+   3. 修复登录后遮罩不消失的问题：监听 #loginOverlay 的
+      display 属性变化，确保遮罩能被正确隐藏。
+   ================================================================ */
+(function () {
+  'use strict';
+
+  /**
+   * 增强登录遮罩：注入完整表单 UI。
+   * 原始 HTML 中只有 h2、p、btnOverlayLogin 三个元素，
+   * 此函数在其后插入用户名/密码输入框，并接管提交逻辑。
+   */
+  function enhanceLoginOverlay() {
+    var overlay = document.getElementById('loginOverlay');
+    var inner   = overlay && overlay.querySelector('.login-overlay-inner');
+    if (!inner) return;
+
+    /* 避免重复注入 */
+    if (inner.querySelector('.login-overlay-form')) return;
+
+    /* ── 构建表单 DOM ── */
+    var form = document.createElement('form');
+    form.className = 'login-overlay-form';
+    form.setAttribute('autocomplete', 'on');
+    /* 阻止 form 默认提交（由 JS 接管） */
+    form.addEventListener('submit', function (e) { e.preventDefault(); doLogin(); });
+
+    /* 用户名字段 */
+    var userField = document.createElement('div');
+    userField.className = 'login-field';
+    userField.innerHTML =
+      '<label for="overlayLoginUser">用户名</label>' +
+      '<input type="text" id="overlayLoginUser" placeholder="请输入用户名" autocomplete="username" spellcheck="false">';
+
+    /* 密码字段 */
+    var passField = document.createElement('div');
+    passField.className = 'login-field';
+    passField.innerHTML =
+      '<label for="overlayLoginPass">密码</label>' +
+      '<input type="password" id="overlayLoginPass" placeholder="请输入密码" autocomplete="current-password">';
+
+    form.appendChild(userField);
+    form.appendChild(passField);
+
+    /* 错误提示行 */
+    var errorEl = document.createElement('p');
+    errorEl.className = 'login-overlay-error';
+    errorEl.id = 'overlayLoginError';
+
+    /* 提交按钮 */
+    var submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.className = 'btn-overlay-submit';
+    submitBtn.textContent = '登 录';
+
+    /* 将表单、错误提示、按钮插入 inner（在原有 hint p 之前） */
+    var hint = inner.querySelector('.login-overlay-hint');
+    inner.insertBefore(form, hint);
+    inner.insertBefore(errorEl, hint);
+    inner.insertBefore(submitBtn, hint);
+
+    /* 自动聚焦用户名输入框 */
+    setTimeout(function () {
+      var userInput = document.getElementById('overlayLoginUser');
+      if (userInput) userInput.focus();
+    }, 100);
+  }
+
+  /**
+   * 执行登录：
+   * 将遮罩表单的值同步到 app.js 的 #loginUser / #loginPass，
+   * 然后触发 loginForm 的 submit 事件，复用 app.js 原有验证逻辑。
+   * 同时监听登录结果（通过检测 loginOverlay 是否被隐藏）。
+   */
+  function doLogin() {
+    var overlayUser = document.getElementById('overlayLoginUser');
+    var overlayPass = document.getElementById('overlayLoginPass');
+    var errorEl     = document.getElementById('overlayLoginError');
+    var submitBtn   = document.querySelector('.login-overlay-inner .btn-overlay-submit');
+
+    if (!overlayUser || !overlayPass) return;
+
+    var username = overlayUser.value.trim();
+    var password = overlayPass.value;
+
+    /* 基础校验 */
+    if (!username) {
+      showOverlayError('请输入用户名');
+      overlayUser.focus();
+      return;
+    }
+    if (!password) {
+      showOverlayError('请输入密码');
+      overlayPass.focus();
+      return;
+    }
+
+    /* 清除旧错误 */
+    if (errorEl) errorEl.textContent = '';
+
+    /* 加载状态 */
+    if (submitBtn) submitBtn.classList.add('loading');
+
+    /* 同步值到 app.js 的隐藏表单 */
+    var appUser = document.getElementById('loginUser');
+    var appPass = document.getElementById('loginPass');
+    if (appUser) appUser.value = username;
+    if (appPass) appPass.value = password;
+
+    /* 触发 app.js 的登录表单提交（复用原有验证逻辑） */
+    var loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
+
+    /* 延迟检查登录结果：
+       app.js 登录成功后会调用 updateUserUI()，
+       updateUserUI() 会设置 loginOverlay.style.display = 'none'。
+       若登录失败，loginHint 会有错误文字。 */
+    setTimeout(function () {
+      if (submitBtn) submitBtn.classList.remove('loading');
+
+      var overlay = document.getElementById('loginOverlay');
+      var isHidden = overlay &&
+        (overlay.style.display === 'none' || getComputedStyle(overlay).display === 'none');
+
+      if (!isHidden) {
+        /* 登录失败：读取 app.js 写入的错误提示 */
+        var appHint = document.getElementById('loginHint');
+        var msg = (appHint && appHint.textContent) || '用户名或密码错误';
+        showOverlayError(msg);
+        /* 清空密码框，聚焦 */
+        overlayPass.value = '';
+        overlayPass.focus();
+        /* 抖动动画 */
+        shakeCard();
+      }
+    }, 80);
+  }
+
+  /**
+   * 在遮罩表单上显示错误信息。
+   * @param {string} msg
+   */
+  function showOverlayError(msg) {
+    var errorEl = document.getElementById('overlayLoginError');
+    if (errorEl) {
+      errorEl.textContent = msg;
+    }
+  }
+
+  /**
+   * 登录失败时对卡片执行抖动动画（CSS keyframe）。
+   */
+  function shakeCard() {
+    var inner = document.querySelector('.login-overlay-inner');
+    if (!inner) return;
+    inner.classList.remove('glass-shake');
+    /* 强制回流触发重新动画 */
+    void inner.offsetWidth;
+    inner.classList.add('glass-shake');
+    inner.addEventListener('animationend', function onEnd() {
+      inner.classList.remove('glass-shake');
+      inner.removeEventListener('animationend', onEnd);
+    });
+  }
+
+  /**
+   * 监听 Enter 键：在遮罩表单的输入框中按 Enter 触发登录。
+   */
+  function bindOverlayEnter() {
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var overlay = document.getElementById('loginOverlay');
+      /* 仅在遮罩可见时响应 */
+      if (!overlay || overlay.style.display === 'none') return;
+      var active = document.activeElement;
+      if (active && (active.id === 'overlayLoginUser' || active.id === 'overlayLoginPass')) {
+        doLogin();
+      }
+    });
+  }
+
+  /* ── 初始化 ── */
+  function initLoginOverlay() {
+    enhanceLoginOverlay();
+    bindOverlayEnter();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLoginOverlay);
+  } else {
+    /* app.js 在 DOMContentLoaded 后执行，需等一帧确保 DOM 就绪 */
+    requestAnimationFrame(initLoginOverlay);
+  }
+
+})();
