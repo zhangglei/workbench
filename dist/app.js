@@ -103,16 +103,16 @@
   state.allowedUsers = load('workbench_allowed_users', '');
   state.guestUsers = state.guestUsers || '';
   state.collapsedModules = state.collapsedModules || {};
-  state.emailNotify = state.emailNotify || { enabled: false, emails: '', serviceId: '', templateId: '', publicKey: '' };
+
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
     if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
-    if (raw.emailNotify) state.emailNotify = raw.emailNotify;
+
   } else if (raw) {
     state = migrateState({ layout: state.layout, bg: state.bg, modules: raw.modules || [], links: raw.links || [], allowedUsers: state.allowedUsers });
     state.collapsedModules = raw.collapsedModules || {};
-    if (raw.emailNotify) state.emailNotify = raw.emailNotify;
+
   }
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
@@ -149,8 +149,7 @@
       modules: state.modules,
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {},
-      emailNotify: state.emailNotify || { enabled: false, emails: '', serviceId: '', templateId: '', publicKey: '' }
+      collapsedModules: state.collapsedModules || {}
     };
     if (window.workbenchApi) {
       window.workbenchApi.saveState(toSave).catch(function (e) { console.error(e); });
@@ -162,7 +161,7 @@
       try {
         localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(state.layout));
         localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
-        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {}, emailNotify: state.emailNotify }));
+        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
       } catch (_) {}
       fetchFirstOk(CLOUD_STATE_URLS, {
         method: 'POST',
@@ -283,19 +282,12 @@
       row.className = 'attachment-row';
       row.innerHTML =
         '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
-        '<button type="button" class="btn btn-secondary btn-sm btn-open-attachment" data-aid="' + escapeHtml(att.id) + '">查看/编辑</button>' +
         '<button type="button" class="btn btn-info btn-sm btn-export-attachment" data-aid="' + escapeHtml(att.id) + '">导出</button>' +
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
 
-    list.querySelectorAll('.btn-open-attachment').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var aid = btn.getAttribute('data-aid');
-        var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) openAttachmentWindow(att);
-      });
-    });
+
     list.querySelectorAll('.btn-export-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
@@ -313,87 +305,7 @@
 
   }
 
-  function openAttachmentWindow(att) {
-    console.log('openAttachmentWindow called', att.name, 'canEdit():', canEdit());
-    console.log('currentRole:', currentRole);
-    var win = window.open('', '_blank');
-    if (!win) {
-      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
-      return;
-    }
-    var safeName = (att.name || '文件');
-    var lang = (att.type || '').toLowerCase();
-    var content = att.content || '';
-    // 在父窗口判断权限，避免子窗口跨域/上下文问题
-    var canEditFile = (typeof canEdit === 'function') && canEdit();
-    console.log('canEditFile:', canEditFile);
-    
-    // 使用textarea方式传递内容，避免script标签破坏HTML
-    var html = '<!doctype html>' +
-      '<html lang="zh-CN">' +
-      '<head>' +
-      '<meta charset="utf-8">' +
-      '<title>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</title>' +
-      '<style>' +
-      'body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}' +
-      '.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}' +
-      '.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}' +
-      '.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}' +
-      '.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}' +
-      '.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}' +
-      'table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}' +
-      '.readonly{background:#2a2e3f !important;color:#a9b1d6 !important;border-color:#565f89 !important;}' +
-      '#dataTransfer{display:none;}' +
-      '</style>' +
-      '</head>' +
-      '<body>' +
-      '<div class="toolbar">' +
-      '<span>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</span>' +
-      '<input id="searchBox" placeholder="搜索…">' +
-      (canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9b1d6;font-size:0.85rem;">只读模式</span>') +
-      '</div>' +
-      '<div class="editor" id="editorWrap"></div>' +
-      '<textarea id="dataTransfer" data-aid="' + (att.id || '').replace(/"/g, '&quot;') + '" data-type="' + lang + '">' + content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>' +
-      '<script>' +
-      '(function() {' +
-      'var ta = document.getElementById("dataTransfer");' +
-      'var attId = ta.getAttribute("data-aid");' +
-      'var type = ta.getAttribute("data-type");' +
-      'var raw = ta.value;' +
-      'var canEdit = ' + canEditFile + ';' +
-      'var wrap = document.getElementById("editorWrap");' +
-      'var isCsv = type === "csv";' +
-      'if(isCsv){' +
-      'var rows = raw.split(/\\r?\\n/).map(function(r){return r.split(",");});' +
-      'var tbl = document.createElement("table");' +
-      'rows.forEach(function(r){var tr = document.createElement("tr");r.forEach(function(c){var td = document.createElement("td");td.textContent = c;tr.appendChild(td);});tbl.appendChild(tr);});' +
-      'wrap.appendChild(tbl);' +
-      'if(!canEdit){tbl.style.pointerEvents="none";tbl.classList.add("readonly");}' +
-      '}else{' +
-      'var editor = document.createElement("textarea");editor.id="editor";editor.value=raw;' +
-      'if(!canEdit){editor.readOnly=true;editor.classList.add("readonly");}' +
-      'wrap.appendChild(editor);' +
-      '}' +
-      'if(canEdit){' +
-      'document.getElementById("btnSave").onclick=function(){' +
-      'var data=isCsv?Array.from(wrap.querySelectorAll("tr")).map(function(tr){return Array.from(tr.cells).map(function(td){return td.textContent;}).join(",");}).join("\\n"):document.getElementById("editor").value;' +
-      'if(window.opener&&window.opener.workbenchUpdateAttachmentContent){window.opener.workbenchUpdateAttachmentContent(attId,data);}' +
-      'alert("已保存");' +
-      '};' +
-      '}' +
-      'document.getElementById("searchBox").oninput=function(){' +
-      'var q=this.value.toLowerCase();' +
-      'if(!isCsv){var editor=document.getElementById("editor");var text=editor.value;var idx=text.toLowerCase().indexOf(q);if(q&&idx>=0){editor.focus();editor.setSelectionRange(idx,idx+q.length);}return;}' +
-      'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
-      '};' +
-      '})();' +
-      '</script>' +
-      '</body>' +
-      '</html>';
-    
-    win.document.write(html);
-    win.document.close();
-  }
+
 
   function exportAttachment(att) {
     if (!att || !att.content) {
@@ -447,7 +359,6 @@
 
   function openAttachmentsModal(item) {
     var attachments = item.attachments || [];
-    console.log('openAttachmentsModal called', attachments.length, 'attachments');
     if (!attachments.length) return;
     var win = window.open('', '_blank');
     if (!win) {
@@ -464,13 +375,10 @@
     attachments.forEach(function(att) {
       var encodedId = encodeAttr(att.id || '');
       html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="console.log(\'点击查看/编辑，encodedId:\', \'' + encodedId + '\'); if (window.opener && window.opener.openAttachmentById) { window.opener.openAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 openAttachmentById 不可用\', window.opener); }">查看/编辑</a> | ' +
-              '<a href="javascript:;" onclick="console.log(\'点击导出，encodedId:\', \'' + encodedId + '\'); if (window.opener && window.opener.exportAttachmentById) { window.opener.exportAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 exportAttachmentById 不可用\', window.opener); }">导出</a></li>';
+              '<a href="javascript:;" onclick="if (window.opener && window.opener.exportAttachmentById) { window.opener.exportAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 exportAttachmentById 不可用\', window.opener); }">导出</a></li>';
     });
     html += '</ul><script>' +
-            'console.log("附件列表窗口加载，window.opener:", window.opener);' +
             'window.addEventListener("error", function(e) { console.error("全局错误:", e.message, e.filename, e.lineno); });' +
-            'document.addEventListener("click", function(e) { if (e.target.tagName === "A") { console.log("链接被点击:", e.target.textContent, "window.opener:", window.opener); } });' +
             '</script></body></html>';
     win.document.write(html);
     win.document.close();
@@ -483,23 +391,7 @@
     return textarea.value;
   }
 
-  window.openAttachmentById = function(attId) {
-    console.log('openAttachmentById called', attId);
-    try {
-      var decodedId = decodeHtmlEntities(attId);
-      var attachments = window._currentAttachments || [];
-      console.log('decodedId:', decodedId, 'attachments count:', attachments.length);
-      var att = attachments.find(function(a) { return a.id === decodedId; });
-      console.log('found attachment:', att ? att.name : 'none');
-      if (att) {
-        openAttachmentWindow(att);
-      } else {
-        console.error('未找到附件，ID:', decodedId, '所有ID:', attachments.map(a => a.id));
-      }
-    } catch (err) {
-      console.error('openAttachmentById 出错:', err.message, err.stack);
-    }
-  };
+
 
   window.exportAttachmentById = function(attId) {
     var decodedId = decodeHtmlEntities(attId);
@@ -1015,52 +907,12 @@
       var commentId = id();
       target.item.comments.push({ id: commentId, user: nick, text: text, time: new Date().toLocaleString() });
       persistState();
-      // 发送邮件通知
-      sendCommentNotification(target.item, target.moduleId, nick, text);
+
       openCommentsModal(target.item, target.moduleId);
     });
   }
 
-  // 发送评论邮件通知
-  function sendCommentNotification(item, moduleId, commentUser, commentText) {
-    if (!state.emailNotify || !state.emailNotify.enabled) return;
-    var cfg = state.emailNotify;
-    if (!cfg.emails || !cfg.serviceId || !cfg.templateId || !cfg.publicKey) return;
-    
-    // 获取模块名称
-    var mod = state.modules.find(function(m) { return m.id === moduleId; });
-    var moduleName = mod ? (mod.name || '未命名模块') : '未知模块';
-    var itemTitle = item.title || '未命名内容';
-    
-    // 分割多个邮箱
-    var emails = cfg.emails.split('\n').map(function(e) { return e.trim(); }).filter(function(e) { return e && e.indexOf('@') > 0; });
-    if (!emails.length) return;
-    
-    // 初始化 EmailJS
-    if (typeof emailjs !== 'undefined' && !window._emailjsInitialized) {
-      emailjs.init(cfg.publicKey);
-      window._emailjsInitialized = true;
-    }
-    if (typeof emailjs === 'undefined') {
-      console.warn('EmailJS SDK 未加载');
-      return;
-    }
-    
-    // 给每个邮箱发送通知
-    emails.forEach(function(email) {
-      var templateParams = {
-        to_email: email,
-        module_name: moduleName,
-        item_title: itemTitle,
-        comment_user: commentUser,
-        comment_text: commentText,
-        comment_time: new Date().toLocaleString()
-      };
-      emailjs.send(cfg.serviceId, cfg.templateId, templateParams)
-        .then(function() { console.log('邮件已发送给', email); })
-        .catch(function(err) { console.error('邮件发送失败', email, err); });
-    });
-  }
+
 
   function bindViewContentModal() {
     document.getElementById('btnCloseViewContentModal').addEventListener('click', closeViewContentModal);
@@ -1223,11 +1075,6 @@
     document.getElementById('bgGradient').value = state.bg.gradient || '';
     document.getElementById('guestUsers').value = state.guestUsers || '';
     document.getElementById('adminUsers').value = state.allowedUsers || '';
-    document.getElementById('enableEmailNotify').checked = state.emailNotify && state.emailNotify.enabled || false;
-    document.getElementById('notifyEmails').value = state.emailNotify && state.emailNotify.emails || '';
-    document.getElementById('emailjsServiceId').value = state.emailNotify && state.emailNotify.serviceId || '';
-    document.getElementById('emailjsTemplateId').value = state.emailNotify && state.emailNotify.templateId || '';
-    document.getElementById('emailjsPublicKey').value = state.emailNotify && state.emailNotify.publicKey || '';
     if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
       document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
     } else {
@@ -1292,13 +1139,6 @@
     };
     state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
     state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
-    state.emailNotify = {
-      enabled: document.getElementById('enableEmailNotify').checked,
-      emails: (document.getElementById('notifyEmails').value || '').trim(),
-      serviceId: (document.getElementById('emailjsServiceId').value || '').trim(),
-      templateId: (document.getElementById('emailjsTemplateId').value || '').trim(),
-      publicKey: (document.getElementById('emailjsPublicKey').value || '').trim()
-    };
     persistState();
     applyLayout();
     applyBackground();
@@ -1433,7 +1273,7 @@
       persistState();
     } catch (_) {}
   };
-  window.openAttachmentWindow = openAttachmentWindow;
+
 
   function exportStateToFile() {
     var toSave = {

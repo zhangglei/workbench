@@ -101,16 +101,7 @@
         <label>目录 <input type="text" id="dataPathInput" readonly></label>
         <button type="button" class="btn btn-secondary" id="btnChooseDataPath">选择文件夹</button>
       </section>
-      <section class="setting-section">
-        <h3>评论邮件通知</h3>
-        <p class="setting-hint">当有人发表评论时，自动发送邮件通知（使用 EmailJS 服务）</p>
-        <label><input type="checkbox" id="enableEmailNotify"> 启用邮件通知</label>
-        <label class="mt">接收邮箱（每行一个） <textarea id="notifyEmails" rows="3" placeholder="admin@example.com&#10;manager@example.com"></textarea></label>
-        <label class="mt">EmailJS Service ID <input type="text" id="emailjsServiceId" placeholder="service_xxx"></label>
-        <label class="mt">EmailJS Template ID <input type="text" id="emailjsTemplateId" placeholder="template_xxx"></label>
-        <label class="mt">EmailJS Public Key <input type="text" id="emailjsPublicKey" placeholder="your_public_key"></label>
-        <p class="setting-hint"><a href="https://www.emailjs.com/" target="_blank">注册 EmailJS 账号</a> 获取以上配置信息</p>
-      </section>
+
       <button type="button" class="btn btn-secondary" id="btnApplySettings">应用设置</button>
     </div>
   </aside>
@@ -218,7 +209,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
   <script src="app.js"></script>
 </body>
 </html>
