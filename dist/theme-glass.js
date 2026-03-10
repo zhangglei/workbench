@@ -570,238 +570,256 @@
 
   /*
    * 图标库：使用 Remix Icon（remixicon.com）
-   * class 格式：ri-{name}-line（线性）
-   * CDN: https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css
-   * 每项：{ cls: 'ri-xxx-line', kw: '搜索关键词 中英文' }
+   * 每项：{ cls, kw, color }
+   * color 会同时用于：选择器网格预览色 + 条目列表图标色
    */
   var ICON_LIST = [
-    /* ── 开发 / 代码 ── */
-    { cls: 'ri-git-branch-line',        kw: 'git branch 分支 代码 版本' },
-    { cls: 'ri-git-commit-line',        kw: 'git commit 提交 代码' },
-    { cls: 'ri-git-merge-line',         kw: 'git merge 合并' },
-    { cls: 'ri-git-pull-request-line',  kw: 'pull request pr 代码审查' },
-    { cls: 'ri-github-line',            kw: 'github 代码 仓库' },
-    { cls: 'ri-gitlab-line',            kw: 'gitlab 代码 仓库' },
-    { cls: 'ri-code-line',              kw: 'code 代码 编程' },
-    { cls: 'ri-code-s-slash-line',      kw: 'code slash 代码 编程' },
-    { cls: 'ri-terminal-line',          kw: 'terminal 终端 命令行 shell bash' },
-    { cls: 'ri-terminal-box-line',      kw: 'terminal box 终端 命令' },
-    { cls: 'ri-bug-line',               kw: 'bug 缺陷 调试 debug' },
-    { cls: 'ri-bug-2-line',             kw: 'bug 缺陷 调试' },
-    { cls: 'ri-braces-line',            kw: 'braces json 代码 对象' },
-    { cls: 'ri-brackets-line',          kw: 'brackets 数组 代码' },
-    { cls: 'ri-html5-line',             kw: 'html html5 前端 网页' },
-    { cls: 'ri-css3-line',              kw: 'css css3 样式 前端' },
-    { cls: 'ri-javascript-line',        kw: 'javascript js 前端 脚本' },
-    { cls: 'ri-reactjs-line',           kw: 'react 前端 框架' },
-    { cls: 'ri-vuejs-line',             kw: 'vue 前端 框架' },
-    { cls: 'ri-angularjs-line',         kw: 'angular 前端 框架' },
-    { cls: 'ri-python-line',            kw: 'python 脚本 编程' },
-    { cls: 'ri-database-line',          kw: 'database 数据库 db' },
-    { cls: 'ri-database-2-line',        kw: 'database 数据库' },
-    { cls: 'ri-table-line',             kw: 'table 表格 数据库' },
-    /* ── 服务器 / 运维 ── */
-    { cls: 'ri-server-line',            kw: 'server 服务器 主机' },
-    { cls: 'ri-server-2-line',          kw: 'server 服务器' },
-    { cls: 'ri-hard-drive-line',        kw: 'hard drive 硬盘 存储' },
-    { cls: 'ri-hard-drive-2-line',      kw: 'hard drive 硬盘' },
-    { cls: 'ri-cpu-line',               kw: 'cpu 处理器 性能' },
-    { cls: 'ri-ram-line',               kw: 'ram memory 内存' },
-    { cls: 'ri-cloud-line',             kw: 'cloud 云 服务器' },
-    { cls: 'ri-cloud-fill',             kw: 'cloud 云' },
-    { cls: 'ri-cloud-upload-line',      kw: 'cloud upload 上传 云' },
-    { cls: 'ri-cloud-download-line',    kw: 'cloud download 下载 云' },
-    { cls: 'ri-computer-line',          kw: 'computer 电脑 桌面' },
-    { cls: 'ri-monitor-line',           kw: 'monitor 显示器 监控' },
-    { cls: 'ri-router-line',            kw: 'router 路由器 网络' },
-    { cls: 'ri-wifi-line',              kw: 'wifi 无线 网络' },
-    { cls: 'ri-signal-wifi-line',       kw: 'wifi signal 信号 网络' },
-    { cls: 'ri-global-line',            kw: 'global 全球 网络 地球 internet' },
-    { cls: 'ri-earth-line',             kw: 'earth 地球 全球 网络' },
-    { cls: 'ri-network-line',           kw: 'network 网络 局域网' },
-    { cls: 'ri-docker-line',            kw: 'docker 容器 部署' },
-    { cls: 'ri-ubuntu-line',            kw: 'ubuntu linux 系统' },
-    { cls: 'ri-centos-line',            kw: 'centos linux 系统' },
-    { cls: 'ri-windows-line',           kw: 'windows 系统 微软' },
-    { cls: 'ri-apple-line',             kw: 'apple mac macos 苹果 系统' },
-    { cls: 'ri-android-line',           kw: 'android 安卓 手机' },
-    { cls: 'ri-linux-line',             kw: 'linux 系统 运维' },
-    /* ── 工具 / 应用 ── */
-    { cls: 'ri-tools-line',             kw: 'tools 工具 设置' },
-    { cls: 'ri-settings-line',          kw: 'settings 设置 配置' },
-    { cls: 'ri-settings-2-line',        kw: 'settings 设置' },
-    { cls: 'ri-settings-3-line',        kw: 'settings 设置 齿轮' },
-    { cls: 'ri-search-line',            kw: 'search 搜索 查找' },
-    { cls: 'ri-home-line',              kw: 'home 首页 主页' },
-    { cls: 'ri-home-2-line',            kw: 'home 首页' },
-    { cls: 'ri-dashboard-line',         kw: 'dashboard 仪表盘 工作台' },
-    { cls: 'ri-apps-line',              kw: 'apps 应用 工作台' },
-    { cls: 'ri-layout-grid-line',       kw: 'layout grid 布局 网格' },
-    { cls: 'ri-calendar-line',          kw: 'calendar 日历 计划 日程' },
-    { cls: 'ri-calendar-2-line',        kw: 'calendar 日历' },
-    { cls: 'ri-time-line',              kw: 'time 时间 时钟' },
-    { cls: 'ri-timer-line',             kw: 'timer 计时器 时间' },
-    { cls: 'ri-mail-line',              kw: 'mail email 邮件 邮箱' },
-    { cls: 'ri-mail-send-line',         kw: 'mail send 发送 邮件' },
-    { cls: 'ri-message-line',           kw: 'message 消息 聊天' },
-    { cls: 'ri-message-2-line',         kw: 'message 消息' },
-    { cls: 'ri-chat-1-line',            kw: 'chat 聊天 消息' },
-    { cls: 'ri-notification-line',      kw: 'notification 通知 提醒' },
-    { cls: 'ri-bell-line',              kw: 'bell 铃铛 通知' },
-    { cls: 'ri-user-line',              kw: 'user 用户 账号 人' },
-    { cls: 'ri-user-2-line',            kw: 'user 用户' },
-    { cls: 'ri-team-line',              kw: 'team 团队 协作 群组' },
-    { cls: 'ri-group-line',             kw: 'group 群组 团队' },
-    { cls: 'ri-lock-line',              kw: 'lock 锁 安全' },
-    { cls: 'ri-lock-2-line',            kw: 'lock 锁' },
-    { cls: 'ri-key-line',               kw: 'key 密钥 安全 密码' },
-    { cls: 'ri-key-2-line',             kw: 'key 密钥' },
-    { cls: 'ri-shield-line',            kw: 'shield 盾牌 安全 防护' },
-    { cls: 'ri-link',                   kw: 'link 链接 网址 url' },
-    { cls: 'ri-external-link-line',     kw: 'external link 外链 跳转' },
-    { cls: 'ri-chrome-line',            kw: 'chrome 浏览器' },
-    { cls: 'ri-firefox-line',           kw: 'firefox 浏览器' },
-    { cls: 'ri-edge-line',              kw: 'edge 浏览器 微软' },
-    /* ── 文件 / 文档 ── */
-    { cls: 'ri-file-line',              kw: 'file 文件' },
-    { cls: 'ri-file-2-line',            kw: 'file 文件' },
-    { cls: 'ri-file-text-line',         kw: 'file text 文本 文档 txt' },
-    { cls: 'ri-file-code-line',         kw: 'file code 代码文件' },
-    { cls: 'ri-file-pdf-line',          kw: 'pdf 文档' },
-    { cls: 'ri-file-excel-line',        kw: 'excel 表格 csv xls' },
-    { cls: 'ri-file-word-line',         kw: 'word 文档 doc' },
-    { cls: 'ri-file-ppt-line',          kw: 'ppt 演示 幻灯片' },
-    { cls: 'ri-file-zip-line',          kw: 'zip 压缩 归档' },
-    { cls: 'ri-file-image-line',        kw: 'image 图片 图像' },
-    { cls: 'ri-file-music-line',        kw: 'music 音乐 音频' },
-    { cls: 'ri-file-video-line',        kw: 'video 视频' },
-    { cls: 'ri-folder-line',            kw: 'folder 文件夹 目录' },
-    { cls: 'ri-folder-2-line',          kw: 'folder 文件夹' },
-    { cls: 'ri-folder-open-line',       kw: 'folder open 打开 文件夹' },
-    { cls: 'ri-book-line',              kw: 'book 书 文档 知识库' },
-    { cls: 'ri-book-2-line',            kw: 'book 书' },
-    { cls: 'ri-book-open-line',         kw: 'book open 阅读 文档' },
-    { cls: 'ri-article-line',           kw: 'article 文章 文档' },
-    { cls: 'ri-markdown-line',          kw: 'markdown md 文档' },
-    { cls: 'ri-edit-line',              kw: 'edit 编辑 修改' },
-    { cls: 'ri-edit-2-line',            kw: 'edit 编辑' },
-    { cls: 'ri-pencil-line',            kw: 'pencil 铅笔 编辑' },
-    { cls: 'ri-clipboard-line',         kw: 'clipboard 剪贴板 复制' },
-    { cls: 'ri-file-copy-line',         kw: 'copy 复制 文件' },
-    { cls: 'ri-download-line',          kw: 'download 下载' },
-    { cls: 'ri-upload-line',            kw: 'upload 上传' },
-    { cls: 'ri-save-line',              kw: 'save 保存 存储' },
-    /* ── AI / 数据 / 图表 ── */
-    { cls: 'ri-robot-line',             kw: 'robot ai 机器人 人工智能' },
-    { cls: 'ri-robot-2-line',           kw: 'robot ai 机器人' },
-    { cls: 'ri-brain-line',             kw: 'brain 大脑 ai 智能' },
-    { cls: 'ri-openai-line',            kw: 'openai chatgpt ai' },
-    { cls: 'ri-bard-line',              kw: 'bard gemini google ai' },
-    { cls: 'ri-flask-line',             kw: 'flask 实验 测试 烧瓶' },
-    { cls: 'ri-test-tube-line',         kw: 'test tube 测试 实验' },
-    { cls: 'ri-bar-chart-line',         kw: 'bar chart 柱状图 数据 统计' },
-    { cls: 'ri-bar-chart-2-line',       kw: 'bar chart 柱状图' },
-    { cls: 'ri-pie-chart-line',         kw: 'pie chart 饼图 数据' },
-    { cls: 'ri-pie-chart-2-line',       kw: 'pie chart 饼图' },
-    { cls: 'ri-line-chart-line',        kw: 'line chart 折线图 趋势' },
-    { cls: 'ri-donut-chart-line',       kw: 'donut chart 环形图' },
-    { cls: 'ri-data-line',              kw: 'data 数据 分析' },
-    { cls: 'ri-flow-chart',             kw: 'flow chart 流程图 流程' },
-    { cls: 'ri-mind-map',               kw: 'mind map 思维导图' },
+    /* ── 开发 / 代码  蓝紫色系 ── */
+    { cls: 'ri-git-branch-line',        kw: 'git branch 分支 代码 版本',    color: '#F05033' },
+    { cls: 'ri-git-commit-line',        kw: 'git commit 提交 代码',          color: '#F05033' },
+    { cls: 'ri-git-merge-line',         kw: 'git merge 合并',                color: '#9B59B6' },
+    { cls: 'ri-git-pull-request-line',  kw: 'pull request pr 代码审查',      color: '#3498DB' },
+    { cls: 'ri-github-line',            kw: 'github 代码 仓库',              color: '#E2E8F0' },
+    { cls: 'ri-gitlab-line',            kw: 'gitlab 代码 仓库',              color: '#FC6D26' },
+    { cls: 'ri-code-line',              kw: 'code 代码 编程',                color: '#80B8FF' },
+    { cls: 'ri-code-s-slash-line',      kw: 'code slash 代码 编程',          color: '#80B8FF' },
+    { cls: 'ri-terminal-line',          kw: 'terminal 终端 命令行 shell bash',color: '#6EE7B7' },
+    { cls: 'ri-terminal-box-line',      kw: 'terminal box 终端 命令',        color: '#6EE7B7' },
+    { cls: 'ri-bug-line',               kw: 'bug 缺陷 调试 debug',           color: '#F87171' },
+    { cls: 'ri-bug-2-line',             kw: 'bug 缺陷 调试',                 color: '#F87171' },
+    { cls: 'ri-braces-line',            kw: 'braces json 代码 对象',         color: '#FBBF24' },
+    { cls: 'ri-brackets-line',          kw: 'brackets 数组 代码',            color: '#FBBF24' },
+    { cls: 'ri-html5-line',             kw: 'html html5 前端 网页',          color: '#E44D26' },
+    { cls: 'ri-css3-line',              kw: 'css css3 样式 前端',            color: '#264DE4' },
+    { cls: 'ri-javascript-line',        kw: 'javascript js 前端 脚本',       color: '#F7DF1E' },
+    { cls: 'ri-reactjs-line',           kw: 'react 前端 框架',               color: '#61DAFB' },
+    { cls: 'ri-vuejs-line',             kw: 'vue 前端 框架',                 color: '#42B883' },
+    { cls: 'ri-angularjs-line',         kw: 'angular 前端 框架',             color: '#DD0031' },
+    { cls: 'ri-python-line',            kw: 'python 脚本 编程',              color: '#3776AB' },
+    { cls: 'ri-database-line',          kw: 'database 数据库 db',            color: '#4DB6AC' },
+    { cls: 'ri-database-2-line',        kw: 'database 数据库',               color: '#4DB6AC' },
+    { cls: 'ri-table-line',             kw: 'table 表格 数据库',             color: '#81C784' },
+    /* ── 服务器 / 运维  绿青色系 ── */
+    { cls: 'ri-server-line',            kw: 'server 服务器 主机',            color: '#6EE7B7' },
+    { cls: 'ri-server-2-line',          kw: 'server 服务器',                 color: '#6EE7B7' },
+    { cls: 'ri-hard-drive-line',        kw: 'hard drive 硬盘 存储',          color: '#94A3B8' },
+    { cls: 'ri-hard-drive-2-line',      kw: 'hard drive 硬盘',               color: '#94A3B8' },
+    { cls: 'ri-cpu-line',               kw: 'cpu 处理器 性能',               color: '#A78BFA' },
+    { cls: 'ri-ram-line',               kw: 'ram memory 内存',               color: '#A78BFA' },
+    { cls: 'ri-cloud-line',             kw: 'cloud 云 服务器',               color: '#60A5FA' },
+    { cls: 'ri-cloud-fill',             kw: 'cloud 云',                      color: '#60A5FA' },
+    { cls: 'ri-cloud-upload-line',      kw: 'cloud upload 上传 云',          color: '#34D399' },
+    { cls: 'ri-cloud-download-line',    kw: 'cloud download 下载 云',        color: '#34D399' },
+    { cls: 'ri-computer-line',          kw: 'computer 电脑 桌面',            color: '#94A3B8' },
+    { cls: 'ri-monitor-line',           kw: 'monitor 显示器 监控',           color: '#94A3B8' },
+    { cls: 'ri-router-line',            kw: 'router 路由器 网络',            color: '#FBBF24' },
+    { cls: 'ri-wifi-line',              kw: 'wifi 无线 网络',                color: '#38BDF8' },
+    { cls: 'ri-signal-wifi-line',       kw: 'wifi signal 信号 网络',         color: '#38BDF8' },
+    { cls: 'ri-global-line',            kw: 'global 全球 网络 地球 internet',color: '#66D1FF' },
+    { cls: 'ri-earth-line',             kw: 'earth 地球 全球 网络',          color: '#66D1FF' },
+    { cls: 'ri-network-line',           kw: 'network 网络 局域网',           color: '#38BDF8' },
+    { cls: 'ri-docker-line',            kw: 'docker 容器 部署',              color: '#2496ED' },
+    { cls: 'ri-ubuntu-line',            kw: 'ubuntu linux 系统',             color: '#E95420' },
+    { cls: 'ri-centos-line',            kw: 'centos linux 系统',             color: '#932279' },
+    { cls: 'ri-windows-line',           kw: 'windows 系统 微软',             color: '#0078D4' },
+    { cls: 'ri-apple-line',             kw: 'apple mac macos 苹果 系统',     color: '#E2E8F0' },
+    { cls: 'ri-android-line',           kw: 'android 安卓 手机',             color: '#3DDC84' },
+    { cls: 'ri-linux-line',             kw: 'linux 系统 运维',               color: '#FBBF24' },
+    /* ── 工具 / 应用  橙黄色系 ── */
+    { cls: 'ri-tools-line',             kw: 'tools 工具 设置',               color: '#FBBF24' },
+    { cls: 'ri-settings-line',          kw: 'settings 设置 配置',            color: '#94A3B8' },
+    { cls: 'ri-settings-2-line',        kw: 'settings 设置',                 color: '#94A3B8' },
+    { cls: 'ri-settings-3-line',        kw: 'settings 设置 齿轮',            color: '#94A3B8' },
+    { cls: 'ri-search-line',            kw: 'search 搜索 查找',              color: '#80B8FF' },
+    { cls: 'ri-home-line',              kw: 'home 首页 主页',                color: '#6EE7B7' },
+    { cls: 'ri-home-2-line',            kw: 'home 首页',                     color: '#6EE7B7' },
+    { cls: 'ri-dashboard-line',         kw: 'dashboard 仪表盘 工作台',       color: '#A78BFA' },
+    { cls: 'ri-apps-line',              kw: 'apps 应用 工作台',              color: '#F472B6' },
+    { cls: 'ri-layout-grid-line',       kw: 'layout grid 布局 网格',         color: '#80B8FF' },
+    { cls: 'ri-calendar-line',          kw: 'calendar 日历 计划 日程',       color: '#F87171' },
+    { cls: 'ri-calendar-2-line',        kw: 'calendar 日历',                 color: '#F87171' },
+    { cls: 'ri-time-line',              kw: 'time 时间 时钟',                color: '#FBBF24' },
+    { cls: 'ri-timer-line',             kw: 'timer 计时器 时间',             color: '#FBBF24' },
+    { cls: 'ri-mail-line',              kw: 'mail email 邮件 邮箱',          color: '#60A5FA' },
+    { cls: 'ri-mail-send-line',         kw: 'mail send 发送 邮件',           color: '#60A5FA' },
+    { cls: 'ri-message-line',           kw: 'message 消息 聊天',             color: '#34D399' },
+    { cls: 'ri-message-2-line',         kw: 'message 消息',                  color: '#34D399' },
+    { cls: 'ri-chat-1-line',            kw: 'chat 聊天 消息',                color: '#34D399' },
+    { cls: 'ri-notification-line',      kw: 'notification 通知 提醒',        color: '#FB923C' },
+    { cls: 'ri-bell-line',              kw: 'bell 铃铛 通知',                color: '#FB923C' },
+    { cls: 'ri-user-line',              kw: 'user 用户 账号 人',             color: '#80B8FF' },
+    { cls: 'ri-user-2-line',            kw: 'user 用户',                     color: '#80B8FF' },
+    { cls: 'ri-team-line',              kw: 'team 团队 协作 群组',           color: '#A78BFA' },
+    { cls: 'ri-group-line',             kw: 'group 群组 团队',               color: '#A78BFA' },
+    { cls: 'ri-lock-line',              kw: 'lock 锁 安全',                  color: '#F87171' },
+    { cls: 'ri-lock-2-line',            kw: 'lock 锁',                       color: '#F87171' },
+    { cls: 'ri-key-line',               kw: 'key 密钥 安全 密码',            color: '#FBBF24' },
+    { cls: 'ri-key-2-line',             kw: 'key 密钥',                      color: '#FBBF24' },
+    { cls: 'ri-shield-line',            kw: 'shield 盾牌 安全 防护',         color: '#34D399' },
+    { cls: 'ri-link',                   kw: 'link 链接 网址 url',            color: '#60A5FA' },
+    { cls: 'ri-external-link-line',     kw: 'external link 外链 跳转',       color: '#60A5FA' },
+    { cls: 'ri-chrome-line',            kw: 'chrome 浏览器',                 color: '#FBBF24' },
+    { cls: 'ri-firefox-line',           kw: 'firefox 浏览器',                color: '#FF9500' },
+    { cls: 'ri-edge-line',              kw: 'edge 浏览器 微软',              color: '#0078D4' },
+    /* ── 文件 / 文档  紫色系 ── */
+    { cls: 'ri-file-line',              kw: 'file 文件',                     color: '#94A3B8' },
+    { cls: 'ri-file-2-line',            kw: 'file 文件',                     color: '#94A3B8' },
+    { cls: 'ri-file-text-line',         kw: 'file text 文本 文档 txt',       color: '#E2E8F0' },
+    { cls: 'ri-file-code-line',         kw: 'file code 代码文件',            color: '#80B8FF' },
+    { cls: 'ri-file-pdf-line',          kw: 'pdf 文档',                      color: '#F87171' },
+    { cls: 'ri-file-excel-line',        kw: 'excel 表格 csv xls',            color: '#21A366' },
+    { cls: 'ri-file-word-line',         kw: 'word 文档 doc',                 color: '#2B579A' },
+    { cls: 'ri-file-ppt-line',          kw: 'ppt 演示 幻灯片',               color: '#D24726' },
+    { cls: 'ri-file-zip-line',          kw: 'zip 压缩 归档',                 color: '#FBBF24' },
+    { cls: 'ri-file-image-line',        kw: 'image 图片 图像',               color: '#F472B6' },
+    { cls: 'ri-file-music-line',        kw: 'music 音乐 音频',               color: '#A78BFA' },
+    { cls: 'ri-file-video-line',        kw: 'video 视频',                    color: '#FB923C' },
+    { cls: 'ri-folder-line',            kw: 'folder 文件夹 目录',            color: '#FBBF24' },
+    { cls: 'ri-folder-2-line',          kw: 'folder 文件夹',                 color: '#FBBF24' },
+    { cls: 'ri-folder-open-line',       kw: 'folder open 打开 文件夹',       color: '#FB923C' },
+    { cls: 'ri-book-line',              kw: 'book 书 文档 知识库',           color: '#C084FC' },
+    { cls: 'ri-book-2-line',            kw: 'book 书',                       color: '#C084FC' },
+    { cls: 'ri-book-open-line',         kw: 'book open 阅读 文档',           color: '#C084FC' },
+    { cls: 'ri-article-line',           kw: 'article 文章 文档',             color: '#E2E8F0' },
+    { cls: 'ri-markdown-line',          kw: 'markdown md 文档',              color: '#80B8FF' },
+    { cls: 'ri-edit-line',              kw: 'edit 编辑 修改',                color: '#6EE7B7' },
+    { cls: 'ri-edit-2-line',            kw: 'edit 编辑',                     color: '#6EE7B7' },
+    { cls: 'ri-pencil-line',            kw: 'pencil 铅笔 编辑',              color: '#FBBF24' },
+    { cls: 'ri-clipboard-line',         kw: 'clipboard 剪贴板 复制',         color: '#94A3B8' },
+    { cls: 'ri-file-copy-line',         kw: 'copy 复制 文件',                color: '#94A3B8' },
+    { cls: 'ri-download-line',          kw: 'download 下载',                 color: '#34D399' },
+    { cls: 'ri-upload-line',            kw: 'upload 上传',                   color: '#60A5FA' },
+    { cls: 'ri-save-line',              kw: 'save 保存 存储',                color: '#6EE7B7' },
+    /* ── AI / 数据  玫红色系 ── */
+    { cls: 'ri-robot-line',             kw: 'robot ai 机器人 人工智能',      color: '#F472B6' },
+    { cls: 'ri-robot-2-line',           kw: 'robot ai 机器人',               color: '#F472B6' },
+    { cls: 'ri-brain-line',             kw: 'brain 大脑 ai 智能',            color: '#C084FC' },
+    { cls: 'ri-openai-line',            kw: 'openai chatgpt ai',             color: '#E2E8F0' },
+    { cls: 'ri-bard-line',              kw: 'bard gemini google ai',         color: '#4285F4' },
+    { cls: 'ri-flask-line',             kw: 'flask 实验 测试 烧瓶',          color: '#A78BFA' },
+    { cls: 'ri-test-tube-line',         kw: 'test tube 测试 实验',           color: '#A78BFA' },
+    { cls: 'ri-bar-chart-line',         kw: 'bar chart 柱状图 数据 统计',    color: '#60A5FA' },
+    { cls: 'ri-bar-chart-2-line',       kw: 'bar chart 柱状图',              color: '#60A5FA' },
+    { cls: 'ri-pie-chart-line',         kw: 'pie chart 饼图 数据',           color: '#F472B6' },
+    { cls: 'ri-pie-chart-2-line',       kw: 'pie chart 饼图',                color: '#F472B6' },
+    { cls: 'ri-line-chart-line',        kw: 'line chart 折线图 趋势',        color: '#34D399' },
+    { cls: 'ri-donut-chart-line',       kw: 'donut chart 环形图',            color: '#FBBF24' },
+    { cls: 'ri-data-line',              kw: 'data 数据 分析',                color: '#80B8FF' },
+    { cls: 'ri-flow-chart',             kw: 'flow chart 流程图 流程',        color: '#FB923C' },
+    { cls: 'ri-mind-map',               kw: 'mind map 思维导图',             color: '#C084FC' },
     /* ── 媒体 / 通讯 ── */
-    { cls: 'ri-video-line',             kw: 'video 视频 媒体' },
-    { cls: 'ri-video-chat-line',        kw: 'video chat 视频会议' },
-    { cls: 'ri-camera-line',            kw: 'camera 相机 截图' },
-    { cls: 'ri-image-line',             kw: 'image 图片 图像' },
-    { cls: 'ri-gallery-line',           kw: 'gallery 图库 相册' },
-    { cls: 'ri-music-line',             kw: 'music 音乐 音频' },
-    { cls: 'ri-headphone-line',         kw: 'headphone 耳机 音频' },
-    { cls: 'ri-phone-line',             kw: 'phone 电话 手机' },
-    { cls: 'ri-smartphone-line',        kw: 'smartphone 手机 移动' },
-    { cls: 'ri-tv-line',                kw: 'tv 电视 显示器' },
-    { cls: 'ri-printer-line',           kw: 'printer 打印机' },
-    { cls: 'ri-scan-line',              kw: 'scan 扫描 二维码' },
-    { cls: 'ri-qr-code-line',           kw: 'qr code 二维码' },
+    { cls: 'ri-video-line',             kw: 'video 视频 媒体',               color: '#F87171' },
+    { cls: 'ri-video-chat-line',        kw: 'video chat 视频会议',           color: '#60A5FA' },
+    { cls: 'ri-camera-line',            kw: 'camera 相机 截图',              color: '#94A3B8' },
+    { cls: 'ri-image-line',             kw: 'image 图片 图像',               color: '#F472B6' },
+    { cls: 'ri-gallery-line',           kw: 'gallery 图库 相册',             color: '#F472B6' },
+    { cls: 'ri-music-line',             kw: 'music 音乐 音频',               color: '#A78BFA' },
+    { cls: 'ri-headphone-line',         kw: 'headphone 耳机 音频',           color: '#A78BFA' },
+    { cls: 'ri-phone-line',             kw: 'phone 电话 手机',               color: '#34D399' },
+    { cls: 'ri-smartphone-line',        kw: 'smartphone 手机 移动',          color: '#94A3B8' },
+    { cls: 'ri-tv-line',                kw: 'tv 电视 显示器',                color: '#60A5FA' },
+    { cls: 'ri-printer-line',           kw: 'printer 打印机',                color: '#94A3B8' },
+    { cls: 'ri-scan-line',              kw: 'scan 扫描 二维码',              color: '#FBBF24' },
+    { cls: 'ri-qr-code-line',           kw: 'qr code 二维码',               color: '#E2E8F0' },
     /* ── 协作 / 项目管理 ── */
-    { cls: 'ri-task-line',              kw: 'task 任务 待办' },
-    { cls: 'ri-todo-line',              kw: 'todo 待办 任务' },
-    { cls: 'ri-checkbox-line',          kw: 'checkbox 复选框 完成' },
-    { cls: 'ri-list-check',             kw: 'list check 清单 任务' },
-    { cls: 'ri-kanban-view',            kw: 'kanban 看板 项目' },
-    { cls: 'ri-roadmap-line',           kw: 'roadmap 路线图 计划' },
-    { cls: 'ri-focus-line',             kw: 'focus 专注 目标' },
-    { cls: 'ri-flag-line',              kw: 'flag 旗 标记 里程碑' },
-    { cls: 'ri-flag-2-line',            kw: 'flag 旗 标记' },
-    { cls: 'ri-slack-line',             kw: 'slack 聊天 协作' },
-    { cls: 'ri-notion-line',            kw: 'notion 笔记 文档' },
-    { cls: 'ri-figma-line',             kw: 'figma 设计 ui' },
-    { cls: 'ri-trello-line',            kw: 'trello 看板 项目管理' },
-    { cls: 'ri-confluence-line',        kw: 'confluence 文档 wiki' },
-    { cls: 'ri-zoom-line',              kw: 'zoom 会议 视频会议' },
-    { cls: 'ri-microsoft-line',         kw: 'microsoft 微软 office' },
-    { cls: 'ri-google-line',            kw: 'google 谷歌' },
+    { cls: 'ri-task-line',              kw: 'task 任务 待办',                color: '#60A5FA' },
+    { cls: 'ri-todo-line',              kw: 'todo 待办 任务',                color: '#60A5FA' },
+    { cls: 'ri-checkbox-line',          kw: 'checkbox 复选框 完成',          color: '#34D399' },
+    { cls: 'ri-list-check',             kw: 'list check 清单 任务',          color: '#34D399' },
+    { cls: 'ri-kanban-view',            kw: 'kanban 看板 项目',              color: '#A78BFA' },
+    { cls: 'ri-roadmap-line',           kw: 'roadmap 路线图 计划',           color: '#FB923C' },
+    { cls: 'ri-focus-line',             kw: 'focus 专注 目标',               color: '#F87171' },
+    { cls: 'ri-flag-line',              kw: 'flag 旗 标记 里程碑',           color: '#F87171' },
+    { cls: 'ri-flag-2-line',            kw: 'flag 旗 标记',                  color: '#F87171' },
+    { cls: 'ri-slack-line',             kw: 'slack 聊天 协作',               color: '#4A154B' },
+    { cls: 'ri-notion-line',            kw: 'notion 笔记 文档',              color: '#E2E8F0' },
+    { cls: 'ri-figma-line',             kw: 'figma 设计 ui',                 color: '#F24E1E' },
+    { cls: 'ri-trello-line',            kw: 'trello 看板 项目管理',          color: '#0052CC' },
+    { cls: 'ri-confluence-line',        kw: 'confluence 文档 wiki',          color: '#0052CC' },
+    { cls: 'ri-zoom-line',              kw: 'zoom 会议 视频会议',            color: '#2D8CFF' },
+    { cls: 'ri-microsoft-line',         kw: 'microsoft 微软 office',         color: '#F25022' },
+    { cls: 'ri-google-line',            kw: 'google 谷歌',                   color: '#4285F4' },
     /* ── 常用操作 / 通用 ── */
-    { cls: 'ri-star-line',              kw: 'star 星 收藏 重要 喜欢' },
-    { cls: 'ri-heart-line',             kw: 'heart 心 喜欢 收藏' },
-    { cls: 'ri-bookmark-line',          kw: 'bookmark 书签 收藏' },
-    { cls: 'ri-tag-line',               kw: 'tag 标签' },
-    { cls: 'ri-price-tag-line',         kw: 'price tag 价格 标签' },
-    { cls: 'ri-share-line',             kw: 'share 分享' },
-    { cls: 'ri-share-forward-line',     kw: 'share forward 分享 转发' },
-    { cls: 'ri-delete-bin-line',        kw: 'delete bin 删除 垃圾桶' },
-    { cls: 'ri-add-line',               kw: 'add plus 添加 新建 加号' },
-    { cls: 'ri-subtract-line',          kw: 'subtract minus 减少' },
-    { cls: 'ri-check-line',             kw: 'check 完成 确认 勾选' },
-    { cls: 'ri-close-line',             kw: 'close 关闭 取消 叉' },
-    { cls: 'ri-information-line',       kw: 'info information 信息 提示' },
-    { cls: 'ri-error-warning-line',     kw: 'warning error 警告 注意' },
-    { cls: 'ri-question-line',          kw: 'question 问题 帮助 疑问' },
-    { cls: 'ri-refresh-line',           kw: 'refresh 刷新 重载' },
-    { cls: 'ri-loop-left-line',         kw: 'loop sync 同步 循环' },
-    { cls: 'ri-arrow-right-line',       kw: 'arrow right 箭头 跳转' },
-    { cls: 'ri-arrow-left-line',        kw: 'arrow left 返回 箭头' },
-    { cls: 'ri-arrow-up-line',          kw: 'arrow up 向上 箭头' },
-    { cls: 'ri-arrow-down-line',        kw: 'arrow down 向下 箭头' },
-    { cls: 'ri-more-line',              kw: 'more 更多 菜单' },
-    { cls: 'ri-more-2-line',            kw: 'more 更多' },
-    { cls: 'ri-menu-line',              kw: 'menu 菜单 导航' },
-    { cls: 'ri-grid-line',              kw: 'grid 网格 布局' },
-    { cls: 'ri-list-unordered',         kw: 'list 列表 无序' },
-    { cls: 'ri-eye-line',               kw: 'eye 眼睛 查看 可见' },
-    { cls: 'ri-eye-off-line',           kw: 'eye off 隐藏 不可见' },
-    { cls: 'ri-thumb-up-line',          kw: 'thumb up 点赞 好评' },
-    { cls: 'ri-map-pin-line',           kw: 'map pin 地图 位置 定位' },
-    { cls: 'ri-compass-line',           kw: 'compass 指南针 导航' },
-    { cls: 'ri-speed-line',             kw: 'speed 速度 性能' },
-    { cls: 'ri-pulse-line',             kw: 'pulse 脉冲 监控 健康' },
+    { cls: 'ri-star-line',              kw: 'star 星 收藏 重要 喜欢',        color: '#FBBF24' },
+    { cls: 'ri-heart-line',             kw: 'heart 心 喜欢 收藏',            color: '#F87171' },
+    { cls: 'ri-bookmark-line',          kw: 'bookmark 书签 收藏',            color: '#FB923C' },
+    { cls: 'ri-tag-line',               kw: 'tag 标签',                      color: '#A78BFA' },
+    { cls: 'ri-price-tag-line',         kw: 'price tag 价格 标签',           color: '#34D399' },
+    { cls: 'ri-share-line',             kw: 'share 分享',                    color: '#60A5FA' },
+    { cls: 'ri-share-forward-line',     kw: 'share forward 分享 转发',       color: '#60A5FA' },
+    { cls: 'ri-delete-bin-line',        kw: 'delete bin 删除 垃圾桶',        color: '#F87171' },
+    { cls: 'ri-add-line',               kw: 'add plus 添加 新建 加号',       color: '#34D399' },
+    { cls: 'ri-subtract-line',          kw: 'subtract minus 减少',           color: '#94A3B8' },
+    { cls: 'ri-check-line',             kw: 'check 完成 确认 勾选',          color: '#34D399' },
+    { cls: 'ri-close-line',             kw: 'close 关闭 取消 叉',            color: '#F87171' },
+    { cls: 'ri-information-line',       kw: 'info information 信息 提示',    color: '#60A5FA' },
+    { cls: 'ri-error-warning-line',     kw: 'warning error 警告 注意',       color: '#FBBF24' },
+    { cls: 'ri-question-line',          kw: 'question 问题 帮助 疑问',       color: '#A78BFA' },
+    { cls: 'ri-refresh-line',           kw: 'refresh 刷新 重载',             color: '#34D399' },
+    { cls: 'ri-loop-left-line',         kw: 'loop sync 同步 循环',           color: '#60A5FA' },
+    { cls: 'ri-arrow-right-line',       kw: 'arrow right 箭头 跳转',         color: '#80B8FF' },
+    { cls: 'ri-arrow-left-line',        kw: 'arrow left 返回 箭头',          color: '#80B8FF' },
+    { cls: 'ri-arrow-up-line',          kw: 'arrow up 向上 箭头',            color: '#80B8FF' },
+    { cls: 'ri-arrow-down-line',        kw: 'arrow down 向下 箭头',          color: '#80B8FF' },
+    { cls: 'ri-more-line',              kw: 'more 更多 菜单',                color: '#94A3B8' },
+    { cls: 'ri-more-2-line',            kw: 'more 更多',                     color: '#94A3B8' },
+    { cls: 'ri-menu-line',              kw: 'menu 菜单 导航',                color: '#94A3B8' },
+    { cls: 'ri-grid-line',              kw: 'grid 网格 布局',                color: '#80B8FF' },
+    { cls: 'ri-list-unordered',         kw: 'list 列表 无序',                color: '#94A3B8' },
+    { cls: 'ri-eye-line',               kw: 'eye 眼睛 查看 可见',            color: '#60A5FA' },
+    { cls: 'ri-eye-off-line',           kw: 'eye off 隐藏 不可见',           color: '#94A3B8' },
+    { cls: 'ri-thumb-up-line',          kw: 'thumb up 点赞 好评',            color: '#FBBF24' },
+    { cls: 'ri-map-pin-line',           kw: 'map pin 地图 位置 定位',        color: '#F87171' },
+    { cls: 'ri-compass-line',           kw: 'compass 指南针 导航',           color: '#34D399' },
+    { cls: 'ri-speed-line',             kw: 'speed 速度 性能',               color: '#FB923C' },
+    { cls: 'ri-pulse-line',             kw: 'pulse 脉冲 监控 健康',          color: '#F87171' },
   ];
 
-  var currentIconCls = '';   /* 当前选中的 icon class */
+  var currentIconCls   = '';  /* 当前选中的 icon class */
+  var currentIconColor = '';  /* 当前选中的 icon color */
 
   /**
-   * 更新预览区域。
-   * @param {string} cls  iconfont class，空字符串表示无图标（显示"默认"）
+   * 根据 class 查找对应颜色。
+   * @param {string} cls
+   * @returns {string} hex color 或 ''
    */
-  function updateIconPreview(cls) {
-    var wrap    = document.getElementById('iconPreviewWrap');
-    var iconEl  = document.getElementById('iconPreviewEl');
-    var noneEl  = document.getElementById('iconPreviewNone');
+  function getIconColor(cls) {
+    if (!cls) return '';
+    var found = ICON_LIST.find(function (ic) { return ic.cls === cls; });
+    return found ? (found.color || '') : '';
+  }
+
+  /**
+   * 更新预览区域，并将 "cls|color" 写入隐藏字段。
+   * @param {string} cls    Remix Icon class，空字符串表示清除
+   * @param {string} [color] 颜色，不传则自动从 ICON_LIST 查找
+   */
+  function updateIconPreview(cls, color) {
+    var wrap      = document.getElementById('iconPreviewWrap');
+    var iconEl    = document.getElementById('iconPreviewEl');
     var iconInput = document.getElementById('itemIcon');
     if (!wrap) return;
 
-    currentIconCls = cls || '';
+    currentIconCls   = cls || '';
+    currentIconColor = color || getIconColor(cls) || '#80B8FF';
 
     if (cls) {
-      /* Remix Icon：直接用 ri-xxx class，无需 iconfont 基础类 */
-      iconEl.className = 'icon-preview-icon ' + cls;
+      iconEl.className  = 'icon-preview-icon ' + cls;
+      iconEl.style.color = currentIconColor;
       wrap.classList.add('has-icon');
     } else {
-      iconEl.className = 'icon-preview-icon';
+      iconEl.className  = 'icon-preview-icon';
+      iconEl.style.color = '';
       wrap.classList.remove('has-icon');
+      currentIconColor = '';
     }
-    if (iconInput) iconInput.value = cls || '';
 
-    /* 同步网格中的选中状态 */
+    /* 存储格式："ri-xxx-line|#RRGGBB"，兼容旧数据（无颜色部分） */
+    if (iconInput) {
+      iconInput.value = cls ? (cls + '|' + currentIconColor) : '';
+    }
+
+    /* 同步网格选中状态 */
     var grid = document.getElementById('iconPickerGrid');
     if (grid) {
       grid.querySelectorAll('.icon-picker-item').forEach(function (btn) {
@@ -810,12 +828,17 @@
     }
   }
 
-  /* 暴露给 app.js 调用（openItemModal 回填图标时使用） */
-  window.updateIconPreview = updateIconPreview;
+  /* 暴露给 app.js 调用（openItemModal 回填图标时使用）
+     app.js 存的 item.icon 格式可能是 "ri-xxx|#color" 或旧的 "ri-xxx" */
+  window.updateIconPreview = function (iconValue) {
+    if (!iconValue) { updateIconPreview('', ''); return; }
+    var parts = iconValue.split('|');
+    updateIconPreview(parts[0] || '', parts[1] || '');
+  };
 
   /**
-   * 渲染图标网格。
-   * @param {string} keyword  搜索关键词，空字符串时显示全部
+   * 渲染图标网格（彩色版）。
+   * @param {string} keyword  搜索关键词
    */
   function renderIconGrid(keyword) {
     var grid = document.getElementById('iconPickerGrid');
@@ -842,13 +865,31 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'icon-picker-item' + (ic.cls === currentIconCls ? ' selected' : '');
-      btn.dataset.cls = ic.cls;
-      btn.title = ic.cls.replace('ri-', '').replace('-line', '') + '  |  ' + ic.kw;
-      btn.innerHTML = '<i class="' + ic.cls + '"></i>';
+      btn.dataset.cls   = ic.cls;
+      btn.dataset.color = ic.color || '#80B8FF';
+      btn.title = ic.cls.replace('ri-', '').replace(/-line$/, '') + '  |  ' + ic.kw;
+
+      /* 图标用对应颜色渲染 */
+      btn.innerHTML = '<i class="' + ic.cls + '" style="color:' + (ic.color || '#80B8FF') + '"></i>';
+
+      /* 选中时边框也用该颜色 */
+      if (ic.cls === currentIconCls) {
+        btn.style.borderColor = ic.color || '#80B8FF';
+        btn.style.background  = (ic.color || '#80B8FF') + '22';
+      }
+
       btn.addEventListener('click', function () {
-        var newCls = (currentIconCls === ic.cls) ? '' : ic.cls;  /* 再次点击取消选中 */
-        updateIconPreview(newCls);
+        var newCls = (currentIconCls === ic.cls) ? '' : ic.cls;
+        updateIconPreview(newCls, newCls ? (ic.color || '#80B8FF') : '');
+        /* 更新所有按钮边框状态 */
+        grid.querySelectorAll('.icon-picker-item').forEach(function (b) {
+          var isSelected = b.dataset.cls === newCls;
+          b.classList.toggle('selected', isSelected);
+          b.style.borderColor = isSelected ? (b.dataset.color || '') : '';
+          b.style.background  = isSelected ? ((b.dataset.color || '#80B8FF') + '22') : '';
+        });
       });
+
       grid.appendChild(btn);
     });
   }

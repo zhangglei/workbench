@@ -891,11 +891,19 @@
       var hasContent = !!(it.content && it.content.trim());
       var showContent = it.showContent !== false;
       var typeClass = hasUrl && hasContent ? 'item-type-both' : (hasUrl ? 'item-type-link' : 'item-type-text');
-      /* 图标：优先用用户选择的 iconfont，否则用默认 emoji */
+      /* 图标：优先用用户选择的 Remix Icon，格式 "ri-xxx-line|#color" 或旧版 "ri-xxx-line" */
       var customIcon = (it.icon && it.icon.trim()) ? it.icon : '';
-      var typeIconHtml = customIcon
-        ? '<i class="' + escapeHtml(customIcon) + ' item-iconfont-icon"></i>'
-        : (hasUrl && hasContent ? '<span class="item-emoji-icon">🔗</span>' : (hasUrl ? '<span class="item-emoji-icon">🔗</span>' : '<span class="item-emoji-icon">📄</span>'));
+      var typeIconHtml;
+      if (customIcon) {
+        var iconParts = customIcon.split('|');
+        var iconCls   = iconParts[0] || '';
+        var iconColor = iconParts[1] || '#80B8FF';
+        typeIconHtml = '<i class="' + escapeHtml(iconCls) + ' item-iconfont-icon" style="color:' + escapeHtml(iconColor) + '"></i>';
+      } else {
+        typeIconHtml = hasUrl
+          ? '<span class="item-emoji-icon">🔗</span>'
+          : '<span class="item-emoji-icon">📄</span>';
+      }
       var row = document.createElement('div');
       row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '');
       row.dataset.itemId = it.id;

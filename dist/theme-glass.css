@@ -1668,22 +1668,23 @@ mark {
    §38  条目列表 iconfont 图标样式
    ================================================================ */
 
-/* iconfont 图标（用户自选） */
+/* Remix Icon 图标（用户自选，颜色由 inline style 控制） */
 .item-iconfont-icon {
   font-size: 15px !important;
   line-height: 1 !important;
-  color: var(--primary) !important;
+  /* color 由 JS inline style 注入，此处不覆盖 */
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 20px !important;
   height: 20px !important;
   flex-shrink: 0 !important;
-  transition: color var(--ease) !important;
+  transition: filter var(--ease) !important;
+  filter: drop-shadow(0 0 3px currentColor);
 }
 
 .module-item:hover .item-iconfont-icon {
-  color: #66D1FF !important;
+  filter: drop-shadow(0 0 6px currentColor) brightness(1.2) !important;
 }
 
 /* 默认 emoji 图标 */
