@@ -1,0 +1,705 @@
+/* ================================================================
+   theme-glass.css — Glass UI 暗色主题覆盖层
+   ----------------------------------------------------------------
+   策略：只追加/覆盖规则，不修改 styles.css 原有代码。
+   所有选择器权重 ≥ 原有规则，通过更具体的选择器或变量覆盖实现。
+   ================================================================ */
+
+
+/* ================================================================
+   §1  全局 CSS 变量（Dark + Glass）
+   ================================================================ */
+:root {
+  /* ── 背景蒙版 ── */
+  --mask-opacity: 0.45;           /* 蒙版透明度，背景亮时调小 */
+
+  /* ── Glass 卡片 ── */
+  --card-bg:             rgba(255, 255, 255, 0.10);
+  --card-border:         rgba(255, 255, 255, 0.18);
+  --card-radius:         14px;
+  --card-shadow:         0 4px 16px rgba(0, 0, 0, 0.22);
+  --card-shadow-hover:   0 8px 28px rgba(0, 0, 0, 0.32);
+  --card-blur:           blur(14px);
+
+  /* ── 主题色 ── */
+  --primary:             #80B8FF;
+  --primary-hover:       #4096FF;
+
+  /* ── 文字（暗色背景下） ── */
+  --text-title:          #FFFFFF;
+  --text-content:        #E2E8F0;
+  --text-muted:          #94A3B8;
+
+  /* ── 顶栏 ── */
+  --header-bg:           rgba(10, 12, 20, 0.72);
+  --header-border:       rgba(255, 255, 255, 0.08);
+
+  /* ── 分割线 ── */
+  --divider:             rgba(255, 255, 255, 0.10);
+
+  /* ── 输入框 ── */
+  --input-bg:            rgba(255, 255, 255, 0.08);
+  --input-border:        rgba(255, 255, 255, 0.15);
+  --input-focus-glow:    0 0 0 3px rgba(128, 184, 255, 0.30);
+
+  /* ── 按钮 ── */
+  --btn-ghost-bg:        rgba(255, 255, 255, 0.08);
+  --btn-ghost-hover:     rgba(255, 255, 255, 0.14);
+
+  /* ── 过渡 ── */
+  --ease:                0.22s cubic-bezier(.4, 0, .2, 1);
+
+  /* ── 标签颜色（模块分组徽标） ── */
+  --tag-dev:    rgba(128, 184, 255, 0.18);
+  --tag-server: rgba(100, 220, 160, 0.18);
+  --tag-tools:  rgba(255, 190, 90,  0.18);
+  --tag-docs:   rgba(200, 140, 255, 0.18);
+  --tag-ai:     rgba(255, 120, 120, 0.18);
+}
+
+
+/* ================================================================
+   §2  背景蒙版
+   覆盖 styles.css 中原有的 body::before
+   ================================================================ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  /* 双层渐变：顶部稍深，底部渐浅，使内容更易读 */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, var(--mask-opacity))   0%,
+      rgba(0, 0, 0, calc(var(--mask-opacity) * 0.75)) 100%
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 主容器置于蒙版之上 */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ================================================================
+   §3  顶部导航栏 — Glass
+   ================================================================ */
+.header {
+  background: var(--header-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid var(--header-border) !important;
+  border-radius: 0 !important;          /* 去掉原有圆角，顶栏全宽更干净 */
+  box-shadow: 0 1px 0 var(--header-border) !important;
+  /* 顶部细彩线（Raycast 风格） */
+  border-top: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* 彩色顶线用伪元素实现，不影响原布局 */
+.header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, #b96eff 50%, #66D1FF 100%);
+  pointer-events: none;
+}
+
+/* 标题文字 */
+.title,
+.editable-title-wrapper .title-text {
+  color: var(--text-title) !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+  font-weight: 600 !important;
+  font-size: 1.15rem !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* 用户名 */
+.user-area .user-name {
+  color: var(--text-content) !important;
+  font-size: 0.85rem !important;
+}
+
+
+/* ================================================================
+   §4  搜索框 — Glass 风格
+   ================================================================ */
+.search-input {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-title) !important;
+  border-radius: 8px !important;
+  padding: 7px 14px 7px 36px !important; /* 为图标留空间 */
+  font-size: 0.875rem !important;
+  min-width: 200px !important;
+  box-shadow: none !important;
+  transition: border-color var(--ease), box-shadow var(--ease) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cline x1='11' y1='11' x2='15' y2='15'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: 11px center !important;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.search-input:focus {
+  background-color: rgba(255,255,255,0.12) !important;
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+  outline: none !important;
+}
+
+
+/* ================================================================
+   §5  Glass 卡片（覆盖所有 .card）
+   ================================================================ */
+.card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: var(--card-radius) !important;
+  box-shadow: var(--card-shadow) !important;
+  backdrop-filter: var(--card-blur) !important;
+  -webkit-backdrop-filter: var(--card-blur) !important;
+  color: var(--text-content) !important;
+  transition: transform var(--ease), box-shadow var(--ease) !important;
+}
+
+.card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--card-shadow-hover) !important;
+}
+
+/* 拖拽中的卡片视觉反馈 */
+.card.dragging,
+.module-card.dragging {
+  opacity: 0.55;
+  transform: scale(0.97) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45) !important;
+  cursor: grabbing !important;
+}
+
+/* 拖拽放置目标高亮 */
+.module-card.drag-over,
+.module-item.drag-over {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 3px !important;
+  background: rgba(128, 184, 255, 0.08) !important;
+}
+
+/* @supports 降级：不支持 backdrop-filter 时使用深色背景 */
+@supports not (backdrop-filter: blur(1px)) {
+  .card {
+    background: rgba(18, 22, 36, 0.82) !important;
+  }
+}
+
+
+/* ================================================================
+   §6  模块卡片头部（card-header）
+   ================================================================ */
+.module-card .card-header {
+  border-bottom: 1px solid var(--divider) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+/* 卡片标题 */
+.card-title {
+  color: var(--text-title) !important;
+  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: 0.015em !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4) !important;
+}
+
+/* 拖拽把手 */
+.drag-handle {
+  color: var(--text-muted) !important;
+  opacity: 0.5 !important;
+  transition: opacity var(--ease) !important;
+  font-size: 1rem !important;
+}
+
+.drag-handle:hover { opacity: 1 !important; }
+
+
+/* ================================================================
+   §7  条目列表（module-item / item-box）
+   ================================================================ */
+.module-item.item-box {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 8px !important;
+  transition: background var(--ease), border-color var(--ease), box-shadow var(--ease) !important;
+  margin-bottom: 5px !important;
+}
+
+.module-item.item-box:hover {
+  background: rgba(255,255,255,0.10) !important;
+  border-color: rgba(255,255,255,0.16) !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18) !important;
+}
+
+/* 左侧彩条 */
+.module-item.item-type-link.item-box  { border-left: 2px solid var(--primary) !important; }
+.module-item.item-type-text.item-box  { border-left: 2px solid #6ee7b7 !important; }
+.module-item.item-type-both.item-box  { border-left: 2px solid #c084fc !important; }
+
+/* 标题文字 */
+.module-item .item-title {
+  color: var(--text-content) !important;
+  font-size: 0.875rem !important;
+}
+
+/* 链接颜色 */
+.module-item .item-title a {
+  color: var(--primary) !important;
+}
+
+.module-item .item-title a:hover {
+  color: var(--primary-hover) !important;
+}
+
+/* 浮层说明 */
+.module-item .item-desc-tooltip {
+  background: rgba(10, 14, 28, 0.96) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-content) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 8px !important;
+}
+
+.module-item .item-desc-tooltip a {
+  color: var(--primary) !important;
+}
+
+/* 操作区 */
+.module-item .item-actions {
+  opacity: 0.5 !important;
+  transition: opacity var(--ease) !important;
+}
+
+.module-item:hover .item-actions {
+  opacity: 1 !important;
+}
+
+
+/* ================================================================
+   §8  模块标签（.mod-tag）— 由 theme-glass.js 动态注入
+   ================================================================ */
+.mod-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.65);
+  border: 1px solid rgba(255,255,255,0.12);
+  margin-left: 6px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  line-height: 1.5;
+  transition: background var(--ease);
+}
+
+/* 各分类配色 */
+.mod-tag[data-type="dev"]    { background: var(--tag-dev);    color: #80B8FF; border-color: rgba(128,184,255,0.25); }
+.mod-tag[data-type="server"] { background: var(--tag-server);  color: #6ee7b7; border-color: rgba(110,231,183,0.25); }
+.mod-tag[data-type="tools"]  { background: var(--tag-tools);   color: #fbbf24; border-color: rgba(251,191,36,0.25); }
+.mod-tag[data-type="docs"]   { background: var(--tag-docs);    color: #c084fc; border-color: rgba(192,132,252,0.25); }
+.mod-tag[data-type="ai"]     { background: var(--tag-ai);      color: #f87171; border-color: rgba(248,113,113,0.25); }
+
+
+/* ================================================================
+   §9  按钮全局覆盖
+   ================================================================ */
+.btn {
+  transition: background var(--ease), color var(--ease),
+              transform 0.10s ease, box-shadow var(--ease) !important;
+}
+
+.btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* 图标按钮 */
+.btn-icon {
+  background: var(--btn-ghost-bg) !important;
+  color: var(--text-content) !important;
+  border-radius: 7px !important;
+}
+
+.btn-icon:hover {
+  background: var(--btn-ghost-hover) !important;
+  color: var(--text-title) !important;
+}
+
+/* 主按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(64,150,255,0.35) !important;
+  font-weight: 600 !important;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(64,150,255,0.50) !important;
+  filter: brightness(1.08) !important;
+}
+
+/* 次级按钮 */
+.btn-secondary {
+  background: var(--btn-ghost-bg) !important;
+  color: var(--text-content) !important;
+  border: 1px solid var(--input-border) !important;
+}
+
+.btn-secondary:hover {
+  background: var(--btn-ghost-hover) !important;
+  color: var(--text-title) !important;
+}
+
+/* 危险按钮 */
+.btn-danger {
+  background: rgba(248,113,113,0.12) !important;
+  color: #f87171 !important;
+}
+
+.btn-danger:hover {
+  background: rgba(248,113,113,0.22) !important;
+}
+
+/* info 按钮 */
+.btn-info {
+  background: rgba(128,184,255,0.14) !important;
+  color: var(--primary) !important;
+}
+
+.btn-info:hover {
+  background: rgba(128,184,255,0.24) !important;
+}
+
+/* 关闭按钮 */
+.btn-close {
+  color: var(--text-muted) !important;
+  font-size: 1.3rem !important;
+}
+
+.btn-close:hover {
+  color: var(--text-title) !important;
+}
+
+/* 折叠按钮 */
+.btn-collapse {
+  color: var(--text-muted) !important;
+}
+
+
+/* ================================================================
+   §10  搜索高亮（<mark>）
+   ================================================================ */
+mark {
+  background: rgba(255, 220, 80, 0.35) !important;
+  color: #FFD700 !important;
+  border-radius: 3px !important;
+  padding: 0 2px !important;
+}
+
+
+/* ================================================================
+   §11  弹窗（Modal）— Glass 深色
+   ================================================================ */
+.modal {
+  background: rgba(0,0,0,0.45) !important;
+}
+
+.modal-content {
+  background: rgba(14, 18, 32, 0.92) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.50) !important;
+  color: var(--text-content) !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--divider) !important;
+  background: rgba(255,255,255,0.03) !important;
+}
+
+.modal-header h2 {
+  color: var(--text-title) !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--divider) !important;
+  background: rgba(0,0,0,0.12) !important;
+}
+
+.modal-body label {
+  color: var(--text-content) !important;
+}
+
+.modal-body input[type="text"],
+.modal-body input[type="url"],
+.modal-body textarea {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-title) !important;
+  border-radius: 8px !important;
+}
+
+.modal-body input:focus,
+.modal-body textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+}
+
+.modal-body input[type="checkbox"] {
+  accent-color: var(--primary) !important;
+}
+
+
+/* ================================================================
+   §12  设置面板（侧边栏）— Glass
+   ================================================================ */
+.panel {
+  background: rgba(10, 14, 26, 0.94) !important;
+  border-left: 1px solid var(--card-border) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+
+.panel-header {
+  background: rgba(255,255,255,0.03) !important;
+  border-bottom: 1px solid var(--divider) !important;
+}
+
+.panel-header h2 {
+  color: var(--text-title) !important;
+  font-size: 1rem !important;
+}
+
+.setting-section h3 {
+  color: var(--primary) !important;
+  font-size: 0.8rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+}
+
+.setting-section label,
+.setting-label {
+  color: var(--text-content) !important;
+}
+
+.setting-hint {
+  color: var(--text-muted) !important;
+}
+
+.setting-section input[type="number"],
+.setting-section input[type="text"],
+.setting-section input[type="url"],
+.setting-section select,
+.setting-section textarea {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-title) !important;
+  border-radius: 7px !important;
+}
+
+.setting-section input:focus,
+.setting-section textarea:focus,
+.setting-section select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: var(--input-focus-glow) !important;
+}
+
+
+/* ================================================================
+   §13  主网格布局 — auto-fill 响应式
+   (覆盖 JS 注入的固定列数，实现无断点自动适应)
+   ================================================================ */
+.main {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+  gap: 16px !important;
+  align-items: start !important;
+  padding: 8px 0 24px !important;
+}
+
+/* 让每个卡片撑满格子 */
+.main .card {
+  justify-self: stretch !important;
+}
+
+
+/* ================================================================
+   §14  页脚
+   ================================================================ */
+.footer {
+  border-top: 1px solid var(--divider) !important;
+  background: transparent !important;
+  padding: 14px 0 !important;
+}
+
+
+/* ================================================================
+   §15  评论
+   ================================================================ */
+.comment-item {
+  border-bottom: 1px solid var(--divider) !important;
+  color: var(--text-content) !important;
+}
+
+.comment-time {
+  color: var(--text-muted) !important;
+}
+
+.comment-form input {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-title) !important;
+}
+
+
+/* ================================================================
+   §16  附件行
+   ================================================================ */
+.attachment-name {
+  color: var(--text-content) !important;
+}
+
+.attachment-row {
+  border-bottom: 1px solid var(--divider);
+  padding: 4px 0;
+}
+
+
+/* ================================================================
+   §17  云同步提示条（Glass 适配）
+   ================================================================ */
+.cloud-sync-hint {
+  background: rgba(251,191,36,0.10) !important;
+  border: 1px solid rgba(251,191,36,0.25) !important;
+  color: #fbbf24 !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+
+/* ================================================================
+   §18  登录遮罩（Glass 暗色）
+   ================================================================ */
+.login-overlay {
+  background: rgba(0,0,0,0.55) !important;
+}
+
+.login-overlay-inner {
+  background: rgba(14, 18, 32, 0.90) !important;
+  border: 1px solid var(--card-border) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  color: var(--text-title) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55) !important;
+}
+
+.login-overlay-inner h2 {
+  color: var(--text-title) !important;
+}
+
+.login-overlay-inner p {
+  color: var(--text-content) !important;
+}
+
+.login-overlay-hint {
+  color: var(--text-muted) !important;
+}
+
+
+/* ================================================================
+   §19  响应式修正（小屏幕）
+   ================================================================ */
+@media (max-width: 767px) {
+  .header {
+    border-radius: 0 !important;
+  }
+
+  /* 移动端搜索框占满一行 */
+  .header-right {
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    min-width: 0 !important;
+    flex: 1 1 100%;
+    order: 10; /* 排到最后一行 */
+  }
+
+  /* 移动端弹窗从底部弹出（sheet 效果） */
+  .modal {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal-content {
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 85vh !important;
+  }
+}
+
+
+/* ================================================================
+   §20  overaly 遮罩深色覆盖
+   ================================================================ */
+.overlay {
+  background: rgba(0,0,0,0.50) !important;
+}
+
+
+/* ================================================================
+   §21  空状态提示
+   ================================================================ */
+.empty-hint {
+  color: var(--text-muted) !important;
+  font-size: 0.9rem !important;
+}
+
+
+/* ================================================================
+   §22  卡片内"+ 添加内容"按钮
+   ================================================================ */
+.btn-add-item {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px dashed rgba(255,255,255,0.15) !important;
+  color: var(--text-muted) !important;
+  border-radius: 8px !important;
+  font-size: 0.82rem !important;
+  transition: background var(--ease), border-color var(--ease), color var(--ease) !important;
+}
+
+.btn-add-item:hover {
+  background: rgba(128,184,255,0.08) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+
+/* ================================================================
+   §23  背景图片模式下强制使背景可见（移除原始 body::before 白色） 
+   body::before 已在 §2 覆盖，此处仅作注释确认
+   ================================================================ */
+/* 若用户使用亮色插画背景，只需在页面控制台执行：
+   document.documentElement.style.setProperty('--mask-opacity','0.2');
+   document.documentElement.style.setProperty('--card-bg','rgba(0,0,0,0.15)');
+*/
