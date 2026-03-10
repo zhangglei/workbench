@@ -103,23 +103,20 @@
   state.allowedUsers = load('workbench_allowed_users', '');
   state.guestUsers = state.guestUsers || '';
   state.collapsedModules = state.collapsedModules || {};
-
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
     if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
-
   } else if (raw) {
     state = migrateState({ layout: state.layout, bg: state.bg, modules: raw.modules || [], links: raw.links || [], allowedUsers: state.allowedUsers });
     state.collapsedModules = raw.collapsedModules || {};
-
   }
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
   var CLOUD_STATE_URLS = [
-    '/.netlify/functions/workbench-state',
-    '/api/workbench-state'
+    '/api/workbench-state',
+    '/.netlify/functions/workbench-state'
   ];
 
   var lastCloudSyncError = '';
@@ -167,7 +164,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toSave)
-      }).catch(function (e) { console.warn('云端保存失败', e); });
+      })
+        .catch(function (e) { console.warn('云端保存失败', e); });
     }
   }
 
@@ -282,25 +280,26 @@
       row.className = 'attachment-row';
       row.innerHTML =
         '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
-        '<button type="button" class="btn btn-secondary btn-sm btn-open-attachment" data-aid="' + escapeHtml(att.id) + '">查看/编辑</button>' +
-        '<button type="button" class="btn btn-info btn-sm btn-export-attachment" data-aid="' + escapeHtml(att.id) + '">导出</button>' +
+        '<button type="button" class="btn btn-info btn-sm btn-view-attachment" data-aid="' + escapeHtml(att.id) + '">查看</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm btn-edit-attachment" data-aid="' + escapeHtml(att.id) + '">编辑</button>' +
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
 
-
-    list.querySelectorAll('.btn-export-attachment').forEach(function (btn) {
+    list.querySelectorAll('.btn-view-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) exportAttachment(att);
+        if (att) openAttachmentViewModal(att);
       });
     });
-    list.querySelectorAll('.btn-open-attachment').forEach(function (btn) {
+    list.querySelectorAll('.btn-edit-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) openAttachmentWindow(att);
+        if (att) openAttachmentEditModal(att, function (newContent) {
+          att.content = newContent;
+        });
       });
     });
     list.querySelectorAll('.btn-del-attachment').forEach(function (btn) {
@@ -314,6 +313,112 @@
   }
 
 
+
+  function openAttachmentViewModal(att) {
+    var modal = document.getElementById('attachmentViewModal');
+    var title = document.getElementById('attachmentViewTitle');
+    var content = document.getElementById('attachmentViewContent');
+    if (!modal) return;
+    if (title) title.textContent = '查看文件：' + (att.name || '未命名');
+    if (content) content.textContent = att.content || '（文件内容为空）';
+    modal.classList.add('show');
+  }
+
+  function openAttachmentEditModal(att, onSave) {
+    var modal = document.getElementById('attachmentEditModal');
+    var title = document.getElementById('attachmentEditTitle');
+    var textarea = document.getElementById('attachmentEditContent');
+    if (!modal) return;
+    if (title) title.textContent = '编辑文件：' + (att.name || '未命名');
+    if (textarea) textarea.value = att.content || '';
+    modal._onSave = onSave;
+    modal._att = att;
+    modal.classList.add('show');
+  }
+
+  function openAttachmentsModal(item) {
+    var attachments = item.attachments || [];
+    if (!attachments.length) return;
+    window._currentAttachmentsItem = item;
+    var modal = document.getElementById('attachmentsListModal');
+    if (modal) {
+      var listEl = document.getElementById('attachmentsListBody');
+      if (listEl) {
+        listEl.innerHTML = '';
+        attachments.forEach(function (att) {
+          var row = document.createElement('div');
+          row.className = 'attachment-row';
+          row.innerHTML =
+            '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
+            '<button type="button" class="btn btn-info btn-sm btn-view-att-list" data-aid="' + escapeHtml(att.id) + '">查看</button>';
+          listEl.appendChild(row);
+        });
+        listEl.querySelectorAll('.btn-view-att-list').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var aid = btn.getAttribute('data-aid');
+            var att = attachments.find(function (x) { return x.id === aid; });
+            if (att) openAttachmentViewModal(att);
+          });
+        });
+      }
+      modal.classList.add('show');
+      return;
+    }
+    var win = window.open('', '_blank');
+    if (!win) {
+      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
+      return;
+    }
+    window._currentAttachments = attachments;
+    function encodeAttr(str) {
+      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;display:flex;align-items:center;gap:10px;}strong{flex:1;}</style></head><body><h2>附件列表</h2><ul>';
+    attachments.forEach(function(att) {
+      var encodedId = encodeAttr(att.id || '');
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong>' +
+              '<a href="javascript:;" onclick="if (window.opener && window.opener.viewAttachmentById) { window.opener.viewAttachmentById(\'' + encodedId + '\'); } else { console.error(\'viewAttachmentById 不可用\'); }">查看</a></li>';
+    });
+    html += '</ul></body></html>';
+    win.document.write(html);
+    win.document.close();
+  }
+
+  // 解码HTML实体
+  function decodeHtmlEntities(str) {
+    var textarea = document.createElement('textarea');
+    textarea.innerHTML = str;
+    return textarea.value;
+  }
+
+  window.openAttachmentById = function(attId) {
+    try {
+      var decodedId = decodeHtmlEntities(attId);
+      var attachments = window._currentAttachments || [];
+      var att = attachments.find(function(a) { return a.id === decodedId; });
+      if (att) {
+        openAttachmentWindow(att);
+      } else {
+        console.error('未找到附件，ID:', decodedId);
+      }
+    } catch (err) {
+      console.error('openAttachmentById 出错:', err.message);
+    }
+  };
+
+  window.exportAttachmentById = function(attId) {
+    var decodedId = decodeHtmlEntities(attId);
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === decodedId; });
+    if (att) exportAttachment(att);
+  };
+
+  window.viewAttachmentById = function(attId) {
+    var decodedId = decodeHtmlEntities(attId);
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === decodedId; });
+    if (att) openAttachmentViewModal(att);
+  };
 
   function exportAttachment(att) {
     if (!att || !att.content) {
@@ -364,64 +469,6 @@
       URL.revokeObjectURL(url);
     }, 100);
   }
-
-  function openAttachmentsModal(item) {
-    var attachments = item.attachments || [];
-    if (!attachments.length) return;
-    var win = window.open('', '_blank');
-    if (!win) {
-      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
-      return;
-    }
-    // 将附件数据存储在父窗口，子窗口通过ID访问
-    window._currentAttachments = attachments;
-    // 对ID进行HTML编码，避免引号破坏onclick属性
-    function encodeAttr(str) {
-      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
-    attachments.forEach(function(att) {
-      var encodedId = encodeAttr(att.id || '');
-      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="if (window.opener && window.opener.openAttachmentById) { window.opener.openAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 openAttachmentById 不可用\', window.opener); }">查看/编辑</a> | ' +
-              '<a href="javascript:;" onclick="if (window.opener && window.opener.exportAttachmentById) { window.opener.exportAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 exportAttachmentById 不可用\', window.opener); }">导出</a></li>';
-    });
-    html += '</ul><script>' +
-            'window.addEventListener("error", function(e) { console.error("全局错误:", e.message, e.filename, e.lineno); });' +
-            '</script></body></html>';
-    win.document.write(html);
-    win.document.close();
-  }
-
-  // 解码HTML实体
-  function decodeHtmlEntities(str) {
-    var textarea = document.createElement('textarea');
-    textarea.innerHTML = str;
-    return textarea.value;
-  }
-
-
-  window.openAttachmentById = function(attId) {
-    try {
-      var decodedId = decodeHtmlEntities(attId);
-      var attachments = window._currentAttachments || [];
-      var att = attachments.find(function(a) { return a.id === decodedId; });
-      if (att) {
-        openAttachmentWindow(att);
-      } else {
-        console.error('未找到附件，ID:', decodedId, '所有ID:', attachments.map(a => a.id));
-      }
-    } catch (err) {
-      console.error('openAttachmentById 出错:', err.message, err.stack);
-    }
-  };
-
-  window.exportAttachmentById = function(attId) {
-    var decodedId = decodeHtmlEntities(attId);
-    var attachments = window._currentAttachments || [];
-    var att = attachments.find(function(a) { return a.id === decodedId; });
-    if (att) exportAttachment(att);
-  };
 
   function openItemModal(moduleId, item) {
     var titleEl = document.getElementById('itemModalTitle');
@@ -930,16 +977,44 @@
       var commentId = id();
       target.item.comments.push({ id: commentId, user: nick, text: text, time: new Date().toLocaleString() });
       persistState();
-
       openCommentsModal(target.item, target.moduleId);
     });
   }
 
+  // 发送评论邮件通知
 
 
   function bindViewContentModal() {
     document.getElementById('btnCloseViewContentModal').addEventListener('click', closeViewContentModal);
     document.getElementById('viewContentModal').addEventListener('click', function (e) { if (e.target.id === 'viewContentModal') closeViewContentModal(); });
+  }
+
+  function bindAttachmentModals() {
+    var viewModal = document.getElementById('attachmentViewModal');
+    var editModal = document.getElementById('attachmentEditModal');
+    var listModal = document.getElementById('attachmentsListModal');
+    if (viewModal) {
+      document.getElementById('btnCloseAttachmentViewModal').addEventListener('click', function () { viewModal.classList.remove('show'); });
+      viewModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentViewModal') viewModal.classList.remove('show'); });
+    }
+    if (editModal) {
+      document.getElementById('btnCloseAttachmentEditModal').addEventListener('click', function () { editModal.classList.remove('show'); });
+      document.getElementById('btnCancelAttachmentEdit').addEventListener('click', function () { editModal.classList.remove('show'); });
+      editModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentEditModal') editModal.classList.remove('show'); });
+      document.getElementById('btnSaveAttachmentEdit').addEventListener('click', function () {
+        var textarea = document.getElementById('attachmentEditContent');
+        var newContent = textarea ? textarea.value : '';
+        if (typeof editModal._onSave === 'function') {
+          editModal._onSave(newContent);
+        }
+        editModal.classList.remove('show');
+        renderAttachmentsList();
+      });
+    }
+    if (listModal) {
+      document.getElementById('btnCloseAttachmentsListModal').addEventListener('click', function () { listModal.classList.remove('show'); });
+      listModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentsListModal') listModal.classList.remove('show'); });
+    }
   }
 
   function bindLoginModal() {
@@ -1098,6 +1173,7 @@
     document.getElementById('bgGradient').value = state.bg.gradient || '';
     document.getElementById('guestUsers').value = state.guestUsers || '';
     document.getElementById('adminUsers').value = state.allowedUsers || '';
+
     if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
       document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
     } else {
@@ -1162,6 +1238,7 @@
     };
     state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
     state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
+
     persistState();
     applyLayout();
     applyBackground();
@@ -1219,6 +1296,7 @@
   bindItemModal();
   bindCommentsModal();
   bindViewContentModal();
+  bindAttachmentModals();
   bindLoginModal();
   updateUserUI();
   applyLayout();
@@ -1262,9 +1340,13 @@
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
     fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
-      .then(function (pair) { return pair.res.text(); })
+      .then(function (pair) { 
+        return pair.res.text(); 
+      })
       .then(function (text) {
-        if (!text || text === 'null') return;
+        if (!text || text === 'null') {
+          return;
+        }
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
           state = migrateState(data);
@@ -1276,7 +1358,10 @@
           renderModules();
         }
       })
-      .catch(function () { showCloudSyncUnavailable(); });
+      .catch(function (e) { 
+        console.warn('云端加载失败', e);
+        showCloudSyncUnavailable(); 
+      });
   }
 
   function showCloudSyncUnavailable() {
@@ -1297,82 +1382,6 @@
     } catch (_) {}
   };
 
-  function openAttachmentWindow(att) {
-    var win = window.open('', '_blank');
-    if (!win) {
-      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
-      return;
-    }
-    var safeName = (att.name || '文件');
-    var lang = (att.type || '').toLowerCase();
-    var content = att.content || '';
-    var canEditFile = (typeof canEdit === 'function') && canEdit();
-    
-    var html = '<!doctype html>' +
-      '<html lang="zh-CN">' +
-      '<head>' +
-      '<meta charset="utf-8">' +
-      '<title>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</title>' +
-      '<style>' +
-      'body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#1a1b26;color:#c0caf5;}' +
-      '.toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid #414868;background:#24283b;align-items:center;}' +
-      '.toolbar input{flex:1;padding:4px 8px;border-radius:6px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;}' +
-      '.toolbar button{padding:6px 12px;border-radius:6px;border:none;background:#7aa2f7;color:#1a1b26;cursor:pointer;}' +
-      '.toolbar span{font-size:0.85rem;color:#a9b1d6;margin-right:4px;}' +
-      '.editor{padding:8px;}textarea,pre{width:100%;box-sizing:border-box;border-radius:8px;border:1px solid #414868;background:#1a1b26;color:#c0caf5;font-family:Consolas,monospace;font-size:13px;line-height:1.5;min-height:calc(100vh - 60px);}' +
-      'table{border-collapse:collapse;width:100%;}td,th{border:1px solid #414868;padding:4px 6px;font-size:12px;}tr:nth-child(even){background:#1f2335;}' +
-      '.readonly{background:#2a2e3f !important;color:#a9b1d6 !important;border-color:#565f89 !important;}' +
-      '#dataTransfer{display:none;}' +
-      '</style>' +
-      '</head>' +
-      '<body>' +
-      '<div class="toolbar">' +
-      '<span>' + safeName.replace(/[<>"&]/g, function(c) { return {'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]; }) + '</span>' +
-      '<input id="searchBox" placeholder="搜索…">' +
-      (canEditFile ? '<button id="btnSave">保存</button>' : '<span style="color:#a9b1d6;font-size:0.85rem;">只读模式</span>') +
-      '</div>' +
-      '<div class="editor" id="editorWrap"></div>' +
-      '<textarea id="dataTransfer" data-aid="' + (att.id || '').replace(/"/g, '&quot;') + '" data-type="' + lang + '">' + content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>' +
-      '<script>' +
-      '(function() {' +
-      'var ta = document.getElementById("dataTransfer");' +
-      'var attId = ta.getAttribute("data-aid");' +
-      'var type = ta.getAttribute("data-type");' +
-      'var raw = ta.value;' +
-      'var canEdit = ' + canEditFile + ';' +
-      'var wrap = document.getElementById("editorWrap");' +
-      'var isCsv = type === "csv";' +
-      'if(isCsv){' +
-      'var rows = raw.split(/\\r?\\n/).map(function(r){return r.split(",");});' +
-      'var tbl = document.createElement("table");' +
-      'rows.forEach(function(r){var tr = document.createElement("tr");r.forEach(function(c){var td = document.createElement("td");td.textContent = c;tr.appendChild(td);});tbl.appendChild(tr);});' +
-      'wrap.appendChild(tbl);' +
-      'if(!canEdit){tbl.style.pointerEvents="none";tbl.classList.add("readonly");}' +
-      '}else{' +
-      'var editor = document.createElement("textarea");editor.id="editor";editor.value=raw;' +
-      'if(!canEdit){editor.readOnly=true;editor.classList.add("readonly");}' +
-      'wrap.appendChild(editor);' +
-      '}' +
-      'if(canEdit){' +
-      'document.getElementById("btnSave").onclick=function(){' +
-      'var data=isCsv?Array.from(wrap.querySelectorAll("tr")).map(function(tr){return Array.from(tr.cells).map(function(td){return td.textContent;}).join(",");}).join("\\n"):document.getElementById("editor").value;' +
-      'if(window.opener&&window.opener.workbenchUpdateAttachmentContent){window.opener.workbenchUpdateAttachmentContent(attId,data);}' +
-      'alert("已保存");' +
-      '};' +
-      '}' +
-      'document.getElementById("searchBox").oninput=function(){' +
-      'var q=this.value.toLowerCase();' +
-      'if(!isCsv){var editor=document.getElementById("editor");var text=editor.value;var idx=text.toLowerCase().indexOf(q);if(q&&idx>=0){editor.focus();editor.setSelectionRange(idx,idx+q.length);}return;}' +
-      'Array.from(wrap.querySelectorAll("tr")).forEach(function(tr){var t=tr.textContent.toLowerCase();tr.style.display=!q||t.indexOf(q)!==-1?"":"none";});' +
-      '};' +
-      '})();' +
-      '</script>' +
-      '</body>' +
-      '</html>';
-    
-    win.document.write(html);
-    win.document.close();
-  }
 
   function exportStateToFile() {
     var toSave = {

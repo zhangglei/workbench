@@ -173,6 +173,49 @@
     </div>
   </div>
 
+  <!-- 附件列表弹窗（只读查看） -->
+  <div class="modal" id="attachmentsListModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>附件列表</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseAttachmentsListModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="attachmentsListBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 附件查看弹窗 -->
+  <div class="modal" id="attachmentViewModal">
+    <div class="modal-content modal-content-wide">
+      <div class="modal-header">
+        <h2 id="attachmentViewTitle">查看文件</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseAttachmentViewModal">×</button>
+      </div>
+      <div class="modal-body">
+        <pre class="attachment-view-content" id="attachmentViewContent"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- 附件编辑弹窗 -->
+  <div class="modal" id="attachmentEditModal">
+    <div class="modal-content modal-content-wide">
+      <div class="modal-header">
+        <h2 id="attachmentEditTitle">编辑文件</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseAttachmentEditModal">×</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="attachmentEditContent" rows="20" style="width:100%;box-sizing:border-box;font-family:monospace;resize:vertical;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelAttachmentEdit">取消</button>
+        <button type="button" class="btn btn-primary" id="btnSaveAttachmentEdit">保存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 评论 弹窗 -->
   <div class="modal" id="commentsModal">
     <div class="modal-content">

@@ -280,17 +280,26 @@
       row.className = 'attachment-row';
       row.innerHTML =
         '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
-        '<button type="button" class="btn btn-info btn-sm btn-export-attachment" data-aid="' + escapeHtml(att.id) + '">导出</button>' +
+        '<button type="button" class="btn btn-info btn-sm btn-view-attachment" data-aid="' + escapeHtml(att.id) + '">查看</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm btn-edit-attachment" data-aid="' + escapeHtml(att.id) + '">编辑</button>' +
         '<button type="button" class="btn btn-danger btn-sm btn-del-attachment" data-aid="' + escapeHtml(att.id) + '">删</button>';
       list.appendChild(row);
     });
 
-
-    list.querySelectorAll('.btn-export-attachment').forEach(function (btn) {
+    list.querySelectorAll('.btn-view-attachment').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aid = btn.getAttribute('data-aid');
         var att = editingAttachments.find(function (x) { return x.id === aid; });
-        if (att) exportAttachment(att);
+        if (att) openAttachmentViewModal(att);
+      });
+    });
+    list.querySelectorAll('.btn-edit-attachment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var aid = btn.getAttribute('data-aid');
+        var att = editingAttachments.find(function (x) { return x.id === aid; });
+        if (att) openAttachmentEditModal(att, function (newContent) {
+          att.content = newContent;
+        });
       });
     });
     list.querySelectorAll('.btn-del-attachment').forEach(function (btn) {
@@ -305,29 +314,72 @@
 
 
 
+  function openAttachmentViewModal(att) {
+    var modal = document.getElementById('attachmentViewModal');
+    var title = document.getElementById('attachmentViewTitle');
+    var content = document.getElementById('attachmentViewContent');
+    if (!modal) return;
+    if (title) title.textContent = '查看文件：' + (att.name || '未命名');
+    if (content) content.textContent = att.content || '（文件内容为空）';
+    modal.classList.add('show');
+  }
+
+  function openAttachmentEditModal(att, onSave) {
+    var modal = document.getElementById('attachmentEditModal');
+    var title = document.getElementById('attachmentEditTitle');
+    var textarea = document.getElementById('attachmentEditContent');
+    if (!modal) return;
+    if (title) title.textContent = '编辑文件：' + (att.name || '未命名');
+    if (textarea) textarea.value = att.content || '';
+    modal._onSave = onSave;
+    modal._att = att;
+    modal.classList.add('show');
+  }
+
   function openAttachmentsModal(item) {
     var attachments = item.attachments || [];
     if (!attachments.length) return;
+    window._currentAttachmentsItem = item;
+    var modal = document.getElementById('attachmentsListModal');
+    if (modal) {
+      var listEl = document.getElementById('attachmentsListBody');
+      if (listEl) {
+        listEl.innerHTML = '';
+        attachments.forEach(function (att) {
+          var row = document.createElement('div');
+          row.className = 'attachment-row';
+          row.innerHTML =
+            '<span class="attachment-name" title="' + escapeHtml(att.name || '') + '">' + escapeHtml(att.name || '') + '</span>' +
+            '<button type="button" class="btn btn-info btn-sm btn-view-att-list" data-aid="' + escapeHtml(att.id) + '">查看</button>';
+          listEl.appendChild(row);
+        });
+        listEl.querySelectorAll('.btn-view-att-list').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var aid = btn.getAttribute('data-aid');
+            var att = attachments.find(function (x) { return x.id === aid; });
+            if (att) openAttachmentViewModal(att);
+          });
+        });
+      }
+      modal.classList.add('show');
+      return;
+    }
     var win = window.open('', '_blank');
     if (!win) {
       console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
       return;
     }
-    // 将附件数据存储在父窗口，子窗口通过ID访问
     window._currentAttachments = attachments;
-    // 对ID进行HTML编码，避免引号破坏onclick属性
     function encodeAttr(str) {
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
-    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;}</style></head><body><h2>附件列表</h2><ul>';
+    var html = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>附件列表</title><style>body{font-family:sans-serif;margin:20px;}ul{list-style:none;padding:0;}li{margin:8px 0;padding:8px;border:1px solid #ccc;border-radius:4px;display:flex;align-items:center;gap:10px;}strong{flex:1;}</style></head><body><h2>附件列表</h2><ul>';
     attachments.forEach(function(att) {
       var encodedId = encodeAttr(att.id || '');
-      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong><br>' +
-              '<a href="javascript:;" onclick="if (window.opener && window.opener.exportAttachmentById) { window.opener.exportAttachmentById(\'' + encodedId + '\'); } else { console.error(\'window.opener 或 exportAttachmentById 不可用\', window.opener); }">导出</a></li>';
+      html += '<li><strong>' + escapeHtml(att.name || '未命名') + '</strong>' +
+              '<a href="javascript:;" onclick="if (window.opener && window.opener.viewAttachmentById) { window.opener.viewAttachmentById(\'' + encodedId + '\'); } else { console.error(\'viewAttachmentById 不可用\'); }">查看</a></li>';
     });
-    html += '</ul><script>' +
-            'window.addEventListener("error", function(e) { console.error("全局错误:", e.message, e.filename, e.lineno); });' +
-            '</script></body></html>';
+    html += '</ul></body></html>';
     win.document.write(html);
     win.document.close();
   }
@@ -359,6 +411,13 @@
     var attachments = window._currentAttachments || [];
     var att = attachments.find(function(a) { return a.id === decodedId; });
     if (att) exportAttachment(att);
+  };
+
+  window.viewAttachmentById = function(attId) {
+    var decodedId = decodeHtmlEntities(attId);
+    var attachments = window._currentAttachments || [];
+    var att = attachments.find(function(a) { return a.id === decodedId; });
+    if (att) openAttachmentViewModal(att);
   };
 
   function exportAttachment(att) {
@@ -930,6 +989,34 @@
     document.getElementById('viewContentModal').addEventListener('click', function (e) { if (e.target.id === 'viewContentModal') closeViewContentModal(); });
   }
 
+  function bindAttachmentModals() {
+    var viewModal = document.getElementById('attachmentViewModal');
+    var editModal = document.getElementById('attachmentEditModal');
+    var listModal = document.getElementById('attachmentsListModal');
+    if (viewModal) {
+      document.getElementById('btnCloseAttachmentViewModal').addEventListener('click', function () { viewModal.classList.remove('show'); });
+      viewModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentViewModal') viewModal.classList.remove('show'); });
+    }
+    if (editModal) {
+      document.getElementById('btnCloseAttachmentEditModal').addEventListener('click', function () { editModal.classList.remove('show'); });
+      document.getElementById('btnCancelAttachmentEdit').addEventListener('click', function () { editModal.classList.remove('show'); });
+      editModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentEditModal') editModal.classList.remove('show'); });
+      document.getElementById('btnSaveAttachmentEdit').addEventListener('click', function () {
+        var textarea = document.getElementById('attachmentEditContent');
+        var newContent = textarea ? textarea.value : '';
+        if (typeof editModal._onSave === 'function') {
+          editModal._onSave(newContent);
+        }
+        editModal.classList.remove('show');
+        renderAttachmentsList();
+      });
+    }
+    if (listModal) {
+      document.getElementById('btnCloseAttachmentsListModal').addEventListener('click', function () { listModal.classList.remove('show'); });
+      listModal.addEventListener('click', function (e) { if (e.target.id === 'attachmentsListModal') listModal.classList.remove('show'); });
+    }
+  }
+
   function bindLoginModal() {
     document.getElementById('btnLogin').addEventListener('click', function () {
       if (currentUser) {
@@ -1209,6 +1296,7 @@
   bindItemModal();
   bindCommentsModal();
   bindViewContentModal();
+  bindAttachmentModals();
   bindLoginModal();
   updateUserUI();
   applyLayout();
