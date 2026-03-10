@@ -1878,3 +1878,34 @@ mark {
   font-size: 0.82rem !important;
   padding: 16px 0 !important;
 }
+
+
+/* ================================================================
+   §40  搜索命中附件文件名高亮标签
+   ================================================================ */
+.item-att-hit {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  margin-top: 4px !important;
+}
+
+.item-att-hit i {
+  font-size: 11px !important;
+  color: var(--text-muted) !important;
+  margin-right: 2px !important;
+  vertical-align: middle !important;
+}
+
+.item-att-hit i,
+.item-att-hit mark,
+.item-att-hit {
+  font-size: 11px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.6 !important;
+}
+
+.item-att-hit mark {
+  color: #FFD700 !important;
+  font-size: 11px !important;
+}

@@ -136,51 +136,15 @@
 
   /**
    * 对 #mainGrid 中所有 .module-card 执行关键字过滤。
-   * 匹配规则：模块标题文本（忽略大小写）包含关键字则显示，否则隐藏。
+   * 搜索过滤：委托给 app.js 的 renderModules()，
+   * 由它根据搜索词精确过滤（模块名 / 条目标题 / 附件名），
+   * 不再在此处手动隐藏卡片，避免两套逻辑冲突。
    * @param {string} keyword — 搜索关键字（已 trim）
    */
   function filterCards(keyword) {
-    var grid = document.getElementById('mainGrid');
-    if (!grid) return;
-
-    var cards = grid.querySelectorAll('.module-card');
-    var visibleCount = 0;
-
-    cards.forEach(function (card) {
-      /* 取模块标题纯文本（排除 .mod-tag 等子元素的干扰） */
-      var titleEl = card.querySelector('.card-title');
-      var titleText = titleEl ? (titleEl.textContent || titleEl.innerText || '') : '';
-      /* 同时也匹配条目标题，让搜索更实用 */
-      var itemsText = card.querySelector('.module-items')
-        ? (card.querySelector('.module-items').textContent || '') : '';
-      var fullText = (titleText + ' ' + itemsText).toLowerCase();
-
-      if (!keyword || fullText.indexOf(keyword.toLowerCase()) !== -1) {
-        card.classList.remove('glass-hidden');
-        visibleCount++;
-      } else {
-        card.classList.add('glass-hidden');
-      }
-    });
-
-    /* 无结果提示 */
-    var noResult = document.getElementById('glass-no-result');
-    if (keyword && visibleCount === 0) {
-      if (!noResult) {
-        noResult = document.createElement('div');
-        noResult.id = 'glass-no-result';
-        noResult.innerHTML =
-          '<span class="glass-no-result-icon">🔍</span>' +
-          '<span>没有找到包含 "<strong>' + escapeForDisplay(keyword) + '</strong>" 的模块</span>';
-        grid.appendChild(noResult);
-      } else {
-        /* 更新关键字文本 */
-        var strong = noResult.querySelector('strong');
-        if (strong) strong.textContent = keyword;
-        noResult.style.display = '';
-      }
-    } else if (noResult) {
-      noResult.style.display = 'none';
+    /* app.js 通过 searchInput.value 读取搜索词，直接触发重渲染即可 */
+    if (typeof window._appRenderModules === 'function') {
+      window._appRenderModules();
     }
   }
 

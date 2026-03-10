@@ -241,8 +241,25 @@
   function matchSearch(module, item) {
     var q = getSearchText();
     if (!q) return true;
-    var text = (module.name + ' ' + (item ? (item.title + ' ' + (item.url || '') + ' ' + (item.content || '')) : '')).toLowerCase();
-    return text.indexOf(q) !== -1;
+    if (item) {
+      /* 条目匹配：标题 + URL + 正文 + 附件文件名 */
+      var attNames = (Array.isArray(item.attachments) ? item.attachments : [])
+        .map(function (a) { return a.name || ''; }).join(' ');
+      var text = (item.title + ' ' + (item.url || '') + ' ' + (item.content || '') + ' ' + attNames).toLowerCase();
+      return text.indexOf(q) !== -1;
+    } else {
+      /* 模块名匹配 */
+      return (module.name || '').toLowerCase().indexOf(q) !== -1;
+    }
+  }
+
+  /**
+   * 判断搜索词是否命中模块名（用于决定是否整体展示该模块）
+   */
+  function matchModuleName(module) {
+    var q = getSearchText();
+    if (!q) return true;
+    return (module.name || '').toLowerCase().indexOf(q) !== -1;
   }
 
   /**
@@ -854,9 +871,12 @@
     document.getElementById('loginModal').classList.remove('show');
   }
 
-  function buildNormalModuleCard(mod) {
-    var items = (mod.items || []).filter(function (it) { return (it.visibleToAll !== false || canEdit()) && matchSearch(mod, it); });
-    var collapsed = state.collapsedModules[mod.id];
+  function buildNormalModuleCard(mod, itemsToShow, forceExpand) {
+    /* itemsToShow：外部传入的已过滤条目列表；forceExpand：搜索时强制展开 */
+    var items = itemsToShow !== undefined
+      ? itemsToShow
+      : (mod.items || []).filter(function (it) { return (it.visibleToAll !== false || canEdit()) && matchSearch(mod, it); });
+    var collapsed = forceExpand ? false : !!state.collapsedModules[mod.id];
     var card = document.createElement('div');
     card.className = 'module-card card' + (collapsed ? ' collapsed' : '');
     card.dataset.moduleId = mod.id;
@@ -911,8 +931,21 @@
       var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
       var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + titleHtml + '</a>') : titleHtml;
       var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
-      var actionsHtml;
+      /* 搜索命中附件文件名时，在条目下方显示命中的附件名高亮 */
       var hasAttachments = it.attachments && it.attachments.length > 0;
+      var attHitHtml = '';
+      if (q && hasAttachments) {
+        var hitAtts = it.attachments.filter(function (a) {
+          return (a.name || '').toLowerCase().indexOf(q) !== -1;
+        });
+        if (hitAtts.length > 0) {
+          attHitHtml = '<span class="item-att-hit">' +
+            hitAtts.map(function (a) {
+              return '<i class="ri-attachment-line"></i>' + highlightMatch(escapeHtml(a.name || ''), q);
+            }).join('') +
+          '</span>';
+        }
+      }
       if (canEdit()) {
         actionsHtml =
           '<div class="item-actions">' +
@@ -932,7 +965,7 @@
       row.innerHTML =
         '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIconHtml + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
-        '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + '</span>' +
+        '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + attHitHtml + '</span>' +
         actionsHtml;
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
@@ -1163,10 +1196,26 @@
         return;
       }
       sorted.forEach(function (mod) {
-        var items = (mod.items || []).filter(function (it) { return (it.visibleToAll !== false || canEdit()) && matchSearch(mod, it); });
-        var hideBySearch = q && !matchSearch(mod, null) && items.length === 0;
-        if (hideBySearch) return;
-        mainGrid.appendChild(buildNormalModuleCard(mod));
+        var modNameHit = q && matchModuleName(mod);
+        /* 可见条目 */
+        var visibleItems = (mod.items || []).filter(function (it) {
+          return it.visibleToAll !== false || canEdit();
+        });
+        /* 搜索命中的条目（标题/URL/正文/附件名） */
+        var matchedItems = q
+          ? visibleItems.filter(function (it) { return matchSearch(mod, it); })
+          : visibleItems;
+
+        /* 隐藏规则：有搜索词 且 模块名不匹配 且 没有任何条目命中 */
+        if (q && !modNameHit && matchedItems.length === 0) return;
+
+        /* 搜索时：模块名命中 → 显示全部条目；条目命中 → 只显示命中条目 */
+        var itemsToShow = q && !modNameHit ? matchedItems : visibleItems;
+
+        /* 有搜索词时强制展开（不受 collapsedModules 影响） */
+        var forceExpand = !!q;
+
+        mainGrid.appendChild(buildNormalModuleCard(mod, itemsToShow, forceExpand));
       });
       return;
     }
@@ -1189,13 +1238,17 @@
         return;
       }
       withTrees.forEach(function (pair) {
-        var items = pair.tree ? [] : (pair.mod.items || []).filter(function (it) { return (it.visibleToAll !== false || canEdit()) && matchSearch(pair.mod, it); });
-        var hideBySearch = q && !matchSearch(pair.mod, null) && items.length === 0 && (!pair.tree || pair.tree.length === 0);
+        var modNameHit2 = q && matchModuleName(pair.mod);
+        var visibleItems2 = pair.tree ? [] : (pair.mod.items || []).filter(function (it) { return it.visibleToAll !== false || canEdit(); });
+        var matchedItems2 = q ? visibleItems2.filter(function (it) { return matchSearch(pair.mod, it); }) : visibleItems2;
+        var hideBySearch = q && !modNameHit2 && matchedItems2.length === 0 && (!pair.tree || pair.tree.length === 0);
         if (hideBySearch) return;
+        var itemsToShow2 = q && !modNameHit2 ? matchedItems2 : visibleItems2;
+        var forceExpand2 = !!q;
         if (pair.tree && pair.tree.length > 0) {
           mainGrid.appendChild(buildMappedModuleCard(pair.mod, pair.tree));
         } else {
-          mainGrid.appendChild(buildNormalModuleCard(pair.mod));
+          mainGrid.appendChild(buildNormalModuleCard(pair.mod, itemsToShow2, forceExpand2));
         }
       });
     });
@@ -1467,6 +1520,8 @@
   }
 
   if (searchInput) searchInput.addEventListener('input', function () { renderModules(); });
+  /* 暴露给 theme-glass.js 的 filterCards 调用 */
+  window._appRenderModules = renderModules;
   if (footerBar) footerBar.style.display = canEdit() ? '' : 'none';
 
   var settingsPanel = document.getElementById('settingsPanel');
