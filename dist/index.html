@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="工作台">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  <!-- 阿里 Iconfont 线性图标库（iconfont-extended，含常用开发/工具类图标） -->
+  <link rel="stylesheet" href="https://at.alicdn.com/t/c/font_4553687_7rvhzpf0qf.css">
 </head>
 <body>
   <div class="login-overlay" id="loginOverlay">
@@ -139,6 +141,22 @@
         <input type="hidden" id="itemId">
         <input type="hidden" id="itemModuleId">
         <input type="file" id="itemImportFile" accept=".txt,.csv,.md,.json" style="display: none;">
+        <!-- 图标选择器 -->
+        <div class="icon-picker-field">
+          <label class="icon-picker-label">图标（选填）</label>
+          <div class="icon-picker-row">
+            <div class="icon-preview-wrap" id="iconPreviewWrap" title="点击更换图标">
+              <i class="iconfont icon-preview-icon" id="iconPreviewEl"></i>
+              <span class="icon-preview-none" id="iconPreviewNone">默认</span>
+            </div>
+            <div class="icon-picker-search-wrap">
+              <input type="text" id="iconSearchInput" class="icon-search-input" placeholder="搜索图标，如：git、server、file…">
+              <button type="button" class="btn btn-icon icon-clear-btn" id="btnClearIcon" title="清除图标">×</button>
+            </div>
+          </div>
+          <input type="hidden" id="itemIcon">
+          <div class="icon-picker-grid" id="iconPickerGrid"></div>
+        </div>
         <label>显示名称 <input type="text" id="itemTitle" placeholder="例如：工时系统"></label>
         <label>网址（选填） <input type="url" id="itemUrl" placeholder="https://..."></label>
         <label>说明或正文（选填） <textarea id="itemContent" rows="4" placeholder="可写文字、链接等"></textarea></label>

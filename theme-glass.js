@@ -553,3 +553,292 @@
   }
 
 })();
+
+
+/* ================================================================
+   图标选择器模块（Icon Picker）
+   ----------------------------------------------------------------
+   功能：
+   1. 内置常用 iconfont class 名称库（开发/服务器/工具/文档/AI 等分类）
+   2. 搜索框实时过滤，网格展示匹配图标
+   3. 点击图标 → 写入 #itemIcon 隐藏字段 + 更新预览
+   4. 清除按钮 → 清空选择
+   5. 暴露 window.updateIconPreview 供 app.js 回填图标时调用
+   ================================================================ */
+(function () {
+  'use strict';
+
+  /* ── 图标库：class 名 → 搜索关键词（中英文均可搜索） ── */
+  var ICON_LIST = [
+    /* 开发 / 代码 */
+    { cls: 'icon-git',           kw: 'git 代码 版本' },
+    { cls: 'icon-github',        kw: 'github 代码 仓库' },
+    { cls: 'icon-gitlab',        kw: 'gitlab 代码 仓库' },
+    { cls: 'icon-code',          kw: 'code 代码 编程' },
+    { cls: 'icon-terminal',      kw: 'terminal 终端 命令行 shell' },
+    { cls: 'icon-api',           kw: 'api 接口' },
+    { cls: 'icon-bug',           kw: 'bug 缺陷 调试' },
+    { cls: 'icon-python',        kw: 'python 脚本' },
+    { cls: 'icon-javascript',    kw: 'javascript js 前端' },
+    { cls: 'icon-html',          kw: 'html 前端 网页' },
+    { cls: 'icon-css',           kw: 'css 样式 前端' },
+    { cls: 'icon-database',      kw: 'database 数据库 db' },
+    { cls: 'icon-mysql',         kw: 'mysql 数据库' },
+    { cls: 'icon-redis',         kw: 'redis 缓存 数据库' },
+    /* 服务器 / 运维 */
+    { cls: 'icon-server',        kw: 'server 服务器 主机' },
+    { cls: 'icon-linux',         kw: 'linux 系统 运维' },
+    { cls: 'icon-docker',        kw: 'docker 容器 部署' },
+    { cls: 'icon-kubernetes',    kw: 'kubernetes k8s 容器' },
+    { cls: 'icon-cloud',         kw: 'cloud 云 服务器' },
+    { cls: 'icon-cloud-upload',  kw: 'upload 上传 云' },
+    { cls: 'icon-cloud-download',kw: 'download 下载 云' },
+    { cls: 'icon-monitor',       kw: 'monitor 监控 显示器' },
+    { cls: 'icon-cpu',           kw: 'cpu 处理器 性能' },
+    { cls: 'icon-memory',        kw: 'memory 内存' },
+    { cls: 'icon-network',       kw: 'network 网络 局域网' },
+    { cls: 'icon-wifi',          kw: 'wifi 无线 网络' },
+    /* 工具 / 应用 */
+    { cls: 'icon-tool',          kw: 'tool 工具 设置' },
+    { cls: 'icon-setting',       kw: 'setting 设置 配置' },
+    { cls: 'icon-search',        kw: 'search 搜索 查找' },
+    { cls: 'icon-home',          kw: 'home 首页 主页' },
+    { cls: 'icon-dashboard',     kw: 'dashboard 仪表盘 工作台' },
+    { cls: 'icon-calendar',      kw: 'calendar 日历 计划' },
+    { cls: 'icon-clock',         kw: 'clock 时钟 时间' },
+    { cls: 'icon-email',         kw: 'email 邮件 邮箱' },
+    { cls: 'icon-message',       kw: 'message 消息 聊天' },
+    { cls: 'icon-notification',  kw: 'notification 通知 提醒' },
+    { cls: 'icon-user',          kw: 'user 用户 账号' },
+    { cls: 'icon-team',          kw: 'team 团队 协作' },
+    { cls: 'icon-lock',          kw: 'lock 锁 安全' },
+    { cls: 'icon-key',           kw: 'key 密钥 安全' },
+    { cls: 'icon-link',          kw: 'link 链接 网址' },
+    { cls: 'icon-global',        kw: 'global 全球 网站 地球' },
+    { cls: 'icon-chrome',        kw: 'chrome 浏览器' },
+    /* 文件 / 文档 */
+    { cls: 'icon-file',          kw: 'file 文件' },
+    { cls: 'icon-file-text',     kw: 'file text 文本 文档' },
+    { cls: 'icon-file-pdf',      kw: 'pdf 文档' },
+    { cls: 'icon-file-excel',    kw: 'excel 表格 csv' },
+    { cls: 'icon-file-word',     kw: 'word 文档' },
+    { cls: 'icon-file-image',    kw: 'image 图片 图像' },
+    { cls: 'icon-folder',        kw: 'folder 文件夹 目录' },
+    { cls: 'icon-book',          kw: 'book 书 文档 知识库' },
+    { cls: 'icon-markdown',      kw: 'markdown md 文档' },
+    { cls: 'icon-edit',          kw: 'edit 编辑 修改' },
+    { cls: 'icon-copy',          kw: 'copy 复制' },
+    { cls: 'icon-download',      kw: 'download 下载' },
+    { cls: 'icon-upload',        kw: 'upload 上传' },
+    /* AI / 数据 */
+    { cls: 'icon-robot',         kw: 'robot ai 机器人 人工智能' },
+    { cls: 'icon-experiment',    kw: 'experiment 实验 测试' },
+    { cls: 'icon-chart',         kw: 'chart 图表 数据' },
+    { cls: 'icon-bar-chart',     kw: 'bar chart 柱状图 数据' },
+    { cls: 'icon-pie-chart',     kw: 'pie chart 饼图 数据' },
+    { cls: 'icon-data',          kw: 'data 数据 分析' },
+    /* 媒体 / 其他 */
+    { cls: 'icon-video',         kw: 'video 视频 媒体' },
+    { cls: 'icon-audio',         kw: 'audio 音频 声音' },
+    { cls: 'icon-image',         kw: 'image 图片 图像' },
+    { cls: 'icon-camera',        kw: 'camera 相机 截图' },
+    { cls: 'icon-phone',         kw: 'phone 电话 手机' },
+    { cls: 'icon-star',          kw: 'star 星 收藏 重要' },
+    { cls: 'icon-heart',         kw: 'heart 心 喜欢' },
+    { cls: 'icon-flag',          kw: 'flag 旗 标记' },
+    { cls: 'icon-tag',           kw: 'tag 标签' },
+    { cls: 'icon-bookmark',      kw: 'bookmark 书签 收藏' },
+    { cls: 'icon-share',         kw: 'share 分享' },
+    { cls: 'icon-delete',        kw: 'delete 删除 垃圾桶' },
+    { cls: 'icon-plus',          kw: 'plus 添加 新建' },
+    { cls: 'icon-minus',         kw: 'minus 减少 删除' },
+    { cls: 'icon-check',         kw: 'check 完成 确认' },
+    { cls: 'icon-close',         kw: 'close 关闭 取消' },
+    { cls: 'icon-info',          kw: 'info 信息 提示' },
+    { cls: 'icon-warning',       kw: 'warning 警告 注意' },
+    { cls: 'icon-question',      kw: 'question 问题 帮助' },
+    { cls: 'icon-refresh',       kw: 'refresh 刷新 重载' },
+    { cls: 'icon-sync',          kw: 'sync 同步' },
+    { cls: 'icon-jenkins',       kw: 'jenkins ci cd 构建' },
+    { cls: 'icon-jira',          kw: 'jira 任务 项目' },
+    { cls: 'icon-confluence',    kw: 'confluence 文档 wiki' },
+    { cls: 'icon-slack',         kw: 'slack 聊天 协作' },
+    { cls: 'icon-zoom',          kw: 'zoom 会议 视频' },
+    { cls: 'icon-figma',         kw: 'figma 设计 ui' },
+    { cls: 'icon-notion',        kw: 'notion 笔记 文档' },
+    { cls: 'icon-excel',         kw: 'excel 表格' },
+    { cls: 'icon-word',          kw: 'word 文档' },
+    { cls: 'icon-powerpoint',    kw: 'ppt 演示 幻灯片' },
+    { cls: 'icon-windows',       kw: 'windows 系统' },
+    { cls: 'icon-apple',         kw: 'apple mac macos 系统' },
+    { cls: 'icon-android',       kw: 'android 安卓 手机' },
+  ];
+
+  var currentIconCls = '';   /* 当前选中的 icon class */
+
+  /**
+   * 更新预览区域。
+   * @param {string} cls  iconfont class，空字符串表示无图标（显示"默认"）
+   */
+  function updateIconPreview(cls) {
+    var wrap    = document.getElementById('iconPreviewWrap');
+    var iconEl  = document.getElementById('iconPreviewEl');
+    var noneEl  = document.getElementById('iconPreviewNone');
+    var iconInput = document.getElementById('itemIcon');
+    if (!wrap) return;
+
+    currentIconCls = cls || '';
+
+    if (cls) {
+      /* 清除旧 class，保留基础 class */
+      iconEl.className = 'iconfont icon-preview-icon ' + cls;
+      wrap.classList.add('has-icon');
+    } else {
+      iconEl.className = 'iconfont icon-preview-icon';
+      wrap.classList.remove('has-icon');
+    }
+    if (iconInput) iconInput.value = cls || '';
+
+    /* 同步网格中的选中状态 */
+    var grid = document.getElementById('iconPickerGrid');
+    if (grid) {
+      grid.querySelectorAll('.icon-picker-item').forEach(function (btn) {
+        btn.classList.toggle('selected', btn.dataset.cls === cls);
+      });
+    }
+  }
+
+  /* 暴露给 app.js 调用（openItemModal 回填图标时使用） */
+  window.updateIconPreview = updateIconPreview;
+
+  /**
+   * 渲染图标网格。
+   * @param {string} keyword  搜索关键词，空字符串时显示全部
+   */
+  function renderIconGrid(keyword) {
+    var grid = document.getElementById('iconPickerGrid');
+    if (!grid) return;
+
+    var kw = (keyword || '').trim().toLowerCase();
+    var filtered = kw
+      ? ICON_LIST.filter(function (ic) {
+          return ic.cls.indexOf(kw) !== -1 || ic.kw.indexOf(kw) !== -1;
+        })
+      : ICON_LIST;
+
+    grid.innerHTML = '';
+
+    if (filtered.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'icon-picker-empty';
+      empty.textContent = '未找到匹配图标，试试其他关键词';
+      grid.appendChild(empty);
+      return;
+    }
+
+    filtered.forEach(function (ic) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'icon-picker-item' + (ic.cls === currentIconCls ? ' selected' : '');
+      btn.dataset.cls = ic.cls;
+      btn.title = ic.cls.replace('icon-', '') + '  |  ' + ic.kw;
+      btn.innerHTML = '<i class="iconfont ' + ic.cls + '"></i>';
+      btn.addEventListener('click', function () {
+        var newCls = (currentIconCls === ic.cls) ? '' : ic.cls;  /* 再次点击取消选中 */
+        updateIconPreview(newCls);
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  /**
+   * 绑定图标选择器所有交互事件。
+   * 在 itemModal 每次打开时调用，确保 DOM 已存在。
+   */
+  function bindIconPicker() {
+    var searchInput = document.getElementById('iconSearchInput');
+    var clearBtn    = document.getElementById('btnClearIcon');
+    var previewWrap = document.getElementById('iconPreviewWrap');
+    var grid        = document.getElementById('iconPickerGrid');
+
+    if (!searchInput || !grid) return;
+    if (searchInput._iconPickerBound) return;  /* 防止重复绑定 */
+    searchInput._iconPickerBound = true;
+
+    /* 搜索框输入 → 过滤网格 */
+    var debounceTimer;
+    searchInput.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        renderIconGrid(searchInput.value);
+      }, 150);
+    });
+
+    /* 搜索框聚焦 → 展开网格（如果为空则渲染全部） */
+    searchInput.addEventListener('focus', function () {
+      if (!grid.children.length) {
+        renderIconGrid(searchInput.value);
+      }
+    });
+
+    /* 清除按钮 */
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        updateIconPreview('');
+        searchInput.value = '';
+        renderIconGrid('');
+      });
+    }
+
+    /* 点击预览区 → 聚焦搜索框 */
+    if (previewWrap) {
+      previewWrap.addEventListener('click', function () {
+        searchInput.focus();
+        if (!grid.children.length) renderIconGrid('');
+      });
+    }
+  }
+
+  /**
+   * 监听 itemModal 打开，初始化图标选择器。
+   * 使用 MutationObserver 监听 class 变化。
+   */
+  function watchItemModal() {
+    var modal = document.getElementById('itemModal');
+    if (!modal) return;
+
+    var obs = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          if (modal.classList.contains('show')) {
+            /* 弹窗打开：初始化绑定 + 清空搜索框 + 重置网格 */
+            bindIconPicker();
+            var searchInput = document.getElementById('iconSearchInput');
+            if (searchInput) searchInput.value = '';
+            renderIconGrid('');
+          }
+        }
+      });
+    });
+
+    obs.observe(modal, { attributes: true });
+  }
+
+  /* ── 初始化 ── */
+  function initIconPicker() {
+    watchItemModal();
+    /* 如果 itemModal 已经是 show 状态（极少情况），立即初始化 */
+    var modal = document.getElementById('itemModal');
+    if (modal && modal.classList.contains('show')) {
+      bindIconPicker();
+      renderIconGrid('');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initIconPicker);
+  } else {
+    requestAnimationFrame(initIconPicker);
+  }
+
+})();

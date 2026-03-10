@@ -790,6 +790,12 @@
     if (itemShowContentEl) itemShowContentEl.checked = item ? (item.showContent !== false) : true;
     var itemVisibleEl = document.getElementById('itemVisibleToAll');
     if (itemVisibleEl) itemVisibleEl.checked = item ? (item.visibleToAll !== false) : true;
+    /* 图标字段：回填当前 icon，更新预览 */
+    var iconInput = document.getElementById('itemIcon');
+    if (iconInput) {
+      iconInput.value = (item && item.icon) ? item.icon : '';
+      updateIconPreview((item && item.icon) || '');
+    }
     document.getElementById('itemImportFile').value = '';
     editingAttachments = (item && Array.isArray(item.attachments)) ? item.attachments : [];
     if (item && !Array.isArray(item.attachments)) item.attachments = editingAttachments;
@@ -885,7 +891,11 @@
       var hasContent = !!(it.content && it.content.trim());
       var showContent = it.showContent !== false;
       var typeClass = hasUrl && hasContent ? 'item-type-both' : (hasUrl ? 'item-type-link' : 'item-type-text');
-      var typeIcon = hasUrl && hasContent ? '🔗📄' : (hasUrl ? '🔗' : '📄');
+      /* 图标：优先用用户选择的 iconfont，否则用默认 emoji */
+      var customIcon = (it.icon && it.icon.trim()) ? it.icon : '';
+      var typeIconHtml = customIcon
+        ? '<i class="iconfont ' + escapeHtml(customIcon) + ' item-iconfont-icon"></i>'
+        : (hasUrl && hasContent ? '<span class="item-emoji-icon">🔗</span>' : (hasUrl ? '<span class="item-emoji-icon">🔗</span>' : '<span class="item-emoji-icon">📄</span>'));
       var row = document.createElement('div');
       row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '');
       row.dataset.itemId = it.id;
@@ -912,7 +922,7 @@
           '</div>';
       }
       row.innerHTML =
-        '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIcon + '</span>' +
+        '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIconHtml + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
         '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + '</span>' +
         actionsHtml;
@@ -1226,14 +1236,15 @@
       var showContent = document.getElementById('itemShowContent').checked;
       var visibleToAll = document.getElementById('itemVisibleToAll').checked;
       var newTab = document.getElementById('itemNewTab').checked;
+      var iconVal = (document.getElementById('itemIcon') && document.getElementById('itemIcon').value) || '';
       var mod = state.modules.find(function (x) { return x.id === moduleId; });
       if (!mod) { closeItemModal(); return; }
       if (!mod.items) mod.items = [];
       if (itemId) {
         var it = mod.items.find(function (x) { return x.id === itemId; });
-        if (it) { it.title = title; it.url = url; it.content = content; it.showContent = showContent; it.visibleToAll = visibleToAll; it.newTab = newTab; it.attachments = editingAttachments.slice(); }
+        if (it) { it.title = title; it.url = url; it.content = content; it.showContent = showContent; it.visibleToAll = visibleToAll; it.newTab = newTab; it.icon = iconVal; it.attachments = editingAttachments.slice(); }
       } else {
-        mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, comments: [], attachments: editingAttachments.slice() });
+        mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, icon: iconVal, comments: [], attachments: editingAttachments.slice() });
       }
       persistState();
       renderModules();
