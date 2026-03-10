@@ -1,8 +1,15 @@
 /* ================================================================
-   theme-glass.css — Glass UI 暗色主题覆盖层
+   theme-glass.css — Glass UI 暗色主题覆盖层  v2
    ----------------------------------------------------------------
    策略：只追加/覆盖规则，不修改 styles.css 原有代码。
    所有选择器权重 ≥ 原有规则，通过更具体的选择器或变量覆盖实现。
+   v2 变更：
+     - 蒙版透明度调整为 0.32（更通透）
+     - 卡片阴影更强、padding 更宽松
+     - 网格最小列宽 320px，间距 24px
+     - 顶栏改为纯黑半透明
+     - 标题字号升至 16px
+     - 拖拽把手 cursor 改为 move
    ================================================================ */
 
 
@@ -11,14 +18,14 @@
    ================================================================ */
 :root {
   /* ── 背景蒙版 ── */
-  --mask-opacity: 0.45;           /* 蒙版透明度，背景亮时调小 */
+  --mask-opacity: 0.32;           /* 蒙版透明度，背景亮时调小至 0.2 */
 
   /* ── Glass 卡片 ── */
-  --card-bg:             rgba(255, 255, 255, 0.10);
-  --card-border:         rgba(255, 255, 255, 0.18);
+  --card-bg:             rgba(255, 255, 255, 0.18);  /* 更亮的毛玻璃 */
+  --card-border:         rgba(255, 255, 255, 0.25);
   --card-radius:         14px;
-  --card-shadow:         0 4px 16px rgba(0, 0, 0, 0.22);
-  --card-shadow-hover:   0 8px 28px rgba(0, 0, 0, 0.32);
+  --card-shadow:         0 10px 30px rgba(0, 0, 0, 0.25);
+  --card-shadow-hover:   0 16px 40px rgba(0, 0, 0, 0.35);
   --card-blur:           blur(14px);
 
   /* ── 主题色 ── */
@@ -85,16 +92,15 @@ body::before {
 
 
 /* ================================================================
-   §3  顶部导航栏 — Glass
+   §3  顶部导航栏 — Glass（纯黑半透明，参考 Vercel/Linear）
    ================================================================ */
 .header {
-  background: var(--header-bg) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid var(--header-border) !important;
-  border-radius: 0 !important;          /* 去掉原有圆角，顶栏全宽更干净 */
-  box-shadow: 0 1px 0 var(--header-border) !important;
-  /* 顶部细彩线（Raycast 风格） */
+  background: rgba(0, 0, 0, 0.35) !important;  /* 纯黑半透明，适配任意背景 */
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) !important;
   border-top: 2px solid transparent !important;
   background-clip: padding-box !important;
 }
@@ -167,7 +173,8 @@ body::before {
   backdrop-filter: var(--card-blur) !important;
   -webkit-backdrop-filter: var(--card-blur) !important;
   color: var(--text-content) !important;
-  transition: transform var(--ease), box-shadow var(--ease) !important;
+  padding: 18px 20px !important;          /* 更宽松的内边距 */
+  transition: all 0.22s ease !important;  /* all 确保 transform + shadow 同步 */
 }
 
 .card:hover {
@@ -209,21 +216,22 @@ body::before {
   margin-bottom: 10px !important;
 }
 
-/* 卡片标题 */
+/* 卡片标题 — 16px / 600 weight（参考 Notion 卡片标题规范） */
 .card-title {
   color: var(--text-title) !important;
   font-weight: 600 !important;
-  font-size: 0.92rem !important;
-  letter-spacing: 0.015em !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.4) !important;
+  font-size: 16px !important;             /* 固定 16px，层级清晰 */
+  letter-spacing: 0.3px !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
 }
 
-/* 拖拽把手 */
+/* 拖拽把手 — cursor:move 更直观 */
 .drag-handle {
   color: var(--text-muted) !important;
-  opacity: 0.5 !important;
+  opacity: 0.6 !important;
   transition: opacity var(--ease) !important;
   font-size: 1rem !important;
+  cursor: move !important;               /* move 比 grab 更直观 */
 }
 
 .drag-handle:hover { opacity: 1 !important; }
@@ -529,14 +537,13 @@ mark {
 
 
 /* ================================================================
-   §13  主网格布局 — auto-fill 响应式
-   (覆盖 JS 注入的固定列数，实现无断点自动适应)
+   §13  主网格布局 — auto-fill 响应式（v2：320px 最小列宽，24px 间距）
    ================================================================ */
 .main {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
-  gap: 16px !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 24px !important;                  /* 更宽的间距，呼吸感更强 */
   align-items: start !important;
-  padding: 8px 0 24px !important;
+  padding: 12px 0 32px !important;
 }
 
 /* 让每个卡片撑满格子 */
@@ -699,7 +706,189 @@ mark {
    §23  背景图片模式下强制使背景可见（移除原始 body::before 白色） 
    body::before 已在 §2 覆盖，此处仅作注释确认
    ================================================================ */
-/* 若用户使用亮色插画背景，只需在页面控制台执行：
-   document.documentElement.style.setProperty('--mask-opacity','0.2');
-   document.documentElement.style.setProperty('--card-bg','rgba(0,0,0,0.15)');
+/* 若用户使用亮色插画背景，只需修改以下两个变量：
+   :root {
+     --mask-opacity: 0.22;
+     --card-bg: rgba(0, 0, 0, 0.18);
+   }
 */
+
+
+/* ================================================================
+   §24  模块卡片搜索过滤动画
+   ----------------------------------------------------------------
+   theme-glass.js §E 中的搜索过滤逻辑会给隐藏的卡片添加
+   .glass-hidden 类，此处定义淡出动画。
+   ================================================================ */
+
+/* 卡片隐藏时淡出缩小 */
+.module-card.glass-hidden {
+  display: none !important;
+}
+
+/* 搜索无结果时的提示（由 JS 动态插入 #glass-no-result） */
+#glass-no-result {
+  grid-column: 1 / -1;           /* 占满整行 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  text-align: center;
+  opacity: 0;
+  animation: glass-fade-in 0.3s ease forwards;
+}
+
+#glass-no-result .glass-no-result-icon {
+  font-size: 2.4rem;
+  opacity: 0.5;
+}
+
+@keyframes glass-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ================================================================
+   §25  模块头部布局强化（左-中-右三段式）
+   ----------------------------------------------------------------
+   确保拖拽图标在最左，标题居中，操作按钮在最右。
+   ================================================================ */
+.module-card .card-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+/* 标题占据剩余空间，文本居左（更符合 Dashboard 阅读习惯） */
+.module-card .card-title {
+  flex: 1 !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  padding: 0 4px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 操作按钮组：默认半透明，hover 时完全显示 */
+.module-card .card-actions {
+  display: flex !important;
+  gap: 2px !important;
+  opacity: 0.5 !important;
+  transition: opacity var(--ease) !important;
+  flex-shrink: 0 !important;
+}
+
+.module-card:hover .card-actions {
+  opacity: 1 !important;
+}
+
+
+/* ================================================================
+   §26  标签样式精修（符合本次要求的 11px / 2px 8px 规范）
+   ================================================================ */
+.mod-tag {
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #E5E5E5 !important;
+  border: none !important;              /* 去掉边框，更简洁 */
+  letter-spacing: 0.05em !important;
+  font-weight: 600 !important;
+}
+
+/* 各分类配色（覆盖 §8 的带边框版本） */
+.mod-tag[data-type="dev"]    { background: rgba(128,184,255,0.20) !important; color: #80B8FF !important; }
+.mod-tag[data-type="server"] { background: rgba(110,231,183,0.20) !important; color: #6ee7b7 !important; }
+.mod-tag[data-type="tools"]  { background: rgba(251,191,36, 0.20) !important; color: #fbbf24 !important; }
+.mod-tag[data-type="docs"]   { background: rgba(192,132,252,0.20) !important; color: #c084fc !important; }
+.mod-tag[data-type="ai"]     { background: rgba(248,113,113,0.20) !important; color: #f87171 !important; }
+
+
+/* ================================================================
+   §27  浏览器兼容降级（不支持 backdrop-filter）
+   ================================================================ */
+@supports not (backdrop-filter: blur(10px)) {
+  /* 卡片降级为深色不透明背景 */
+  .module-card,
+  .card {
+    background: rgba(30, 30, 30, 0.70) !important;
+  }
+
+  /* 顶栏降级 */
+  .header {
+    background: rgba(15, 15, 15, 0.90) !important;
+  }
+
+  /* 弹窗降级 */
+  .modal-content {
+    background: rgba(20, 22, 35, 0.98) !important;
+  }
+}
+
+
+/* ================================================================
+   §28  卡片进入动画（页面加载时错落出现）
+   ----------------------------------------------------------------
+   由 theme-glass.js §F 在卡片渲染后添加 .glass-animated 类触发。
+   ================================================================ */
+.module-card.glass-animated {
+  animation: card-enter 0.35s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* ================================================================
+   §29  条目数量角标（模块折叠时显示）
+   ================================================================ */
+.module-card.collapsed .card-title::after {
+  content: attr(data-count);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: rgba(128,184,255,0.20);
+  color: var(--primary);
+  vertical-align: middle;
+}
+
+
+/* ================================================================
+   §30  响应式：小屏幕下网格退回单列
+   ================================================================ */
+@media (max-width: 640px) {
+  .main {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 960px) {
+  .main {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 18px !important;
+  }
+}

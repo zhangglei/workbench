@@ -127,25 +127,162 @@
   }
 
   /* ================================================================
-     §C  MutationObserver — 监听主网格 DOM 变化
+     §E  模块卡片搜索过滤（卡片级别的显示/隐藏）
      ----------------------------------------------------------------
-     当 app.js 的 renderModules() 重新渲染卡片后，
-     Observer 回调中重新执行标签注入和事件绑定。
+     app.js 自带的搜索逻辑过滤的是条目（item），本功能在此基础上
+     额外实现"整张卡片"的实时显示/隐藏，并在无结果时显示提示。
+     不修改 app.js 的任何逻辑，仅监听搜索框 input 事件。
      ================================================================ */
 
-  var mainGrid = null;   /* 主网格容器，延迟获取 */
-  var observer = null;   /* MutationObserver 实例 */
+  /**
+   * 对 #mainGrid 中所有 .module-card 执行关键字过滤。
+   * 匹配规则：模块标题文本（忽略大小写）包含关键字则显示，否则隐藏。
+   * @param {string} keyword — 搜索关键字（已 trim）
+   */
+  function filterCards(keyword) {
+    var grid = document.getElementById('mainGrid');
+    if (!grid) return;
+
+    var cards = grid.querySelectorAll('.module-card');
+    var visibleCount = 0;
+
+    cards.forEach(function (card) {
+      /* 取模块标题纯文本（排除 .mod-tag 等子元素的干扰） */
+      var titleEl = card.querySelector('.card-title');
+      var titleText = titleEl ? (titleEl.textContent || titleEl.innerText || '') : '';
+      /* 同时也匹配条目标题，让搜索更实用 */
+      var itemsText = card.querySelector('.module-items')
+        ? (card.querySelector('.module-items').textContent || '') : '';
+      var fullText = (titleText + ' ' + itemsText).toLowerCase();
+
+      if (!keyword || fullText.indexOf(keyword.toLowerCase()) !== -1) {
+        card.classList.remove('glass-hidden');
+        visibleCount++;
+      } else {
+        card.classList.add('glass-hidden');
+      }
+    });
+
+    /* 无结果提示 */
+    var noResult = document.getElementById('glass-no-result');
+    if (keyword && visibleCount === 0) {
+      if (!noResult) {
+        noResult = document.createElement('div');
+        noResult.id = 'glass-no-result';
+        noResult.innerHTML =
+          '<span class="glass-no-result-icon">🔍</span>' +
+          '<span>没有找到包含 "<strong>' + escapeForDisplay(keyword) + '</strong>" 的模块</span>';
+        grid.appendChild(noResult);
+      } else {
+        /* 更新关键字文本 */
+        var strong = noResult.querySelector('strong');
+        if (strong) strong.textContent = keyword;
+        noResult.style.display = '';
+      }
+    } else if (noResult) {
+      noResult.style.display = 'none';
+    }
+  }
 
   /**
-   * 获取主网格容器（#mainGrid），不存在则返回 null。
+   * 简单 HTML 转义，防止搜索关键字中含有特殊字符时 XSS。
+   * @param {string} str
+   * @returns {string}
    */
+  function escapeForDisplay(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /**
+   * 绑定搜索框的 input 事件（委托到 document，兼容动态渲染的搜索框）。
+   */
+  function bindSearchFilter() {
+    var searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    /* 防抖：用户停止输入 120ms 后再执行过滤，减少重排次数 */
+    var _filterTimer = null;
+    searchInput.addEventListener('input', function () {
+      clearTimeout(_filterTimer);
+      var keyword = (this.value || '').trim();
+      _filterTimer = setTimeout(function () {
+        filterCards(keyword);
+      }, 120);
+    });
+
+    /* 清空搜索时立即恢复所有卡片 */
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        this.value = '';
+        filterCards('');
+      }
+    });
+  }
+
+
+  /* ================================================================
+     §F  卡片进入动画
+     ----------------------------------------------------------------
+     每次 renderModules() 重新渲染后，Observer 回调中为新卡片添加
+     .glass-animated 类，触发 CSS §28 定义的错落出现动画。
+     ================================================================ */
+
+  /**
+   * 为所有尚未添加动画类的 .module-card 添加 .glass-animated，
+   * 并按顺序错落延迟（每张卡片延迟 40ms）。
+   */
+  function animateNewCards() {
+    var cards = document.querySelectorAll('#mainGrid .module-card:not(.glass-animated)');
+    cards.forEach(function (card, i) {
+      /* 错落延迟：第 i 张卡片延迟 i * 40ms */
+      card.style.animationDelay = (i * 40) + 'ms';
+      card.classList.add('glass-animated');
+    });
+  }
+
+
+  /* ================================================================
+     §G  条目数量角标（折叠状态下显示模块内容数）
+     ----------------------------------------------------------------
+     在 .card-title 上设置 data-count 属性，CSS §29 通过 ::after
+     伪元素将其显示为角标。
+     ================================================================ */
+
+  /**
+   * 遍历所有模块卡片，统计条目数量并写入 data-count 属性。
+   */
+  function updateItemCounts() {
+    var cards = document.querySelectorAll('#mainGrid .module-card');
+    cards.forEach(function (card) {
+      var titleEl = card.querySelector('.card-title');
+      if (!titleEl) return;
+      /* 统计 .module-items 下的直接子条目数 */
+      var itemsEl = card.querySelector('.module-items');
+      var count = itemsEl ? itemsEl.children.length : 0;
+      if (count > 0) {
+        titleEl.setAttribute('data-count', count);
+      } else {
+        titleEl.removeAttribute('data-count');
+      }
+    });
+  }
+
+
+  /* ================================================================
+     §C  MutationObserver — 监听主网格 DOM 变化（升级版）
+     ================================================================ */
+
+  var mainGrid = null;
+  var observer = null;
+
   function getMainGrid() {
     return document.getElementById('mainGrid');
   }
 
-  /**
-   * 启动 Observer，监听 #mainGrid 的子树变化。
-   */
   function startObserver() {
     mainGrid = getMainGrid();
     if (!mainGrid) return;
@@ -155,35 +292,39 @@
     mainGrid.addEventListener('dragend', onDragEnd);
 
     observer = new MutationObserver(function (mutations) {
-      /* 仅在有子节点变化时处理（忽略属性变化减少开销） */
       var hasChildChanges = mutations.some(function (m) {
         return m.type === 'childList' && m.addedNodes.length > 0;
       });
       if (!hasChildChanges) return;
 
       /* 短暂延迟，确保 app.js 渲染完毕 */
-      setTimeout(injectAllTags, 60);
+      setTimeout(function () {
+        injectAllTags();    /* §A：注入分类标签 */
+        animateNewCards();  /* §F：卡片进入动画 */
+        updateItemCounts(); /* §G：条目数量角标 */
+      }, 60);
     });
 
     observer.observe(mainGrid, {
-      childList: true,   /* 监听直接子节点增删 */
-      subtree: false      /* 不监听子树，减少回调频率 */
+      childList: true,
+      subtree: false
     });
 
-    /* 首次立即注入（页面已完成初始渲染时） */
+    /* 首次立即执行 */
     injectAllTags();
+    animateNewCards();
+    updateItemCounts();
   }
+
 
   /* ================================================================
      §D  初始化入口
-     ----------------------------------------------------------------
-     等待 DOM 就绪后启动，兼容 DOMContentLoaded 已触发的情况。
      ================================================================ */
 
   function init() {
     startObserver();
+    bindSearchFilter();   /* §E：绑定搜索过滤 */
 
-    /* 若 #mainGrid 尚未挂载（极端情况），轮询等待 */
     if (!mainGrid) {
       var retries = 0;
       var timer = setInterval(function () {
@@ -192,7 +333,6 @@
           clearInterval(timer);
           startObserver();
         } else if (retries > 40) {
-          /* 超过 4 秒仍未找到，放弃轮询 */
           clearInterval(timer);
         }
       }, 100);
@@ -203,7 +343,6 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    /* 页面已就绪，延迟一帧确保 app.js 初始化完成 */
     requestAnimationFrame(init);
   }
 
