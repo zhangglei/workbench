@@ -245,6 +245,16 @@
     return text.indexOf(q) !== -1;
   }
 
+  /**
+   * 在 str 中高亮所有 q 出现的位置，返回带 <mark> 的 HTML 字符串。
+   * str 应是已 escapeHtml 过的安全 HTML 文本。
+   */
+  function highlightMatch(str, q) {
+    if (!q || !str) return str;
+    var escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
+  }
+
   function openModuleModal(module) {
     var titleEl = document.getElementById('moduleModalTitle');
     var idEl = document.getElementById('moduleId');
@@ -759,11 +769,13 @@
     card.className = 'module-card card' + (collapsed ? ' collapsed' : '');
     card.dataset.moduleId = mod.id;
     card.draggable = canEdit();
+    var q = getSearchText();
+    var modNameHtml = highlightMatch(escapeHtml(mod.name || '未命名'), q);
     card.innerHTML =
       '<div class="card-header">' +
         '<button type="button" class="btn btn-icon btn-collapse" title="' + (collapsed ? '展开' : '收起') + '">' + (collapsed ? '▶' : '▼') + '</button>' +
         (canEdit() ? '<span class="drag-handle" title="拖动排序">⋮⋮</span>' : '') +
-        '<span class="card-title">' + escapeHtml(mod.name || '未命名') + '</span>' +
+        '<span class="card-title">' + modNameHtml + '</span>' +
         (canEdit() ? '<div class="card-actions">' +
           '<button type="button" class="btn btn-icon btn-edit-module" title="编辑">✏️</button>' +
           '<button type="button" class="btn btn-icon btn-danger btn-delete-module" title="删除模块">🗑️</button>' +
@@ -787,8 +799,9 @@
       row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '');
       row.dataset.itemId = it.id;
       row.draggable = canEdit();
-      var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + escapeHtml(it.title || '') + '</a>') : escapeHtml(it.title || '');
-      var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(escapeHtml(it.content)) + '</span>') : '';
+      var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
+      var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + titleHtml + '</a>') : titleHtml;
+      var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
       var actionsHtml;
       var hasAttachments = it.attachments && it.attachments.length > 0;
       if (canEdit()) {
@@ -810,7 +823,7 @@
       row.innerHTML =
         '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIcon + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
-        '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : escapeHtml(it.title || '')) + '</span>' + tooltipDesc + '</span>' +
+        '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + '</span>' +
         actionsHtml;
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
@@ -1487,6 +1500,64 @@
   applyLayout();
   applyBackground();
   renderModules();
+
+  /* ── 全局快捷键 ──────────────────────────────────────────
+   * Ctrl+K  → 聚焦搜索框并全选
+   * Ctrl+N  → 打开"添加内容"弹窗（需已登录管理员）
+   * Esc     → 依次关闭最顶层弹窗 / 清空搜索
+   * ──────────────────────────────────────────────────────── */
+  document.addEventListener('keydown', function (e) {
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    var inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+    // Ctrl+K / Cmd+K：聚焦搜索框
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+      return;
+    }
+
+    // Ctrl+N / Cmd+N：打开添加内容弹窗（仅 admin）
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      if (canEdit() && state.modules.length > 0) {
+        // 默认向第一个模块添加内容
+        openItemModal(state.modules[0].id, null);
+      } else if (canEdit()) {
+        openModuleModal(null);
+      }
+      return;
+    }
+
+    // Esc：关闭弹窗 → 关闭设置面板 → 清空搜索
+    if (e.key === 'Escape') {
+      // 已在输入框内且有值时先 blur，防止误关弹窗
+      var modals = ['itemModal', 'moduleModal', 'commentsModal', 'viewContentModal',
+                    'loginModal', 'attachmentsListModal'];
+      var closed = false;
+      for (var mi = 0; mi < modals.length; mi++) {
+        var m = document.getElementById(modals[mi]);
+        if (m && m.classList.contains('show')) {
+          m.classList.remove('show');
+          closed = true;
+          break;
+        }
+      }
+      if (!closed && settingsPanel && settingsPanel.classList.contains('open')) {
+        closeSettings();
+        closed = true;
+      }
+      if (!closed && searchInput && searchInput.value) {
+        searchInput.value = '';
+        renderModules();
+        searchInput.blur();
+      }
+      return;
+    }
+  });
 
   if (window.workbenchApi) {
     window.workbenchApi.getConfig().then(function (cfg) {
