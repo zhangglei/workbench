@@ -25,6 +25,19 @@
   <div id="app">
     <header class="header">
       <h1 class="title" id="headerTitle">我的工作台</h1>
+
+      <!-- SPA 导航按钮 -->
+      <nav class="spa-nav" id="spaNav">
+        <button type="button" class="spa-nav-btn spa-nav-btn--active" data-view="dashboard" id="navDashboard">
+          <i class="ri-layout-grid-line"></i>
+          <span>工作台</span>
+        </button>
+        <button type="button" class="spa-nav-btn" data-view="knowledge" id="navKnowledge">
+          <i class="ri-book-2-line"></i>
+          <span>知识库</span>
+        </button>
+      </nav>
+
       <div class="header-right">
         <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
         <span class="user-area" id="userArea">
@@ -34,11 +47,86 @@
       </div>
     </header>
 
-    <main class="main" id="mainGrid"></main>
+    <!-- ── Dashboard 视图 ── -->
+    <div id="dashboard-view">
+      <main class="main" id="mainGrid"></main>
+    </div>
+
+    <!-- ── 知识库视图 ── -->
+    <div id="knowledge-view" style="display:none;">
+      <!-- 知识库顶部工具栏 -->
+      <div class="kb-toolbar">
+        <div class="kb-toolbar-left">
+          <h2 class="kb-toolbar-title"><i class="ri-book-2-line"></i> 知识库</h2>
+          <div class="kb-tag-bar" id="kb-tag-bar"></div>
+        </div>
+        <div class="kb-toolbar-right">
+          <div class="kb-search-wrap">
+            <i class="ri-search-line kb-search-icon"></i>
+            <input type="text" id="kb-search-input" class="kb-search-input" placeholder="搜索笔记标题、内容…">
+          </div>
+          <button type="button" class="kb-new-note-btn" id="kb-new-btn" style="display:none;">
+            <i class="ri-add-line"></i> 新建笔记
+          </button>
+        </div>
+      </div>
+
+      <!-- 笔记列表视图 -->
+      <div id="kb-list-view">
+        <div class="kb-note-grid" id="kb-note-grid"></div>
+        <div class="kb-empty" id="kb-empty" style="display:none;">
+          <i class="ri-file-search-line"></i>
+          <p>没有找到相关笔记</p>
+        </div>
+      </div>
+
+      <!-- 笔记详情视图 -->
+      <div id="kb-detail-view" style="display:none;">
+        <div class="kb-detail-header">
+          <button type="button" class="kb-back-btn" id="kb-back-btn">
+            <i class="ri-arrow-left-line"></i> 返回列表
+          </button>
+          <h1 class="kb-detail-title" id="kb-detail-title"></h1>
+          <div class="kb-detail-meta" id="kb-detail-meta"></div>
+        </div>
+        <div class="kb-detail-body kb-markdown" id="kb-detail-body"></div>
+      </div>
+    </div>
 
     <footer class="footer" id="footerBar">
       <button type="button" class="btn btn-primary" id="btnAddModule">+ 添加模块</button>
     </footer>
+  </div>
+
+  <!-- 知识库笔记编辑器弹窗 -->
+  <div class="modal kb-editor-modal" id="kb-editor-modal">
+    <div class="modal-content kb-editor-content">
+      <div class="modal-header">
+        <h2>编辑笔记</h2>
+        <button type="button" class="btn btn-icon btn-close" id="kb-editor-close">×</button>
+      </div>
+      <div class="modal-body kb-editor-body">
+        <label class="kb-editor-label">标题 <input type="text" id="kb-edit-title" placeholder="笔记标题"></label>
+        <div class="kb-editor-row">
+          <label class="kb-editor-label" style="flex:1">分类 <input type="text" id="kb-edit-category" placeholder="如：Linux、Git、BSP"></label>
+          <label class="kb-editor-label" style="flex:2">标签（逗号分隔） <input type="text" id="kb-edit-tags" placeholder="如：Linux, 运维, Shell"></label>
+        </div>
+        <label class="kb-editor-label">作者 <input type="text" id="kb-edit-author" placeholder="作者名"></label>
+        <label class="kb-editor-label">摘要 <textarea id="kb-edit-summary" rows="2" placeholder="一句话描述笔记内容…"></textarea></label>
+        <label class="kb-editor-label">
+          Markdown 正文
+          <span class="kb-editor-hint">支持标准 Markdown，代码块语法高亮</span>
+        </label>
+        <textarea id="kb-edit-content" class="kb-editor-textarea" rows="16" placeholder="# 标题&#10;&#10;## 小节&#10;&#10;```bash&#10;echo 'Hello'&#10;```"></textarea>
+        <label class="kb-editor-label kb-editor-checkbox-row">
+          <input type="checkbox" id="kb-edit-pinned"> 置顶显示
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="kb-editor-cancel">取消</button>
+        <button type="button" class="btn btn-primary" id="kb-editor-save">保存笔记</button>
+      </div>
+    </div>
   </div>
 
   <!-- 设置面板 -->
@@ -242,9 +330,63 @@
 
 
   <script src="app.js"></script>
+  <script src="knowledge.js"></script>
 
   <!-- Glass UI 主题增强层（只追加样式/行为，不修改原有逻辑） -->
   <link rel="stylesheet" href="theme-glass.css">
   <script src="theme-glass.js"></script>
+
+  <!-- SPA 路由（最后加载，确保 app.js / knowledge.js 已初始化） -->
+  <script>
+  (function () {
+    'use strict';
+    var views = { dashboard: 'dashboard-view', knowledge: 'knowledge-view' };
+    var current = 'dashboard';
+
+    function showView(name) {
+      if (!views[name]) return;
+      current = name;
+      /* 切换 section 显示 */
+      Object.keys(views).forEach(function (k) {
+        var el = document.getElementById(views[k]);
+        if (el) el.style.display = k === name ? '' : 'none';
+      });
+      /* 切换导航按钮激活状态 */
+      document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
+        btn.classList.toggle('spa-nav-btn--active', btn.dataset.view === name);
+      });
+      /* 切换搜索框 placeholder */
+      var si = document.getElementById('searchInput');
+      if (si) si.placeholder = name === 'knowledge' ? '搜索笔记…（功能在知识库内）' : '搜索模块、网页…';
+      /* 隐藏 Dashboard 的 footer 按钮（知识库有自己的新建按钮） */
+      var footer = document.getElementById('footerBar');
+      if (footer) footer.style.display = name === 'knowledge' ? 'none' : '';
+      /* 知识库：显示新建按钮（仅管理员），初始化 */
+      if (name === 'knowledge') {
+        var newBtn = document.getElementById('kb-new-btn');
+        if (newBtn) {
+          var role = '';
+          try { role = localStorage.getItem('workbench_user_role'); } catch(e) {}
+          newBtn.style.display = role === 'admin' ? '' : 'none';
+        }
+        if (window.KnowledgeBase) window.KnowledgeBase.init();
+      }
+      /* Hash 同步 */
+      try { history.replaceState(null, '', '#' + name); } catch(e) {}
+    }
+
+    /* 绑定导航按钮 */
+    document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { showView(btn.dataset.view); });
+    });
+
+    /* 从 hash 恢复 */
+    var hash = (location.hash || '').slice(1);
+    if (views[hash]) showView(hash);
+
+    /* 暴露给外部 */
+    window.showView = showView;
+  })();
+  </script>
 </body>
 </html>

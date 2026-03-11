@@ -1909,3 +1909,714 @@ mark {
   color: #FFD700 !important;
   font-size: 11px !important;
 }
+
+/* ================================================================
+   §41  SPA 导航栏
+   ================================================================ */
+
+/* 导航按钮组 */
+.spa-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 3px 4px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.spa-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.spa-nav-btn i {
+  font-size: 1rem;
+}
+
+.spa-nav-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.90);
+}
+
+.spa-nav-btn--active {
+  background: rgba(128,184,255,0.18) !important;
+  color: #80B8FF !important;
+  border: 1px solid rgba(128,184,255,0.25) !important;
+}
+
+/* 把导航栏嵌入 header 居中 */
+.header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* ================================================================
+   §42  知识库页面整体
+   ================================================================ */
+
+#knowledge-view {
+  padding: 0 0 80px 0;
+  min-height: calc(100vh - 120px);
+}
+
+/* ── 知识库工具栏 ── */
+.kb-toolbar {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 0 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 20px;
+}
+
+.kb-toolbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 300px;
+}
+
+.kb-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.kb-toolbar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-title);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.kb-toolbar-title i {
+  color: #80B8FF;
+  font-size: 1.15rem;
+}
+
+/* ── 标签过滤栏 ── */
+.kb-tag-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kb-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.60);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.kb-tag:hover {
+  background: rgba(128,184,255,0.12);
+  border-color: rgba(128,184,255,0.25);
+  color: #80B8FF;
+}
+
+.kb-tag--active {
+  background: rgba(128,184,255,0.20) !important;
+  border-color: rgba(128,184,255,0.40) !important;
+  color: #80B8FF !important;
+  font-weight: 600 !important;
+}
+
+/* ── 知识库搜索框 ── */
+.kb-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.kb-search-icon {
+  position: absolute;
+  left: 10px;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.kb-search-input {
+  padding: 7px 12px 7px 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-title);
+  font-size: 0.85rem;
+  width: 220px;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+.kb-search-input::placeholder {
+  color: rgba(255,255,255,0.30);
+}
+
+.kb-search-input:focus {
+  border-color: rgba(128,184,255,0.40);
+  background: rgba(255,255,255,0.09);
+  box-shadow: 0 0 0 3px rgba(128,184,255,0.12);
+}
+
+/* ── 新建笔记按钮 ── */
+.kb-new-note-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(128,184,255,0.35);
+  background: rgba(128,184,255,0.14);
+  color: #80B8FF;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.kb-new-note-btn:hover {
+  background: rgba(128,184,255,0.25);
+  border-color: rgba(128,184,255,0.55);
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   §43  笔记列表卡片
+   ================================================================ */
+
+.kb-note-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* 笔记卡片 */
+.kb-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 18px 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  outline: none;
+  position: relative;
+}
+
+.kb-card:hover {
+  border-color: rgba(59,130,246,0.45);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+  background: rgba(255,255,255,0.08);
+}
+
+.kb-card:focus {
+  border-color: rgba(128,184,255,0.55);
+  box-shadow: 0 0 0 3px rgba(128,184,255,0.14);
+}
+
+/* 卡片顶部行：分类 + 置顶 */
+.kb-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 分类标签 */
+.kb-card-cat {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* 置顶图标 */
+.kb-card-pin {
+  color: #fbbf24;
+  font-size: 0.85rem;
+  opacity: 0.80;
+}
+
+/* 卡片标题 */
+.kb-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-title);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 摘要 */
+.kb-card-summary {
+  font-size: 0.82rem;
+  color: var(--text-content);
+  margin: 0;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* 小标签行 */
+.kb-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.kb-card-tag-sm {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.50);
+  font-size: 0.70rem;
+}
+
+/* 卡片底部元信息行 */
+.kb-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+.kb-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.kb-card-meta i {
+  font-size: 0.78rem;
+  opacity: 0.70;
+}
+
+/* 管理员操作按钮 */
+.kb-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.kb-btn-icon {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.40);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.kb-edit-btn:hover {
+  background: rgba(128,184,255,0.15);
+  color: #80B8FF;
+}
+
+.kb-del-btn:hover {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+}
+
+/* 空状态 */
+.kb-empty {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  display: flex;
+}
+
+.kb-empty i {
+  font-size: 2.5rem;
+  opacity: 0.40;
+}
+
+/* ================================================================
+   §44  笔记详情页
+   ================================================================ */
+
+.kb-detail-header {
+  padding: 16px 0 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kb-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.60);
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  width: fit-content;
+}
+
+.kb-back-btn:hover {
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+}
+
+.kb-detail-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.kb-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.kb-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(128,184,255,0.30);
+  background: rgba(128,184,255,0.10);
+  color: #80B8FF;
+  font-size: 0.79rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kb-btn-sm:hover {
+  background: rgba(128,184,255,0.22);
+}
+
+/* ================================================================
+   §45  Markdown 渲染区域样式
+   ================================================================ */
+
+.kb-markdown {
+  max-width: 820px;
+  color: var(--text-content);
+  font-size: 0.93rem;
+  line-height: 1.75;
+  padding-bottom: 60px;
+}
+
+.kb-markdown h1,
+.kb-markdown h2,
+.kb-markdown h3,
+.kb-markdown h4 {
+  color: var(--text-title);
+  margin: 1.6em 0 0.6em;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.kb-markdown h1 { font-size: 1.5rem; }
+.kb-markdown h2 {
+  font-size: 1.2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  padding-bottom: 6px;
+}
+.kb-markdown h3 { font-size: 1rem; }
+
+.kb-markdown p {
+  margin: 0.6em 0 0.9em;
+}
+
+.kb-markdown a {
+  color: #80B8FF;
+  text-decoration: none;
+}
+
+.kb-markdown a:hover {
+  text-decoration: underline;
+}
+
+.kb-markdown ul,
+.kb-markdown ol {
+  padding-left: 1.5em;
+  margin: 0.6em 0 0.9em;
+}
+
+.kb-markdown li {
+  margin: 0.3em 0;
+}
+
+/* 行内代码 */
+.kb-markdown code {
+  background: rgba(128,184,255,0.12);
+  border: 1px solid rgba(128,184,255,0.18);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+  color: #93c5fd;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+}
+
+/* 代码块（highlight.js 输出） */
+.kb-code-block,
+.kb-markdown pre {
+  background: rgba(0,0,0,0.45) !important;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+.kb-code-block code,
+.kb-markdown pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+}
+
+/* 引用块 */
+.kb-markdown blockquote {
+  border-left: 3px solid rgba(128,184,255,0.45);
+  margin: 1em 0;
+  padding: 8px 16px;
+  background: rgba(128,184,255,0.06);
+  border-radius: 0 8px 8px 0;
+  color: rgba(255,255,255,0.65);
+}
+
+/* 表格 */
+.kb-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.87rem;
+}
+
+.kb-markdown th,
+.kb-markdown td {
+  border: 1px solid rgba(255,255,255,0.10);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.kb-markdown th {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-title);
+  font-weight: 600;
+}
+
+.kb-markdown tr:nth-child(even) td {
+  background: rgba(255,255,255,0.03);
+}
+
+/* 水平线 */
+.kb-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  margin: 2em 0;
+}
+
+/* 渲染中动画 */
+.kb-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 24px 0;
+}
+
+@keyframes kb-spin {
+  to { transform: rotate(360deg); }
+}
+
+.kb-spin {
+  animation: kb-spin 0.8s linear infinite;
+}
+
+/* ================================================================
+   §46  知识库编辑器弹窗
+   ================================================================ */
+
+.kb-editor-modal .modal-content {
+  max-width: 760px;
+  width: 95vw;
+}
+
+.kb-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.kb-editor-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.45);
+  font-weight: 500;
+}
+
+.kb-editor-label input,
+.kb-editor-label textarea {
+  font-size: 0.88rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--text-title) !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  resize: vertical;
+}
+
+.kb-editor-label input:focus,
+.kb-editor-label textarea:focus {
+  border-color: rgba(128,184,255,0.45) !important;
+  box-shadow: 0 0 0 3px rgba(128,184,255,0.10) !important;
+}
+
+.kb-editor-row {
+  display: flex;
+  gap: 12px;
+}
+
+.kb-editor-textarea {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace !important;
+  font-size: 0.84rem !important;
+  line-height: 1.6 !important;
+  min-height: 240px !important;
+}
+
+.kb-editor-hint {
+  font-size: 0.72rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: rgba(255,255,255,0.30) !important;
+  font-weight: 400 !important;
+  margin-left: 4px;
+}
+
+.kb-editor-checkbox-row {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.84rem !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: rgba(255,255,255,0.60) !important;
+}
+
+/* ================================================================
+   §47  响应式适配
+   ================================================================ */
+
+@media (max-width: 768px) {
+  .spa-nav-btn span { display: none; }
+  .spa-nav-btn { padding: 6px 10px; }
+
+  .kb-toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .kb-toolbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .kb-search-input {
+    width: 100% !important;
+  }
+
+  .kb-note-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kb-detail-title {
+    font-size: 1.2rem;
+  }
+
+  .kb-editor-row {
+    flex-direction: column;
+  }
+
+  .kb-editor-modal .modal-content {
+    width: 100%;
+    max-height: 95vh;
+  }
+}
