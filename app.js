@@ -946,6 +946,7 @@
           '</span>';
         }
       }
+      var actionsHtml;
       if (canEdit()) {
         actionsHtml =
           '<div class="item-actions">' +
