@@ -922,7 +922,15 @@ File Name: X4U-2.10.2.6610.z
     if (listView) listView.style.display = '';
     if (detailView) detailView.style.display = 'none';
 
-    /* 每次切入都重新绑定搜索框（防止首次时 DOM 未就绪） */
+    /* 每次切入时重载数据（防止 IIFE 初始化时 localStorage 不同步） */
+    state.notes = loadNotes();
+    state.searchQ = '';
+    state.activeTag = '全部';
+    state.currentNoteId = null;
+
+    var searchInput = document.getElementById('kb-search-input');
+    if (searchInput) searchInput.value = '';
+
     bindKbSearch();
     renderTagBar();
     renderNoteList();

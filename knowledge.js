@@ -763,7 +763,6 @@ File Name: X4U-2.10.2.6610.z
      §10  笔记编辑器弹窗
      ================================================================ */
   function openNoteEditor(noteId) {
-    console.log('[KB] openNoteEditor called with noteId:', noteId);
     var note = noteId ? state.notes.find(function (n) { return n.id === noteId; }) : null;
     state.editingNoteId = noteId || null;
 
@@ -863,21 +862,23 @@ File Name: X4U-2.10.2.6610.z
      §12  全局绑定（事件委托，避免 DOM 时序问题）
      ================================================================ */
   function bindAll() {
-    console.log('[KB] bindAll called');
     /* 用事件委托挂在 document 上，无论按钮何时出现都能响应 */
     document.addEventListener('click', function (e) {
       var target = e.target;
 
-      /* 向上查找最近的带 id 的元素 */
-      var btn = target.closest ? target.closest('[id]') : null;
-
-      console.log('[KB] Click event - target:', target, 'btn:', btn, 'btn.id:', btn ? btn.id : 'null');
+      /* 向上查找最近的带 id 的祖先按钮 */
+      var btn = target.closest
+        ? target.closest('[id]')
+        : (function () {
+            var el = target;
+            while (el && !el.id) el = el.parentElement;
+            return el;
+          })();
 
       if (!btn) return;
 
       switch (btn.id) {
         case 'kb-new-btn':
-          console.log('[KB] kb-new-btn clicked');
           openNoteEditor(null);
           break;
         case 'kb-back-btn':
@@ -915,28 +916,32 @@ File Name: X4U-2.10.2.6610.z
      §13  初始化（由 SPA router 在切换到知识库时调用）
      ================================================================ */
   function initKnowledge() {
-    console.log('[KB] initKnowledge called');
     /* 确保详情页隐藏、列表页可见 */
     var listView = document.getElementById('kb-list-view');
     var detailView = document.getElementById('kb-detail-view');
     if (listView) listView.style.display = '';
     if (detailView) detailView.style.display = 'none';
 
-    /* 每次切入都重新绑定搜索框（防止首次时 DOM 未就绪） */
+    /* 每次切入时重载数据（防止 IIFE 初始化时 localStorage 不同步） */
+    state.notes = loadNotes();
+    state.searchQ = '';
+    state.activeTag = '全部';
+    state.currentNoteId = null;
+
+    var searchInput = document.getElementById('kb-search-input');
+    if (searchInput) searchInput.value = '';
+
     bindKbSearch();
     renderTagBar();
     renderNoteList();
 
     /* 根据角色决定新建按钮可见性 */
     var newBtn = document.getElementById('kb-new-btn');
-    console.log('[KB] newBtn found:', !!newBtn);
     if (newBtn) {
       var role = '';
       try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
-      console.log('[KB] user role:', role);
       /* 管理员显示，其余人隐藏 */
       newBtn.style.display = role === 'admin' ? '' : 'none';
-      console.log('[KB] newBtn display set to:', newBtn.style.display);
     }
   }
 
@@ -947,25 +952,12 @@ File Name: X4U-2.10.2.6610.z
   };
 
   /* DOM 就绪后绑定事件（事件只绑定一次，渲染按需触发） */
-  var bindAllCalled = false;
-  function ensureBindAll() {
-    if (!bindAllCalled) {
-      console.log('[KB] ensureBindAll - calling bindAll');
-      bindAll();
-      bindAllCalled = true;
-    } else {
-      console.log('[KB] ensureBindAll - bindAll already called');
-    }
-  }
-
-  console.log('[KB] knowledge.js loaded, readyState:', document.readyState);
   if (document.readyState === 'loading') {
-    console.log('[KB] Waiting for DOMContentLoaded');
-    document.addEventListener('DOMContentLoaded', ensureBindAll);
+    document.addEventListener('DOMContentLoaded', function () {
+      bindAll();
+    });
   } else {
-    console.log('[KB] DOM already ready, calling ensureBindAll');
-    ensureBindAll();
+    bindAll();
   }
-})();
 
 })();
