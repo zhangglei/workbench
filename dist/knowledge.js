@@ -338,69 +338,70 @@ docker image prune -f
       date: '2024-10-15',
       views: 267,
       pinned: false,
-      content: `# Shell 自动化脚本：批量服务器巡检
-
-## 脚本结构
-
-\`\`\`bash
-#!/bin/bash
-set -euo pipefail
-
-# 颜色定义
-RED='\x1b[0;31m'
-GREEN='\x1b[0;32m'
-YELLOW='\x1b[1;33m'
-NC='\x1b[0m' # No Color
-
-# 服务器列表
-SERVERS=(
-    "192.168.1.10"
-    "192.168.1.11"
-    "192.168.1.12"
-)
-
-# 巡检函数
-check_server() {
-    local host=$1
-    echo -e "\n${YELLOW}=== 巡检: $host ===${NC}"
-
-    # CPU 使用率
-    cpu=$(ssh "$host" "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1")
-    echo "CPU 使用率: ${cpu}%"
-
-    # 内存使用率
-    mem=$(ssh "$host" "free | grep Mem | awk '{printf \"%.1f\", $3/$2 * 100}'")
-    echo "内存使用率: ${mem}%"
-
-    # 磁盘使用率
-    disk=$(ssh "$host" "df -h / | awk 'NR==2{print $5}'")
-    echo "磁盘使用率: $disk"
-
-    # 检查关键服务
-    for service in nginx mysql redis; do
-        if ssh "$host" "systemctl is-active $service" &>/dev/null; then
-            echo -e "服务 $service: ${GREEN}运行中${NC}"
-        else
-            echo -e "服务 $service: ${RED}停止${NC}"
-        fi
-    done
-}
-
-# 主循环
-for server in "${SERVERS[@]}"; do
-    check_server "$server" 2>/dev/null || echo -e "${RED}无法连接: $server${NC}"
-done
-\`\`\`
-
-## 告警阈值设置
-
-\`\`\`bash
-# CPU 超过 80% 发送告警
-if (( $(echo "$cpu > 80" | bc -l) )); then
-    echo "【告警】$host CPU 过高: ${cpu}%" | mail -s "服务器告警" admin@example.com
-fi
-\`\`\`
-`
+      content: [
+        '# Shell 自动化脚本：批量服务器巡检',
+        '',
+        '## 脚本结构',
+        '',
+        '```bash',
+        '#!/bin/bash',
+        'set -euo pipefail',
+        '',
+        '# 颜色定义',
+        "RED='\\033[0;31m'",
+        "GREEN='\\033[0;32m'",
+        "YELLOW='\\033[1;33m'",
+        "NC='\\033[0m' # No Color",
+        '',
+        '# 服务器列表',
+        'SERVERS=(',
+        '    "192.168.1.10"',
+        '    "192.168.1.11"',
+        '    "192.168.1.12"',
+        ')',
+        '',
+        '# 巡检函数',
+        'check_server() {',
+        '    local host=$1',
+        '    echo -e "\\n${YELLOW}=== 巡检: $host ===${NC}"',
+        '',
+        '    # CPU 使用率',
+        '    cpu=$(ssh "$host" "top -bn1 | grep \'Cpu(s)\' | awk \'{print $2}\' | cut -d\'%\' -f1")',
+        '    echo "CPU 使用率: ${cpu}%"',
+        '',
+        '    # 内存使用率',
+        '    mem=$(ssh "$host" "free | grep Mem | awk \'{printf \\"%.1f\\", $3/$2 * 100}\'")',
+        '    echo "内存使用率: ${mem}%"',
+        '',
+        '    # 磁盘使用率',
+        '    disk=$(ssh "$host" "df -h / | awk \'NR==2{print $5}\'")',
+        '    echo "磁盘使用率: $disk"',
+        '',
+        '    # 检查关键服务',
+        '    for service in nginx mysql redis; do',
+        '        if ssh "$host" "systemctl is-active $service" &>/dev/null; then',
+        '            echo -e "服务 $service: ${GREEN}运行中${NC}"',
+        '        else',
+        '            echo -e "服务 $service: ${RED}停止${NC}"',
+        '        fi',
+        '    done',
+        '}',
+        '',
+        '# 主循环',
+        'for server in "${SERVERS[@]}"; do',
+        '    check_server "$server" 2>/dev/null || echo -e "${RED}无法连接: $server${NC}"',
+        'done',
+        '```',
+        '',
+        '## 告警阈值设置',
+        '',
+        '```bash',
+        '# CPU 超过 80% 发送告警',
+        'if (( $(echo "$cpu > 80" | bc -l) )); then',
+        '    echo "【告警】$host CPU 过高: ${cpu}%" | mail -s "服务器告警" admin@example.com',
+        'fi',
+        '```',
+      ].join('\n')
     },
     {
       id: 'note_006',
