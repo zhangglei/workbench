@@ -19,7 +19,7 @@ export default async (req, context) => {
   if (req.method === 'GET') {
     try {
       const data = await store.get(STATE_KEY);
-      const body = data != null ? data : '[]';
+      const body = data != null ? data : '{}';
       return new Response(body, { status: 200, headers: CORS_HEADERS });
     } catch (err) {
       console.error('knowledge-state GET error:', err);
@@ -33,7 +33,7 @@ export default async (req, context) => {
   if (req.method === 'POST') {
     try {
       const body = await req.text();
-      await store.set(STATE_KEY, body || '[]');
+      await store.set(STATE_KEY, body || '{}');
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: CORS_HEADERS });
     } catch (err) {
       console.error('knowledge-state POST error:', err);

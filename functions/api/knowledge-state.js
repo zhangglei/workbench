@@ -27,7 +27,7 @@ export async function onRequest(context) {
   try {
     if (method === 'GET') {
       const data = await kv.get(STORE_KEY, { type: 'json' });
-      return new Response(JSON.stringify(data || []), { status: 200, headers: CORS_HEADERS });
+      return new Response(JSON.stringify(data != null ? data : {}), { status: 200, headers: CORS_HEADERS });
     }
 
     if (method === 'POST') {
@@ -38,7 +38,7 @@ export async function onRequest(context) {
         body = await request.text();
       }
       const storeValue = typeof body === 'object' ? JSON.stringify(body) : body;
-      await kv.put(STORE_KEY, storeValue || '[]');
+      await kv.put(STORE_KEY, storeValue || '{}');
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: CORS_HEADERS });
     }
 

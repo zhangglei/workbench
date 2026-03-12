@@ -509,40 +509,62 @@ File Name: X4U-2.10.2.6610.z
     return loadNotesLocal();
   }
 
-  /* 保存到 localStorage + 异步推送服务端 */
+  /* 保存到 localStorage + 同步推送服务端 */
   function saveNotes(notes) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
-    /* 异步推送到服务端，失败静默 */
+    try { localStorage.setItem(STORAGE_KEY + '_ts', String(Date.now())); } catch (e) {}
     fetchKnowledgeApi({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(notes)
-    }).catch(function () {});
+      body: JSON.stringify({ notes: notes, ts: Date.now() })
+    }).catch(function (e) { console.warn('[KB] 云端保存失败', e); });
   }
 
-  /* 从服务端拉取最新笔记，成功后更新本地并重新渲染 */
+  /*
+   * 同步策略：
+   *  - 比较本地 ts 与远端 ts，谁更新用谁
+   *  - 远端无数据 → 把本地推上去
+   *  - 本地无自定义数据（仅 DEFAULT_NOTES）→ 用远端覆盖
+   */
   function syncFromServer(onDone) {
     fetchKnowledgeApi({ method: 'GET' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (Array.isArray(data) && data.length > 0) {
-          /* 服务端有数据 → 覆盖本地 */
-          state.notes = data;
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+        var remoteNotes = null;
+        var remoteTs = 0;
+
+        /* 兼容新格式 { notes:[], ts:N } 和旧格式 [] */
+        if (data && Array.isArray(data.notes) && data.notes.length > 0) {
+          remoteNotes = data.notes;
+          remoteTs = data.ts || 0;
+        } else if (Array.isArray(data) && data.length > 0) {
+          remoteNotes = data;
+          remoteTs = 0;
+        }
+
+        var localTs = 0;
+        try { localTs = parseInt(localStorage.getItem(STORAGE_KEY + '_ts'), 10) || 0; } catch (e) {}
+
+        if (remoteNotes && remoteTs >= localTs) {
+          /* 远端更新或一样新 → 用远端数据 */
+          state.notes = remoteNotes;
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteNotes));
+            localStorage.setItem(STORAGE_KEY + '_ts', String(remoteTs));
+          } catch (e) {}
           renderTagBar();
           renderNoteList();
-        } else if (state.notes && state.notes.length > 0) {
-          /* 服务端为空但本地有数据 → 将本地数据推送到服务端（首次同步） */
+        } else {
+          /* 本地更新或远端为空 → 把本地推到远端 */
           fetchKnowledgeApi({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(state.notes)
+            body: JSON.stringify({ notes: state.notes, ts: localTs || Date.now() })
           }).catch(function () {});
         }
         if (onDone) onDone();
       })
       .catch(function () {
-        /* 服务端不可用时继续使用本地数据 */
         if (onDone) onDone();
       });
   }
