@@ -866,14 +866,8 @@ File Name: X4U-2.10.2.6610.z
     document.addEventListener('click', function (e) {
       var target = e.target;
 
-      /* 向上查找最近的带 id 的祖先按钮 */
-      var btn = target.closest
-        ? target.closest('[id]')
-        : (function () {
-            var el = target;
-            while (el && !el.id) el = el.parentElement;
-            return el;
-          })();
+      /* 向上查找最近的带 id 的元素 */
+      var btn = target.closest ? target.closest('[id]') : null;
 
       if (!btn) return;
 
