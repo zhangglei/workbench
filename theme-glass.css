@@ -2589,6 +2589,66 @@ mark {
   color: rgba(255,255,255,0.60) !important;
 }
 
+/* ── 图片上传工具栏 ── */
+.kb-editor-content-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.kb-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.kb-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(128,184,255,0.25);
+  background: rgba(128,184,255,0.10);
+  color: #80B8FF;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.kb-toolbar-btn:hover {
+  background: rgba(128,184,255,0.22);
+  border-color: rgba(128,184,255,0.45);
+}
+
+.kb-toolbar-btn i {
+  font-size: 0.9rem;
+}
+
+.kb-toolbar-hint {
+  font-size: 0.70rem;
+  color: rgba(255,255,255,0.25);
+}
+
+/* textarea 和工具栏连为一体 */
+.kb-editor-content-wrap .kb-editor-textarea {
+  border-radius: 0 0 8px 8px !important;
+  border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* 拖拽进入时高亮边框 */
+.kb-editor-textarea.kb-drag-over {
+  border-color: rgba(128,184,255,0.55) !important;
+  background: rgba(128,184,255,0.08) !important;
+  box-shadow: inset 0 0 0 2px rgba(128,184,255,0.20) !important;
+}
+
 /* ================================================================
    §47  响应式适配
    ================================================================ */

@@ -118,9 +118,18 @@
         <label class="kb-editor-label">摘要 <textarea id="kb-edit-summary" rows="2" placeholder="一句话描述笔记内容…"></textarea></label>
         <label class="kb-editor-label">
           Markdown 正文
-          <span class="kb-editor-hint">支持标准 Markdown，代码块语法高亮</span>
+          <span class="kb-editor-hint">支持 Markdown + 图片（粘贴 / 拖拽 / 按钮上传）</span>
         </label>
-        <textarea id="kb-edit-content" class="kb-editor-textarea" rows="16" placeholder="# 标题&#10;&#10;## 小节&#10;&#10;```bash&#10;echo 'Hello'&#10;```"></textarea>
+        <div class="kb-editor-content-wrap">
+          <div class="kb-editor-toolbar">
+            <button type="button" class="kb-toolbar-btn" id="kb-img-upload-btn" title="插入图片">
+              <i class="ri-image-add-line"></i> 插入图片
+            </button>
+            <input type="file" id="kb-img-file-input" accept="image/*" multiple style="display:none;">
+            <span class="kb-toolbar-hint">也可直接粘贴截图或拖拽图片到编辑区</span>
+          </div>
+          <textarea id="kb-edit-content" class="kb-editor-textarea" rows="16" placeholder="# 标题&#10;&#10;## 小节&#10;&#10;```bash&#10;echo 'Hello'&#10;```&#10;&#10;拖拽或粘贴图片到此区域…"></textarea>
+        </div>
         <label class="kb-editor-label kb-editor-checkbox-row">
           <input type="checkbox" id="kb-edit-pinned"> 置顶显示
         </label>

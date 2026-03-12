@@ -568,11 +568,67 @@ File Name: X4U-2.10.2.6610.z
   }
 
   /* ================================================================
-     §6  Markdown 渲染（懒加载 CDN）
+     §6  Markdown 渲染（懒加载 CDN，含 fallback）
      ================================================================ */
   var _md = null;
   var _mdLoading = false;
   var _mdQueue = [];
+  var CDN_TIMEOUT = 6000;
+
+  /* 简易 Markdown 渲染（CDN 不可用时的 fallback） */
+  function simpleMdRender(src) {
+    var html = escHtml(src);
+    /* 代码块 */
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function (_, lang, code) {
+      return '<pre class="kb-code-block"><code>' + code + '</code></pre>';
+    });
+    /* 标题 */
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    /* 粗体/斜体 */
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    /* 行内代码 */
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    /* 图片 */
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;">');
+    /* 链接 */
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    /* 无序列表 */
+    html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+    /* 引用 */
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    /* 水平线 */
+    html = html.replace(/^---$/gm, '<hr>');
+    /* 段落（连续空行分隔） */
+    html = html.replace(/\n{2,}/g, '</p><p>');
+    html = '<p>' + html + '</p>';
+    /* 清理空段落 */
+    html = html.replace(/<p>\s*<\/p>/g, '');
+    html = html.replace(/<p>\s*(<h[1-4]>)/g, '$1');
+    html = html.replace(/(<\/h[1-4]>)\s*<\/p>/g, '$1');
+    html = html.replace(/<p>\s*(<pre)/g, '$1');
+    html = html.replace(/(<\/pre>)\s*<\/p>/g, '$1');
+    html = html.replace(/<p>\s*(<ul>)/g, '$1');
+    html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
+    html = html.replace(/<p>\s*(<blockquote>)/g, '$1');
+    html = html.replace(/(<\/blockquote>)\s*<\/p>/g, '$1');
+    html = html.replace(/<p>\s*(<hr>)/g, '$1');
+    return html;
+  }
+
+  /* 刷新队列中所有等待的回调 */
+  function flushQueue() {
+    var render = _md
+      ? function (c) { return _md.render(c); }
+      : simpleMdRender;
+    _mdLoading = false;
+    _mdQueue.forEach(function (item) { item.cb(render(item.content)); });
+    _mdQueue = [];
+  }
 
   function renderMarkdown(content, cb) {
     if (_md) { cb(_md.render(content)); return; }
@@ -580,37 +636,62 @@ File Name: X4U-2.10.2.6610.z
     if (_mdLoading) return;
     _mdLoading = true;
 
-    /* 加载 markdown-it */
-    var s1 = document.createElement('script');
-    s1.src = 'https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js';
-    s1.onload = function () {
-      /* 加载 highlight.js */
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css';
-      document.head.appendChild(link);
+    /* 超时保底：CDN 加载失败时用 fallback 渲染 */
+    var timer = setTimeout(function () {
+      if (!_md) {
+        console.warn('[KB] CDN timeout, using fallback renderer');
+        flushQueue();
+      }
+    }, CDN_TIMEOUT);
 
-      var s2 = document.createElement('script');
-      s2.src = 'https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js';
-      s2.onload = function () {
-        _md = window.markdownit({
-          html: false,
-          linkify: true,
-          typographer: true,
-          highlight: function (str, lang) {
-            if (lang && window.hljs && window.hljs.getLanguage(lang)) {
-              try { return '<pre class="kb-code-block"><code class="hljs language-' + lang + '">' + window.hljs.highlight(str, { language: lang }).value + '</code></pre>'; } catch (e) {}
-            }
-            return '<pre class="kb-code-block"><code>' + escHtml(str) + '</code></pre>';
+    function loadScript(url, onOk, onErr) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = onOk;
+      s.onerror = function () { console.warn('[KB] Failed to load:', url); onErr(); };
+      document.head.appendChild(s);
+    }
+
+    /* 加载 markdown-it */
+    loadScript('https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js',
+      function () {
+        /* 加载 highlight.js CSS */
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css';
+        document.head.appendChild(link);
+
+        /* 加载 highlight.js */
+        loadScript('https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js',
+          function () {
+            clearTimeout(timer);
+            _md = window.markdownit({
+              html: true,
+              linkify: true,
+              typographer: true,
+              highlight: function (str, lang) {
+                if (lang && window.hljs && window.hljs.getLanguage(lang)) {
+                  try { return '<pre class="kb-code-block"><code class="hljs language-' + lang + '">' + window.hljs.highlight(str, { language: lang }).value + '</code></pre>'; } catch (e) {}
+                }
+                return '<pre class="kb-code-block"><code>' + escHtml(str) + '</code></pre>';
+              }
+            });
+            flushQueue();
+          },
+          function () {
+            /* highlight.js 加载失败，markdown-it 仍可用 */
+            clearTimeout(timer);
+            _md = window.markdownit({ html: true, linkify: true, typographer: true });
+            flushQueue();
           }
-        });
-        _mdLoading = false;
-        _mdQueue.forEach(function (item) { item.cb(_md.render(item.content)); });
-        _mdQueue = [];
-      };
-      document.head.appendChild(s2);
-    };
-    document.head.appendChild(s1);
+        );
+      },
+      function () {
+        /* markdown-it 加载失败，用 fallback */
+        clearTimeout(timer);
+        flushQueue();
+      }
+    );
   }
 
   /* ================================================================
@@ -860,6 +941,107 @@ File Name: X4U-2.10.2.6610.z
   }
 
   /* ================================================================
+     §11b  图片上传（Base64 内嵌到 Markdown）
+     ================================================================ */
+
+  var MAX_IMG_WIDTH = 1200;
+
+  function compressAndInsertImage(file, textarea) {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height;
+        if (w > MAX_IMG_WIDTH) {
+          h = Math.round(h * MAX_IMG_WIDTH / w);
+          w = MAX_IMG_WIDTH;
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        var quality = file.size > 500000 ? 0.7 : 0.85;
+        var dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        var name = file.name || 'image';
+        var mdImg = '\n![' + name + '](' + dataUrl + ')\n';
+        insertAtCursor(textarea, mdImg);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function insertAtCursor(textarea, text) {
+    if (!textarea) return;
+    var start = textarea.selectionStart || 0;
+    var end = textarea.selectionEnd || 0;
+    var val = textarea.value;
+    textarea.value = val.slice(0, start) + text + val.slice(end);
+    var newPos = start + text.length;
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+    textarea.focus();
+  }
+
+  function bindImageUpload() {
+    var textarea = document.getElementById('kb-edit-content');
+    var uploadBtn = document.getElementById('kb-img-upload-btn');
+    var fileInput = document.getElementById('kb-img-file-input');
+    if (!textarea) return;
+
+    /* 按钮点击 → 触发文件选择 */
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+      });
+      fileInput.addEventListener('change', function () {
+        var files = this.files;
+        for (var i = 0; i < files.length; i++) {
+          compressAndInsertImage(files[i], textarea);
+        }
+        this.value = '';
+      });
+    }
+
+    /* 粘贴图片 */
+    textarea.addEventListener('paste', function (e) {
+      var items = (e.clipboardData || {}).items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          compressAndInsertImage(items[i].getAsFile(), textarea);
+          return;
+        }
+      }
+    });
+
+    /* 拖拽图片 */
+    textarea.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      textarea.classList.add('kb-drag-over');
+    });
+    textarea.addEventListener('dragleave', function () {
+      textarea.classList.remove('kb-drag-over');
+    });
+    textarea.addEventListener('drop', function (e) {
+      e.preventDefault();
+      textarea.classList.remove('kb-drag-over');
+      var files = e.dataTransfer ? e.dataTransfer.files : [];
+      for (var i = 0; i < files.length; i++) {
+        if (files[i].type.startsWith('image/')) {
+          compressAndInsertImage(files[i], textarea);
+        }
+      }
+    });
+  }
+
+  /* ================================================================
      §12  全局绑定（事件委托，避免 DOM 时序问题）
      ================================================================ */
   function bindAll() {
@@ -911,6 +1093,7 @@ File Name: X4U-2.10.2.6610.z
     });
 
     bindKbSearch();
+    bindImageUpload();
   }
 
   /* ================================================================
