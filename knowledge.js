@@ -763,6 +763,7 @@ File Name: X4U-2.10.2.6610.z
      §10  笔记编辑器弹窗
      ================================================================ */
   function openNoteEditor(noteId) {
+    console.log('[KB] openNoteEditor called with noteId:', noteId);
     var note = noteId ? state.notes.find(function (n) { return n.id === noteId; }) : null;
     state.editingNoteId = noteId || null;
 
@@ -869,10 +870,13 @@ File Name: X4U-2.10.2.6610.z
       /* 向上查找最近的带 id 的元素 */
       var btn = target.closest ? target.closest('[id]') : null;
 
+      console.log('[KB] Click event - target:', target, 'btn:', btn, 'btn.id:', btn ? btn.id : 'null');
+
       if (!btn) return;
 
       switch (btn.id) {
         case 'kb-new-btn':
+          console.log('[KB] kb-new-btn clicked');
           openNoteEditor(null);
           break;
         case 'kb-back-btn':
@@ -938,12 +942,18 @@ File Name: X4U-2.10.2.6610.z
   };
 
   /* DOM 就绪后绑定事件（事件只绑定一次，渲染按需触发） */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
+  var bindAllCalled = false;
+  function ensureBindAll() {
+    if (!bindAllCalled) {
       bindAll();
-    });
+      bindAllCalled = true;
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureBindAll);
   } else {
-    bindAll();
+    ensureBindAll();
   }
 
 })();
