@@ -2505,6 +2505,23 @@ mark {
    §46  知识库编辑器弹窗
    ================================================================ */
 
+/* 弹窗基础：默认隐藏，.show 时以 flex 居中显示 */
+.kb-editor-modal {
+  display: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0,0,0,0.55) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.kb-editor-modal.show {
+  display: flex !important;
+}
+
 .kb-editor-modal .modal-content {
   max-width: 760px;
   width: 95vw;

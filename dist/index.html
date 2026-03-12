@@ -9,8 +9,11 @@
   <meta name="apple-mobile-web-app-title" content="工作台">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
-  <!-- Remix Icon 线性图标库（2800+ 图标，公开 CDN，线性风格） -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css">
+  <!-- Remix Icon：preload 预连接 + media trick 实现非阻塞异步加载，避免 CDN 超时导致灰屏 -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"
+        media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"></noscript>
 </head>
 <body>
   <div class="login-overlay" id="loginOverlay">

@@ -347,10 +347,10 @@ docker image prune -f
 set -euo pipefail
 
 # 颜色定义
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED='\x1b[0;31m'
+GREEN='\x1b[0;32m'
+YELLOW='\x1b[1;33m'
+NC='\x1b[0m' # No Color
 
 # 服务器列表
 SERVERS=(
