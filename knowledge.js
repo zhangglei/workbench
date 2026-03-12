@@ -966,5 +966,6 @@ File Name: X4U-2.10.2.6610.z
     console.log('[KB] DOM already ready, calling ensureBindAll');
     ensureBindAll();
   }
+})();
 
 })();
