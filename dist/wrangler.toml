@@ -1,13 +1,8 @@
 name = "workbench"
 compatibility_date = "2026-03-05"
 
-# Cloudflare Pages 输出目录（Pages 必须字段）
+# Cloudflare Pages 输出目录（Pages 必须字段，不能有 [build] 节）
 pages_build_output_dir = "./dist"
-
-# Cloudflare Pages 构建配置
-[build]
-# 跳过 npm install（避免 electron 二进制下载失败），直接用 Node 执行构建脚本
-command = "node copy-static.js"
 
 # KV Namespace 绑定
 [[kv_namespaces]]
