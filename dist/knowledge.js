@@ -767,15 +767,26 @@ File Name: X4U-2.10.2.6610.z
     state.editingNoteId = noteId || null;
 
     var modal = document.getElementById('kb-editor-modal');
-    if (!modal) return;
+    if (!modal) { console.error('[KB] #kb-editor-modal not found'); return; }
 
-    document.getElementById('kb-edit-title').value    = note ? (note.title || '')    : '';
-    document.getElementById('kb-edit-category').value = note ? (note.category || '') : '';
-    document.getElementById('kb-edit-tags').value     = note ? (note.tags || []).join(', ') : '';
-    document.getElementById('kb-edit-summary').value  = note ? (note.summary || '')  : '';
-    document.getElementById('kb-edit-content').value  = note ? (note.content || '')  : '';
-    document.getElementById('kb-edit-author').value   = note ? (note.author || '')   : (localStorage.getItem('workbench_user') || 'Admin');
-    document.getElementById('kb-edit-pinned').checked = note ? !!note.pinned : false;
+    /* 防御性赋值：任何字段找不到只跳过，不中断 */
+    function setVal(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.value = val;
+      else console.warn('[KB] field not found:', id);
+    }
+    function setChecked(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.checked = val;
+    }
+
+    setVal('kb-edit-title',    note ? (note.title || '')    : '');
+    setVal('kb-edit-category', note ? (note.category || '') : '');
+    setVal('kb-edit-tags',     note ? (note.tags || []).join(', ') : '');
+    setVal('kb-edit-summary',  note ? (note.summary || '')  : '');
+    setVal('kb-edit-content',  note ? (note.content || '')  : '');
+    setVal('kb-edit-author',   note ? (note.author || '')   : (localStorage.getItem('workbench_user') || 'Admin'));
+    setChecked('kb-edit-pinned', note ? !!note.pinned : false);
 
     modal.classList.add('show');
   }
@@ -848,41 +859,50 @@ File Name: X4U-2.10.2.6610.z
   }
 
   /* ================================================================
-     §12  全局绑定（只执行一次）
+     §12  全局绑定（事件委托，避免 DOM 时序问题）
      ================================================================ */
   function bindAll() {
-    /* 返回按钮 */
-    var backBtn = document.getElementById('kb-back-btn');
-    if (backBtn) backBtn.addEventListener('click', closeNoteDetail);
+    /* 用事件委托挂在 document 上，无论按钮何时出现都能响应 */
+    document.addEventListener('click', function (e) {
+      var target = e.target;
 
-    /* 新建笔记按钮 */
-    var newBtn = document.getElementById('kb-new-btn');
-    if (newBtn) newBtn.addEventListener('click', function () { openNoteEditor(null); });
+      /* 向上查找最近的带 id 的祖先按钮 */
+      var btn = target.closest
+        ? target.closest('[id]')
+        : (function () {
+            var el = target;
+            while (el && !el.id) el = el.parentElement;
+            return el;
+          })();
 
-    /* 编辑器关闭 */
-    var editorClose = document.getElementById('kb-editor-close');
-    if (editorClose) editorClose.addEventListener('click', closeNoteEditor);
+      if (!btn) return;
 
-    var editorCancel = document.getElementById('kb-editor-cancel');
-    if (editorCancel) editorCancel.addEventListener('click', closeNoteEditor);
+      switch (btn.id) {
+        case 'kb-new-btn':
+          openNoteEditor(null);
+          break;
+        case 'kb-back-btn':
+          closeNoteDetail();
+          break;
+        case 'kb-editor-close':
+        case 'kb-editor-cancel':
+          closeNoteEditor();
+          break;
+        case 'kb-editor-save':
+          saveNote();
+          break;
+        case 'kb-editor-modal':
+          /* 点击遮罩层本身（不是内容区）则关闭 */
+          if (e.target === btn) closeNoteEditor();
+          break;
+      }
+    });
 
-    /* 编辑器保存 */
-    var editorSave = document.getElementById('kb-editor-save');
-    if (editorSave) editorSave.addEventListener('click', saveNote);
-
-    /* 点击遮罩关闭编辑器 */
-    var editorModal = document.getElementById('kb-editor-modal');
-    if (editorModal) {
-      editorModal.addEventListener('click', function (e) {
-        if (e.target === editorModal) closeNoteEditor();
-      });
-    }
-
-    /* Esc 关闭详情 */
+    /* Esc 关闭 */
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
-        if (document.getElementById('kb-editor-modal') &&
-            document.getElementById('kb-editor-modal').classList.contains('show')) {
+        var modal = document.getElementById('kb-editor-modal');
+        if (modal && modal.classList.contains('show')) {
           closeNoteEditor(); return;
         }
         if (state.currentNoteId) closeNoteDetail();
@@ -902,8 +922,19 @@ File Name: X4U-2.10.2.6610.z
     if (listView) listView.style.display = '';
     if (detailView) detailView.style.display = 'none';
 
+    /* 每次切入都重新绑定搜索框（防止首次时 DOM 未就绪） */
+    bindKbSearch();
     renderTagBar();
     renderNoteList();
+
+    /* 根据角色决定新建按钮可见性 */
+    var newBtn = document.getElementById('kb-new-btn');
+    if (newBtn) {
+      var role = '';
+      try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
+      /* 管理员显示，其余人隐藏 */
+      newBtn.style.display = role === 'admin' ? '' : 'none';
+    }
   }
 
   /* 暴露给 router 使用 */
