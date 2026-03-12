@@ -472,8 +472,26 @@ File Name: X4U-2.10.2.6610.z
      §3  数据持久化（localStorage + 服务端 API 双写）
      ================================================================ */
 
-  /* 知识库专属云端 API 路径（由 server.js 提供） */
-  var KNOWLEDGE_API_URL = '/api/knowledge-state';
+  /* 知识库云端 API 端点列表（按优先级排列：CF Pages / Netlify / 局域网 server.js） */
+  var KNOWLEDGE_API_URLS = [
+    '/api/knowledge-state',
+    '/.netlify/functions/knowledge-state'
+  ];
+
+  /* 找到第一个可用端点，返回 Response */
+  function fetchKnowledgeApi(init) {
+    var urls = KNOWLEDGE_API_URLS;
+    var i = 0;
+    function tryNext() {
+      if (i >= urls.length) return Promise.reject(new Error('All knowledge endpoints failed'));
+      var url = urls[i++];
+      return fetch(url, init).then(function (res) {
+        if (res.ok) return res;
+        return tryNext();
+      }).catch(function () { return tryNext(); });
+    }
+    return tryNext();
+  }
 
   /* 从 localStorage 读取（离线 fallback） */
   function loadNotesLocal() {
@@ -495,7 +513,7 @@ File Name: X4U-2.10.2.6610.z
   function saveNotes(notes) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
     /* 异步推送到服务端，失败静默 */
-    fetch(KNOWLEDGE_API_URL, {
+    fetchKnowledgeApi({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(notes)
@@ -504,8 +522,8 @@ File Name: X4U-2.10.2.6610.z
 
   /* 从服务端拉取最新笔记，成功后更新本地并重新渲染 */
   function syncFromServer(onDone) {
-    fetch(KNOWLEDGE_API_URL, { method: 'GET' })
-      .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
+    fetchKnowledgeApi({ method: 'GET' })
+      .then(function (res) { return res.json(); })
       .then(function (data) {
         /* 服务端返回非空数组时才覆盖本地 */
         if (Array.isArray(data) && data.length > 0) {
@@ -517,7 +535,7 @@ File Name: X4U-2.10.2.6610.z
         if (onDone) onDone();
       })
       .catch(function () {
-        /* 服务端不可用（静态部署/云端模式），继续使用本地数据 */
+        /* 服务端不可用时继续使用本地数据 */
         if (onDone) onDone();
       });
   }

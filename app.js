@@ -1488,7 +1488,8 @@
 
     var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.style.display = canEdit() ? '' : 'none';
-    if (footerBar) footerBar.style.display = canEdit() ? '' : 'none';
+    /* footer 由 _syncFooter 统一控制，避免各处覆盖 */
+    _syncFooter();
     if (appRoot) appRoot.style.display = currentUser ? '' : 'none';
     if (loginOverlay) loginOverlay.style.display = currentUser ? 'none' : '';
     if (!userArea) return;
@@ -1523,7 +1524,19 @@
   if (searchInput) searchInput.addEventListener('input', function () { renderModules(); });
   /* 暴露给 theme-glass.js 的 filterCards 调用 */
   window._appRenderModules = renderModules;
-  if (footerBar) footerBar.style.display = canEdit() ? '' : 'none';
+
+  /* footer 显示规则：管理员 + dashboard 视图时才显示 */
+  function _syncFooter() {
+    if (!footerBar) return;
+    var _view = (typeof window._currentView === 'function') ? window._currentView() : 'dashboard';
+    footerBar.style.display = (_view === 'knowledge' || !canEdit()) ? 'none' : '';
+  }
+  _syncFooter();
+
+  /* showView 切换视图时触发同步，防止被 updateUserUI 覆盖 */
+  window._onViewChange = function (viewName) {
+    _syncFooter();
+  };
 
   var settingsPanel = document.getElementById('settingsPanel');
   var settingsOverlay = document.getElementById('settingsOverlay');

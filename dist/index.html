@@ -355,6 +355,9 @@
     var views = { dashboard: 'dashboard-view', knowledge: 'knowledge-view' };
     var current = 'dashboard';
 
+    /* 供 app.js 查询当前视图 */
+    window._currentView = function () { return current; };
+
     function showView(name) {
       if (!views[name]) return;
       current = name;
@@ -377,6 +380,8 @@
         try { _role = localStorage.getItem('workbench_user_role'); } catch(e) {}
         footer.style.display = (name === 'knowledge' || _role !== 'admin') ? 'none' : '';
       }
+      /* 通知 app.js 同步 footer 状态（处理 updateUserUI 可能覆盖的情况） */
+      if (typeof window._onViewChange === 'function') window._onViewChange(name);
       /* 知识库：显示新建按钮（仅管理员），初始化 */
       if (name === 'knowledge') {
         var newBtn = document.getElementById('kb-new-btn');
