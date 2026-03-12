@@ -378,7 +378,7 @@
       if (footer) {
         var _role = '';
         try { _role = localStorage.getItem('workbench_user_role'); } catch(e) {}
-        footer.style.display = (name === 'knowledge' || _role !== 'admin') ? 'none' : '';
+        footer.classList.toggle('hidden', name === 'knowledge' || _role !== 'admin');
       }
       /* 通知 app.js 同步 footer 状态（处理 updateUserUI 可能覆盖的情况） */
       if (typeof window._onViewChange === 'function') window._onViewChange(name);

@@ -525,12 +525,19 @@ File Name: X4U-2.10.2.6610.z
     fetchKnowledgeApi({ method: 'GET' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        /* 服务端返回非空数组时才覆盖本地 */
         if (Array.isArray(data) && data.length > 0) {
+          /* 服务端有数据 → 覆盖本地 */
           state.notes = data;
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
           renderTagBar();
           renderNoteList();
+        } else if (state.notes && state.notes.length > 0) {
+          /* 服务端为空但本地有数据 → 将本地数据推送到服务端（首次同步） */
+          fetchKnowledgeApi({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state.notes)
+          }).catch(function () {});
         }
         if (onDone) onDone();
       })

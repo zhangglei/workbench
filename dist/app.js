@@ -1525,11 +1525,12 @@
   /* 暴露给 theme-glass.js 的 filterCards 调用 */
   window._appRenderModules = renderModules;
 
-  /* footer 显示规则：管理员 + dashboard 视图时才显示 */
+  /* footer 显示规则：管理员 + dashboard 视图时才显示（用 class 控制，因为 theme-glass.css 有 !important） */
   function _syncFooter() {
     if (!footerBar) return;
     var _view = (typeof window._currentView === 'function') ? window._currentView() : 'dashboard';
-    footerBar.style.display = (_view === 'knowledge' || !canEdit()) ? 'none' : '';
+    var shouldHide = _view === 'knowledge' || !canEdit();
+    footerBar.classList.toggle('hidden', shouldHide);
   }
   _syncFooter();
 
