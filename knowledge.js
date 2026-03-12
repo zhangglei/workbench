@@ -863,6 +863,7 @@ File Name: X4U-2.10.2.6610.z
      §12  全局绑定（事件委托，避免 DOM 时序问题）
      ================================================================ */
   function bindAll() {
+    console.log('[KB] bindAll called');
     /* 用事件委托挂在 document 上，无论按钮何时出现都能响应 */
     document.addEventListener('click', function (e) {
       var target = e.target;
@@ -914,6 +915,7 @@ File Name: X4U-2.10.2.6610.z
      §13  初始化（由 SPA router 在切换到知识库时调用）
      ================================================================ */
   function initKnowledge() {
+    console.log('[KB] initKnowledge called');
     /* 确保详情页隐藏、列表页可见 */
     var listView = document.getElementById('kb-list-view');
     var detailView = document.getElementById('kb-detail-view');
@@ -927,11 +929,14 @@ File Name: X4U-2.10.2.6610.z
 
     /* 根据角色决定新建按钮可见性 */
     var newBtn = document.getElementById('kb-new-btn');
+    console.log('[KB] newBtn found:', !!newBtn);
     if (newBtn) {
       var role = '';
       try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
+      console.log('[KB] user role:', role);
       /* 管理员显示，其余人隐藏 */
       newBtn.style.display = role === 'admin' ? '' : 'none';
+      console.log('[KB] newBtn display set to:', newBtn.style.display);
     }
   }
 
@@ -945,14 +950,20 @@ File Name: X4U-2.10.2.6610.z
   var bindAllCalled = false;
   function ensureBindAll() {
     if (!bindAllCalled) {
+      console.log('[KB] ensureBindAll - calling bindAll');
       bindAll();
       bindAllCalled = true;
+    } else {
+      console.log('[KB] ensureBindAll - bindAll already called');
     }
   }
 
+  console.log('[KB] knowledge.js loaded, readyState:', document.readyState);
   if (document.readyState === 'loading') {
+    console.log('[KB] Waiting for DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', ensureBindAll);
   } else {
+    console.log('[KB] DOM already ready, calling ensureBindAll');
     ensureBindAll();
   }
 
