@@ -370,9 +370,13 @@
       /* 切换搜索框 placeholder */
       var si = document.getElementById('searchInput');
       if (si) si.placeholder = name === 'knowledge' ? '搜索笔记…（功能在知识库内）' : '搜索模块、网页…';
-      /* 隐藏 Dashboard 的 footer 按钮（知识库有自己的新建按钮） */
+      /* 隐藏 Dashboard 的 footer 按钮（知识库有自己的新建按钮；非管理员始终隐藏） */
       var footer = document.getElementById('footerBar');
-      if (footer) footer.style.display = name === 'knowledge' ? 'none' : '';
+      if (footer) {
+        var _role = '';
+        try { _role = localStorage.getItem('workbench_user_role'); } catch(e) {}
+        footer.style.display = (name === 'knowledge' || _role !== 'admin') ? 'none' : '';
+      }
       /* 知识库：显示新建按钮（仅管理员），初始化 */
       if (name === 'knowledge') {
         var newBtn = document.getElementById('kb-new-btn');

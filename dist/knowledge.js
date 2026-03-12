@@ -469,9 +469,14 @@ File Name: X4U-2.10.2.6610.z
   ];
 
   /* ================================================================
-     §3  数据持久化
+     §3  数据持久化（localStorage + 服务端 API 双写）
      ================================================================ */
-  function loadNotes() {
+
+  /* 知识库专属云端 API 路径（由 server.js 提供） */
+  var KNOWLEDGE_API_URL = '/api/knowledge-state';
+
+  /* 从 localStorage 读取（离线 fallback） */
+  function loadNotesLocal() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -482,8 +487,39 @@ File Name: X4U-2.10.2.6610.z
     return DEFAULT_NOTES.map(function (n) { return Object.assign({}, n); });
   }
 
+  function loadNotes() {
+    return loadNotesLocal();
+  }
+
+  /* 保存到 localStorage + 异步推送服务端 */
   function saveNotes(notes) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
+    /* 异步推送到服务端，失败静默 */
+    fetch(KNOWLEDGE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notes)
+    }).catch(function () {});
+  }
+
+  /* 从服务端拉取最新笔记，成功后更新本地并重新渲染 */
+  function syncFromServer(onDone) {
+    fetch(KNOWLEDGE_API_URL, { method: 'GET' })
+      .then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); })
+      .then(function (data) {
+        /* 服务端返回非空数组时才覆盖本地 */
+        if (Array.isArray(data) && data.length > 0) {
+          state.notes = data;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+          renderTagBar();
+          renderNoteList();
+        }
+        if (onDone) onDone();
+      })
+      .catch(function () {
+        /* 服务端不可用（静态部署/云端模式），继续使用本地数据 */
+        if (onDone) onDone();
+      });
   }
 
   /* ================================================================
@@ -708,6 +744,8 @@ File Name: X4U-2.10.2.6610.z
     bar.querySelectorAll('.kb-tag').forEach(function (btn) {
       btn.addEventListener('click', function () {
         state.activeTag = btn.dataset.tag;
+        /* 若当前在详情页，跳回列表再过滤 */
+        if (state.currentNoteId) closeNoteDetail();
         renderTagBar();
         renderNoteList();
       });
@@ -928,6 +966,8 @@ File Name: X4U-2.10.2.6610.z
       var val = this.value;
       timer = setTimeout(function () {
         state.searchQ = val;
+        /* 若当前在详情页且有搜索词，跳回列表 */
+        if (val && state.currentNoteId) closeNoteDetail();
         renderNoteList();
       }, 180);
     });
@@ -935,6 +975,7 @@ File Name: X4U-2.10.2.6610.z
       if (e.key === 'Escape') {
         this.value = '';
         state.searchQ = '';
+        if (state.currentNoteId) closeNoteDetail();
         renderNoteList();
       }
     });
@@ -1106,7 +1147,7 @@ File Name: X4U-2.10.2.6610.z
     if (listView) listView.style.display = '';
     if (detailView) detailView.style.display = 'none';
 
-    /* 每次切入时重载数据（防止 IIFE 初始化时 localStorage 不同步） */
+    /* 先用本地数据渲染，避免白屏 */
     state.notes = loadNotes();
     state.searchQ = '';
     state.activeTag = '全部';
@@ -1124,9 +1165,11 @@ File Name: X4U-2.10.2.6610.z
     if (newBtn) {
       var role = '';
       try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
-      /* 管理员显示，其余人隐藏 */
       newBtn.style.display = role === 'admin' ? '' : 'none';
     }
+
+    /* 从服务端拉取最新数据（局域网多设备同步） */
+    syncFromServer(null);
   }
 
   /* 暴露给 router 使用 */
