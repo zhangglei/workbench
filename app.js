@@ -964,16 +964,17 @@
           ? '<span class="item-emoji-icon">🔗</span>'
           : '<span class="item-emoji-icon">📄</span>';
       }
-      var row = document.createElement('div');
-            row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '') + (hasContent ? ' has-tooltip' : '');
+            var row = document.createElement('div');
+      row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '') + ((hasContent && showContent) ? ' has-tooltip' : '');
       row.dataset.itemId = it.id;
       row.draggable = canEdit();
+
+      var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
+      var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + titleHtml + '</a>') : titleHtml;
+      var hoverText = (hasContent && showContent) ? String(it.content || '').replace(/\s+/g, ' ').trim() : '';
+      var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
       if (hoverText) row.title = hoverText;
 
-            var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
-      var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + titleHtml + '</a>') : titleHtml;
-      var hoverText = hasContent ? String(it.content || '').replace(/\s+/g, ' ').trim() : '';
-      var tooltipDesc = hasContent ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
 
       /* 搜索命中附件文件名时，在条目下方显示命中的附件名高亮 */
 
@@ -1012,10 +1013,8 @@
         '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIconHtml + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
         '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + attHitHtml + '</span>' +
-        actionsHtml;
-      if (hasContent) {
-        row.setAttribute('title', String(it.content || '').trim());
-      }
+                actionsHtml;
+
 
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
