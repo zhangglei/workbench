@@ -23,9 +23,10 @@
 
   function updateFabVisibility() {
     var fab = $('fabAddModule');
-    if (!fab) return;
+    var footer = $('footerBar');
     var visible = getCurrentView() === 'dashboard' && getRole() === 'admin';
-    fab.classList.toggle('hidden', !visible);
+    if (fab) fab.classList.toggle('hidden', !visible);
+    if (footer) footer.classList.add('hidden');
   }
 
   function updateSyncStatus() {

@@ -965,13 +965,18 @@
           : '<span class="item-emoji-icon">📄</span>';
       }
       var row = document.createElement('div');
-      row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '');
+            row.className = 'module-item item-box ' + typeClass + (hasUrl ? ' has-link' : '') + (hasContent ? ' has-tooltip' : '');
       row.dataset.itemId = it.id;
       row.draggable = canEdit();
-      var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
+      if (hoverText) row.title = hoverText;
+
+            var titleHtml = highlightMatch(escapeHtml(it.title || ''), q);
       var link = hasUrl ? ('<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener">' + titleHtml + '</a>') : titleHtml;
-      var tooltipDesc = (hasContent && showContent) ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
+      var hoverText = hasContent ? String(it.content || '').replace(/\s+/g, ' ').trim() : '';
+      var tooltipDesc = hasContent ? ('<span class="item-desc-tooltip">' + linkify(highlightMatch(escapeHtml(it.content), q)) + '</span>') : '';
+
       /* 搜索命中附件文件名时，在条目下方显示命中的附件名高亮 */
+
       var hasAttachments = it.attachments && it.attachments.length > 0;
       var attHitHtml = '';
       if (q && hasAttachments) {
@@ -1003,11 +1008,15 @@
             (it.comments && it.comments.length ? '<span class="comment-badge">' + it.comments.length + '</span>' : '') +
           '</div>';
       }
-      row.innerHTML =
+            row.innerHTML =
         '<span class="item-type-icon" title="' + (hasUrl ? '链接' : '正文') + '">' + typeIconHtml + '</span>' +
         (canEdit() ? '<span class="drag-handle small">⋮⋮</span>' : '') +
         '<span class="item-title-wrap"><span class="item-title">' + (hasUrl ? link : titleHtml) + '</span>' + tooltipDesc + attHitHtml + '</span>' +
         actionsHtml;
+      if (hasContent) {
+        row.setAttribute('title', String(it.content || '').trim());
+      }
+
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
           if (e.target.closest('.item-actions')) return;
@@ -1544,11 +1553,15 @@
       }
     }
 
-    var btnSettings = document.getElementById('btnSettings');
+        var btnSettings = document.getElementById('btnSettings');
     if (btnSettings) btnSettings.style.display = canEdit() ? '' : 'none';
     /* footer 由 _syncFooter 统一控制，避免各处覆盖 */
     _syncFooter();
+    if (window.WorkbenchUI && typeof window.WorkbenchUI.refreshUI === 'function') {
+      window.WorkbenchUI.refreshUI();
+    }
     if (appRoot) appRoot.style.display = currentUser ? '' : 'none';
+
     if (loginOverlay) loginOverlay.style.display = currentUser ? 'none' : '';
     if (!userArea) return;
     if (currentUser) {
@@ -1584,12 +1597,11 @@
   window._appRenderModules = renderModules;
 
   /* footer 显示规则：管理员 + dashboard 视图时才显示（用 class 控制，因为 theme-glass.css 有 !important） */
-  function _syncFooter() {
+    function _syncFooter() {
     if (!footerBar) return;
-    var _view = (typeof window._currentView === 'function') ? window._currentView() : 'dashboard';
-    var shouldHide = _view === 'knowledge' || !canEdit();
-    footerBar.classList.toggle('hidden', shouldHide);
+    footerBar.classList.add('hidden');
   }
+
   _syncFooter();
 
   /* showView 切换视图时触发同步，防止被 updateUserUI 覆盖 */
