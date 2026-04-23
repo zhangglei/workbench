@@ -266,13 +266,37 @@
    * 在 str 中高亮所有 q 出现的位置，返回带 <mark> 的 HTML 字符串。
    * str 应是已 escapeHtml 过的安全 HTML 文本。
    */
-  function highlightMatch(str, q) {
+    function highlightMatch(str, q) {
     if (!q || !str) return str;
     var escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return str.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
   }
 
+  function showToast(message, type) {
+    if (window.WorkbenchUI && typeof window.WorkbenchUI.showToast === 'function') {
+      window.WorkbenchUI.showToast(message, type || 'success');
+    }
+  }
+
+    function confirmAction(message, onConfirm, options) {
+    if (window.WorkbenchUI && typeof window.WorkbenchUI.confirm === 'function') {
+      window.WorkbenchUI.confirm({
+        title: (options && options.title) || '请确认操作',
+        message: message || '确认继续吗？',
+        confirmText: (options && options.confirmText) || '确定',
+        cancelText: (options && options.cancelText) || '取消',
+        danger: !options || options.danger !== false
+      }).then(function (ok) {
+        if (ok && typeof onConfirm === 'function') onConfirm();
+      });
+      return;
+    }
+    showToast('确认弹窗不可用，请刷新页面后重试', 'error');
+  }
+
+
   function openModuleModal(module) {
+
     var titleEl = document.getElementById('moduleModalTitle');
     var idEl = document.getElementById('moduleId');
     var nameEl = document.getElementById('moduleName');
@@ -596,7 +620,9 @@
             'var s=document.getElementById("statusMsg");' +
             's.classList.add("show");' +
             'setTimeout(function(){s.classList.remove("show");},2500);' +
-          '}else{alert("无法连接到工作台窗口，请确认原窗口未关闭。");}' +
+                                        '}else if(window.opener&&window.opener.WorkbenchUI&&window.opener.WorkbenchUI.showToast){window.opener.WorkbenchUI.showToast("无法连接到工作台窗口，请确认原窗口未关闭。","error");}else{var s=document.getElementById("statusMsg");if(s){s.textContent="无法连接到工作台窗口，请确认原窗口未关闭。";s.classList.add("show");}}' +
+
+
         '}' +
         'ed.addEventListener("keydown",function(e){' +
           'if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();doSave();}' +
@@ -610,21 +636,29 @@
       '</body></html>';
   }
 
-  function openAttachmentViewWindow(att) {
+    function openAttachmentViewWindow(att) {
     var win = window.open('', '_blank');
-    if (!win) { alert('弹出窗口被阻止，请允许弹出窗口后重试。'); return; }
+    if (!win) {
+      showToast('弹出窗口被阻止，请允许弹出窗口后重试。', 'warning');
+      return;
+    }
     win.document.write(buildAttachmentViewHtml(att));
     win.document.close();
   }
 
-  function openAttachmentEditWindow(att, onSave) {
+
+    function openAttachmentEditWindow(att, onSave) {
     window._updateAttachmentCallbacks = window._updateAttachmentCallbacks || {};
     window._updateAttachmentCallbacks[att.id] = onSave;
     var win = window.open('', '_blank');
-    if (!win) { alert('弹出窗口被阻止，请允许弹出窗口后重试。'); return; }
+    if (!win) {
+      showToast('弹出窗口被阻止，请允许弹出窗口后重试。', 'warning');
+      return;
+    }
     win.document.write(buildAttachmentEditHtml(att));
     win.document.close();
   }
+
 
   window.updateAttachmentContent = function(attId, newContent) {
     var cb = (window._updateAttachmentCallbacks || {})[attId];
@@ -671,11 +705,12 @@
       return;
     }
     // 降级：新窗口打开附件列表
-    var win = window.open('', '_blank');
+        var win = window.open('', '_blank');
     if (!win) {
-      console.warn('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。');
+      showToast('弹出窗口被阻止，无法打开附件查看器。请允许弹出窗口。', 'warning');
       return;
     }
+
     window._currentAttachments = attachments;
     function encodeAttr(str) {
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -738,11 +773,12 @@
     if (att) openAttachmentViewWindow(att);
   };
 
-  function exportAttachment(att) {
+    function exportAttachment(att) {
     if (!att || !att.content) {
-      alert('附件内容为空，无法导出');
+      showToast('附件内容为空，无法导出', 'warning');
       return;
     }
+
     
     var content = att.content;
     var filename = att.name || 'exported_file.txt';
@@ -840,14 +876,18 @@
           (canEdit() ? ' <button type="button" class="btn btn-icon small btn-danger btn-delete-comment" data-cid="' + escapeHtml(c.id) + '" title="删除">🗑️</button>' : '');
         list.appendChild(div);
       });
-      list.querySelectorAll('.btn-delete-comment').forEach(function (btn) {
+            list.querySelectorAll('.btn-delete-comment').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var cid = btn.getAttribute('data-cid');
-          item.comments = (item.comments || []).filter(function (x) { return x.id !== cid; });
-          persistState();
-          openCommentsModal(item, moduleId);
+          confirmAction('确定删除这条评论？', function () {
+            item.comments = (item.comments || []).filter(function (x) { return x.id !== cid; });
+            persistState();
+            openCommentsModal(item, moduleId);
+            showToast('评论已删除', 'success');
+          }, { title: '删除评论', confirmText: '删除', danger: true });
         });
       });
+
     }
     var input = document.getElementById('commentInput');
     if (input) input.value = '';
@@ -982,12 +1022,14 @@
       });
       row.querySelectorAll('.btn-delete-item').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
-          e.preventDefault(); e.stopPropagation();
-          if (confirm('确定删除该内容？')) {
+                    e.preventDefault(); e.stopPropagation();
+          confirmAction('确定删除该内容？', function () {
             mod.items = (mod.items || []).filter(function (x) { return x.id !== it.id; });
             persistState();
             renderModules();
-          }
+            showToast('内容已删除', 'success');
+          }, { title: '删除内容', confirmText: '删除', danger: true });
+
         });
       });
       row.querySelectorAll('.btn-comment-item').forEach(function (btn) {
@@ -1036,13 +1078,15 @@
       btn.addEventListener('click', function () { openModuleModal(mod); });
     });
     card.querySelectorAll('.btn-delete-module').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        if (confirm('确定删除整个模块？')) {
+            btn.addEventListener('click', function () {
+        confirmAction('确定删除整个模块？模块下内容也会一起删除。', function () {
           state.modules = state.modules.filter(function (x) { return x.id !== mod.id; });
           persistState();
           renderModules();
-        }
+          showToast('模块已删除', 'success');
+        }, { title: '删除模块', confirmText: '删除', danger: true });
       });
+
     });
     card.querySelectorAll('.btn-add-item').forEach(function (btn) {
       btn.addEventListener('click', function () { openItemModal(mod.id, null); });
@@ -1140,13 +1184,15 @@
       btn.addEventListener('click', function () { openModuleModal(mod); });
     });
     card.querySelectorAll('.btn-delete-module').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        if (confirm('确定删除整个模块？')) {
+            btn.addEventListener('click', function () {
+        confirmAction('确定删除整个模块？模块下内容也会一起删除。', function () {
           state.modules = state.modules.filter(function (x) { return x.id !== mod.id; });
           persistState();
           renderModules();
-        }
+          showToast('模块已删除', 'success');
+        }, { title: '删除模块', confirmText: '删除', danger: true });
       });
+
     });
     if (canEdit()) {
       card.addEventListener('dragstart', function (e) {
@@ -1279,10 +1325,12 @@
           items: []
         });
       }
-      persistState();
+            persistState();
       renderModules();
       closeModuleModal();
+      showToast(idVal ? '模块已更新' : '模块已创建', 'success');
     });
+
   }
 
   function bindItemModal() {
@@ -1308,10 +1356,12 @@
       } else {
         mod.items.push({ id: id(), title: title, url: url, content: content, showContent: showContent, visibleToAll: visibleToAll, newTab: newTab, icon: iconVal, comments: [], attachments: editingAttachments.slice() });
       }
-      persistState();
+            persistState();
       renderModules();
       closeItemModal();
+      showToast(itemId ? '内容已更新' : '内容已创建', 'success');
     });
+
     document.getElementById('btnImportContent').addEventListener('click', function () {
       document.getElementById('itemImportFile').click();
     });
@@ -1330,8 +1380,10 @@
           type: ext,
           content: add
         });
-        renderAttachmentsList();
+                renderAttachmentsList();
+        showToast('文件已导入到附件列表', 'success');
       };
+
       reader.readAsText(file, 'UTF-8');
       this.value = '';
     });
@@ -1349,18 +1401,21 @@
       if (!text) return;
       var nick = (document.getElementById('commentNickname') && document.getElementById('commentNickname').value || '').trim() || '游客';
       if (currentUser) nick = currentUser;
-      if (!canComment()) {
-        alert('请先登录后再发表评论。');
+            if (!canComment()) {
+        showToast('请先登录后再发表评论', 'warning');
         closeCommentsModal();
         openLoginModal();
         return;
       }
+
       target.item.comments = target.item.comments || [];
       var commentId = id();
-      target.item.comments.push({ id: commentId, user: nick, text: text, time: new Date().toLocaleString() });
+            target.item.comments.push({ id: commentId, user: nick, text: text, time: new Date().toLocaleString() });
       persistState();
       openCommentsModal(target.item, target.moduleId);
+      showToast('评论已发送', 'success');
     });
+
   }
 
   // 发送评论邮件通知
@@ -1417,7 +1472,7 @@
       }
       var all = guestList.concat(adminList);
       var matched = all.find(function (x) { return x.user === user && x.pass === pass; });
-      if (matched) {
+            if (matched) {
         currentUser = user;
         currentRole = matched.role || 'admin';
         localStorage.setItem(STORAGE_USER, user);
@@ -1425,9 +1480,12 @@
         closeLoginModal();
         updateUserUI();
         renderModules();
+        showToast(currentRole === 'admin' ? '管理员登录成功' : '登录成功', 'success');
       } else {
         document.getElementById('loginHint').textContent = '用户名或密码错误，或未在设置中配置允许的用户。';
+        showToast('登录失败，请检查账号密码', 'error');
       }
+
     }
     document.getElementById('loginForm').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -1654,8 +1712,12 @@
     img.src = url;
   });
 
-  var btnExportState = document.getElementById('btnExportState');
-  if (btnExportState) btnExportState.addEventListener('click', exportStateToFile);
+    var btnExportState = document.getElementById('btnExportState');
+  if (btnExportState) btnExportState.addEventListener('click', function () {
+    exportStateToFile();
+    showToast('数据已导出', 'success');
+  });
+
   var btnImportState = document.getElementById('btnImportState');
   var importStateFile = document.getElementById('importStateFile');
   if (btnImportState && importStateFile) {
@@ -1663,10 +1725,11 @@
     importStateFile.addEventListener('change', function () {
       var f = this.files && this.files[0];
       if (!f) return;
-      importStateFromFile(f)
-        .then(function () { alert('导入成功'); })
-        .catch(function () { alert('导入失败：文件格式不正确'); })
+            importStateFromFile(f)
+        .then(function () { showToast('导入成功', 'success'); })
+        .catch(function () { showToast('导入失败：文件格式不正确', 'error'); })
         .finally(function () { importStateFile.value = ''; });
+
     });
   }
 

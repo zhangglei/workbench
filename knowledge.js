@@ -625,10 +625,26 @@ File Name: X4U-2.10.2.6610.z
     return String(d).replace(/-/g, '/');
   }
 
-  /* 判断是否为管理员（复用 app.js 逻辑） */
+    /* 判断是否为管理员（复用 app.js 逻辑） */
   function isAdmin() {
     try { return localStorage.getItem('workbench_user_role') === 'admin'; } catch (e) { return false; }
   }
+
+  function showToast(message, type) {
+    if (window.WorkbenchUI && typeof window.WorkbenchUI.showToast === 'function') {
+      window.WorkbenchUI.showToast(message, type || 'success');
+    }
+  }
+
+    function confirmAction(options) {
+    if (window.WorkbenchUI && typeof window.WorkbenchUI.confirm === 'function') {
+      return window.WorkbenchUI.confirm(options || {});
+    }
+    showToast('确认弹窗不可用，请刷新页面后重试', 'error');
+    return Promise.resolve(false);
+  }
+
+
 
   /* 类别对应颜色 */
   var CATEGORY_COLOR = {
@@ -864,16 +880,20 @@ File Name: X4U-2.10.2.6610.z
     });
 
     /* 删除按钮 */
-    grid.querySelectorAll('.kb-del-btn').forEach(function (btn) {
+        grid.querySelectorAll('.kb-del-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
-        if (!confirm('确定删除这篇笔记？')) return;
-        state.notes = state.notes.filter(function (n) { return n.id !== btn.dataset.id; });
-        saveNotes(state.notes);
-        renderTagBar();
-        renderNoteList();
+        confirmAction({ title: '删除笔记', message: '确定删除这篇笔记？', confirmText: '删除', cancelText: '取消', danger: true }).then(function (ok) {
+          if (!ok) return;
+          state.notes = state.notes.filter(function (n) { return n.id !== btn.dataset.id; });
+          saveNotes(state.notes);
+          renderTagBar();
+          renderNoteList();
+          showToast('笔记已删除', 'success');
+        });
       });
     });
+
   }
 
   /* ================================================================
@@ -973,7 +993,11 @@ File Name: X4U-2.10.2.6610.z
     var author   = (document.getElementById('kb-edit-author').value || '').trim() || 'Admin';
     var pinned   = document.getElementById('kb-edit-pinned').checked;
 
-    if (!title) { alert('请填写标题'); return; }
+        if (!title) {
+      showToast('请填写标题', 'warning');
+      return;
+    }
+
 
     var tags = tagsRaw ? tagsRaw.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
     if (category && tags.indexOf(category) === -1) tags.unshift(category);
@@ -993,10 +1017,12 @@ File Name: X4U-2.10.2.6610.z
         views: 0, pinned: pinned
       });
     }
-    saveNotes(state.notes);
+        saveNotes(state.notes);
     closeNoteEditor();
     renderTagBar();
     renderNoteList();
+    showToast(state.editingNoteId ? '笔记已更新' : '笔记已创建', 'success');
+
     /* 若在详情页编辑，刷新详情 */
     if (state.currentNoteId) openNoteDetail(state.currentNoteId);
   }

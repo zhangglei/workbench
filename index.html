@@ -25,12 +25,15 @@
     </div>
   </div>
 
-  <div id="app">
+    <div id="app">
     <header class="header">
-      <h1 class="title" id="headerTitle">我的工作台</h1>
+      <div class="header-brand">
+        <h1 class="title" id="headerTitle">我的工作台</h1>
+        <span class="sync-status" id="syncStatus" aria-live="polite">浏览器本地数据</span>
+      </div>
 
       <!-- SPA 导航按钮 -->
-      <nav class="spa-nav" id="spaNav">
+      <nav class="spa-nav" id="spaNav" aria-label="主导航">
         <button type="button" class="spa-nav-btn spa-nav-btn--active" data-view="dashboard" id="navDashboard">
           <i class="ri-layout-grid-line"></i>
           <span>工作台</span>
@@ -42,11 +45,15 @@
       </nav>
 
       <div class="header-right">
-        <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
-        <span class="user-area" id="userArea">
-          <button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>
-        </span>
-        <button type="button" class="btn btn-icon" id="btnSettings" title="设置" style="display: none;">⚙️</button>
+        <div class="header-search" id="headerSearchWrap">
+          <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
+        </div>
+        <div class="header-actions">
+          <span class="user-area" id="userArea">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>
+          </span>
+          <button type="button" class="btn btn-icon" id="btnSettings" title="设置" aria-label="打开设置" style="display: none;">⚙️</button>
+        </div>
       </div>
     </header>
 
@@ -96,16 +103,39 @@
       </div>
     </div>
 
-    <footer class="footer" id="footerBar">
+        <footer class="footer" id="footerBar">
       <button type="button" class="btn btn-primary" id="btnAddModule">+ 添加模块</button>
     </footer>
   </div>
 
+  <button type="button" class="fab-add-module hidden" id="fabAddModule" aria-label="添加模块">
+    <i class="ri-add-line"></i>
+    <span>添加模块</span>
+  </button>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-content modal-content-sm">
+      <div class="modal-header">
+        <h2 id="confirmModalTitle">请确认操作</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseConfirmModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-modal-message" id="confirmModalMessage">确认继续吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelConfirmModal">取消</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmModalOk">确定</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 知识库笔记编辑器弹窗 -->
-  <div class="modal kb-editor-modal" id="kb-editor-modal">
+    <div class="modal kb-editor-modal" id="kb-editor-modal" role="dialog" aria-modal="true" aria-labelledby="kb-editor-title">
     <div class="modal-content kb-editor-content">
       <div class="modal-header">
-        <h2>编辑笔记</h2>
+        <h2 id="kb-editor-title">编辑笔记</h2>
         <button type="button" class="btn btn-icon btn-close" id="kb-editor-close">×</button>
       </div>
       <div class="modal-body kb-editor-body">
@@ -210,7 +240,7 @@
   <div class="overlay" id="settingsOverlay"></div>
 
   <!-- 添加/编辑 模块 弹窗 -->
-  <div class="modal" id="moduleModal">
+  <div class="modal" id="moduleModal" role="dialog" aria-modal="true" aria-labelledby="moduleModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="moduleModalTitle">添加模块</h2>
@@ -231,7 +261,7 @@
   </div>
 
   <!-- 添加/编辑 内容（网页）弹窗 -->
-  <div class="modal" id="itemModal">
+  <div class="modal" id="itemModal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="itemModalTitle">添加内容</h2>
@@ -279,7 +309,7 @@
   </div>
 
   <!-- 查看内容（只读）弹窗 -->
-  <div class="modal" id="viewContentModal">
+  <div class="modal" id="viewContentModal" role="dialog" aria-modal="true" aria-labelledby="viewContentTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="viewContentTitle">查看内容</h2>
@@ -292,10 +322,10 @@
   </div>
 
   <!-- 附件列表弹窗（只读查看） -->
-  <div class="modal" id="attachmentsListModal">
+  <div class="modal" id="attachmentsListModal" role="dialog" aria-modal="true" aria-labelledby="attachmentsListTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>附件列表</h2>
+        <h2 id="attachmentsListTitle">附件列表</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseAttachmentsListModal">×</button>
       </div>
       <div class="modal-body">
@@ -305,10 +335,10 @@
   </div>
 
   <!-- 评论 弹窗 -->
-  <div class="modal" id="commentsModal">
+  <div class="modal" id="commentsModal" role="dialog" aria-modal="true" aria-labelledby="commentsModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>评论</h2>
+        <h2 id="commentsModalTitle">评论</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseCommentsModal">×</button>
       </div>
       <div class="modal-body">
@@ -323,10 +353,10 @@
   </div>
 
   <!-- 登录 弹窗 -->
-  <div class="modal" id="loginModal">
+  <div class="modal" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>登录</h2>
+        <h2 id="loginModalTitle">登录</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseLoginModal">×</button>
       </div>
       <form id="loginForm" class="modal-body" action="javascript:;">
@@ -341,8 +371,11 @@
   </div>
 
 
+    
+
   <script src="app.js"></script>
   <script src="knowledge.js"></script>
+  <script src="ui-enhancements.js"></script>
 
   <!-- Glass UI 主题增强层（只追加样式/行为，不修改原有逻辑） -->
   <link rel="stylesheet" href="theme-glass.css">
@@ -367,21 +400,24 @@
         if (el) el.style.display = k === name ? '' : 'none';
       });
       /* 切换导航按钮激活状态 */
-      document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
+            document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
         btn.classList.toggle('spa-nav-btn--active', btn.dataset.view === name);
       });
-      /* 切换搜索框 placeholder */
+      /* Dashboard 使用顶部搜索，知识库使用自身搜索 */
       var si = document.getElementById('searchInput');
-      if (si) si.placeholder = name === 'knowledge' ? '搜索笔记…（功能在知识库内）' : '搜索模块、网页…';
+      var headerSearchWrap = document.getElementById('headerSearchWrap');
+      if (si) si.placeholder = '搜索模块、网页…';
+      if (headerSearchWrap) headerSearchWrap.classList.toggle('hidden', name === 'knowledge');
       /* 隐藏 Dashboard 的 footer 按钮（知识库有自己的新建按钮；非管理员始终隐藏） */
       var footer = document.getElementById('footerBar');
-      if (footer) {
+            if (footer) {
         var _role = '';
         try { _role = localStorage.getItem('workbench_user_role'); } catch(e) {}
         footer.classList.toggle('hidden', name === 'knowledge' || _role !== 'admin');
       }
-      /* 通知 app.js 同步 footer 状态（处理 updateUserUI 可能覆盖的情况） */
+      /* 通知 app.js / UI 增强层同步状态（处理 updateUserUI 可能覆盖的情况） */
       if (typeof window._onViewChange === 'function') window._onViewChange(name);
+      if (window.WorkbenchUI && typeof window.WorkbenchUI.refreshUI === 'function') window.WorkbenchUI.refreshUI();
       /* 知识库：显示新建按钮（仅管理员），初始化 */
       if (name === 'knowledge') {
         var newBtn = document.getElementById('kb-new-btn');
