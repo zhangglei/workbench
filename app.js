@@ -1649,8 +1649,11 @@
     }
     if (window.workbenchApi) {
       document.getElementById('dataPathSection').style.display = '';
+      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
       window.workbenchApi.getConfig().then(function (cfg) {
         document.getElementById('dataPathInput').value = (cfg && cfg.dataPath) || '';
+        if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
+        if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
       });
     }
     settingsPanel.classList.add('open');
@@ -1687,6 +1690,13 @@
     state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
 
     persistState();
+    if (window.workbenchApi) {
+      window.workbenchApi.setConfig({
+        dataPath: (document.getElementById('dataPathInput').value || '').trim(),
+        obsidianVaultPath: (document.getElementById('obsidianVaultPathInput') ? document.getElementById('obsidianVaultPathInput').value : '').trim(),
+        obsidianSyncFolder: (document.getElementById('obsidianSyncFolderInput') ? document.getElementById('obsidianSyncFolderInput').value : 'WorkbenchSync').trim() || 'WorkbenchSync'
+      });
+    }
     applyLayout();
     applyBackground();
     closeSettings();
@@ -1741,6 +1751,36 @@
         .catch(function () { showToast('导入失败：文件格式不正确', 'error'); })
         .finally(function () { importStateFile.value = ''; });
 
+    });
+  }
+
+  if (window.workbenchApi) {
+    window.workbenchApi.getConfig().then(function (cfg) {
+      if (document.getElementById('dataPathSection')) document.getElementById('dataPathSection').style.display = '';
+      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
+      if (document.getElementById('dataPathInput') && cfg && cfg.dataPath) document.getElementById('dataPathInput').value = cfg.dataPath;
+      if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
+      if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
+    }).catch(function () {});
+
+    var chooseBtn = document.getElementById('btnChooseDataPath');
+    if (chooseBtn) chooseBtn.addEventListener('click', function () {
+      window.workbenchApi.chooseDataPath().then(function (path) {
+        if (!path) return;
+        window.workbenchApi.setConfig({ dataPath: path });
+        document.getElementById('dataPathInput').value = path;
+      });
+    });
+
+    var chooseObsidianBtn = document.getElementById('btnChooseObsidianVaultPath');
+    if (chooseObsidianBtn) chooseObsidianBtn.addEventListener('click', function () {
+      window.workbenchApi.chooseObsidianVaultPath().then(function (vaultPath) {
+        if (!vaultPath) return;
+        var syncFolderInput = document.getElementById('obsidianSyncFolderInput');
+        var syncFolder = ((syncFolderInput && syncFolderInput.value) || 'WorkbenchSync').trim() || 'WorkbenchSync';
+        window.workbenchApi.setConfig({ obsidianVaultPath: vaultPath, obsidianSyncFolder: syncFolder });
+        document.getElementById('obsidianVaultPathInput').value = vaultPath;
+      });
     });
   }
 
@@ -1814,10 +1854,6 @@
   });
 
   if (window.workbenchApi) {
-    window.workbenchApi.getConfig().then(function (cfg) {
-      if (document.getElementById('dataPathSection')) document.getElementById('dataPathSection').style.display = '';
-      if (document.getElementById('dataPathInput') && cfg && cfg.dataPath) document.getElementById('dataPathInput').value = cfg.dataPath;
-    });
     window.workbenchApi.loadState().then(function (data) {
       if (data) {
         state = migrateState(data);
@@ -1829,18 +1865,6 @@
       applyBackground();
       renderModules();
     }).catch(function () {});
-    var chooseBtn = document.getElementById('btnChooseDataPath');
-    if (chooseBtn) chooseBtn.addEventListener('click', function () {
-      window.workbenchApi.chooseDataPath().then(function (path) {
-        if (!path) return;
-        window.workbenchApi.setConfig({ dataPath: path });
-        document.getElementById('dataPathInput').value = path;
-        window.workbenchApi.loadState().then(function (data) {
-          if (data) state = migrateState(data);
-          renderModules();
-        });
-      });
-    });
   } else {
     var rawState = load(STORAGE_STATE, null);
     if (rawState) {

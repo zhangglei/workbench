@@ -233,6 +233,13 @@
         <label>目录 <input type="text" id="dataPathInput" readonly></label>
         <button type="button" class="btn btn-secondary" id="btnChooseDataPath">选择文件夹</button>
       </section>
+      <section class="setting-section" id="obsidianPathSection" style="display: none;">
+        <h3>Obsidian 双向同步</h3>
+        <p class="setting-hint">仅桌面版可用。选择 Vault 目录后，工作台会在其中的 <code>WorkbenchSync</code> 子目录中同步 Markdown 笔记，并继续同步现有知识库数据。</p>
+        <label>Vault 目录 <input type="text" id="obsidianVaultPathInput" readonly></label>
+        <label>同步子目录 <input type="text" id="obsidianSyncFolderInput" value="WorkbenchSync" placeholder="WorkbenchSync"></label>
+        <button type="button" class="btn btn-secondary" id="btnChooseObsidianVaultPath">选择 Vault 文件夹</button>
+      </section>
 
       <button type="button" class="btn btn-secondary" id="btnApplySettings">应用设置</button>
     </div>

@@ -509,15 +509,87 @@ File Name: X4U-2.10.2.6610.z
     return loadNotesLocal();
   }
 
-  /* 保存到 localStorage + 同步推送服务端 */
-  function saveNotes(notes) {
+  function noteTimestamp(note) {
+    if (!note) return 0;
+    var updated = Date.parse(note.updatedAt || '');
+    if (!isNaN(updated) && updated > 0) return updated;
+    var dateOnly = Date.parse(note.date || '');
+    if (!isNaN(dateOnly) && dateOnly > 0) return dateOnly;
+    return 0;
+  }
+
+  function normalizeNote(note) {
+    if (!note || !note.id) return null;
+    var normalized = Object.assign({}, note);
+    normalized.title = String(normalized.title || '未命名').trim();
+    normalized.category = String(normalized.category || '').trim();
+    normalized.tags = Array.isArray(normalized.tags)
+      ? normalized.tags.map(function (t) { return String(t || '').trim(); }).filter(Boolean)
+      : [];
+    if (!normalized.category && normalized.tags.length) normalized.category = normalized.tags[0];
+    normalized.summary = String(normalized.summary || '').trim();
+    normalized.content = String(normalized.content || '');
+    normalized.author = String(normalized.author || 'Admin').trim();
+    normalized.date = String(normalized.date || new Date().toISOString().slice(0, 10)).trim();
+    normalized.views = parseInt(normalized.views, 10) || 0;
+    normalized.pinned = !!normalized.pinned;
+    normalized.updatedAt = String(normalized.updatedAt || new Date(noteTimestamp(normalized) || Date.now()).toISOString());
+    return normalized;
+  }
+
+  function mergeNotesByFreshness() {
+    var map = {};
+    Array.prototype.slice.call(arguments).forEach(function (list) {
+      (Array.isArray(list) ? list : []).forEach(function (rawNote) {
+        var note = normalizeNote(rawNote);
+        if (!note) return;
+        var existing = map[note.id];
+        if (!existing || noteTimestamp(note) >= noteTimestamp(existing)) {
+          map[note.id] = note;
+        }
+      });
+    });
+    return Object.keys(map).map(function (id) { return map[id]; }).sort(function (a, b) {
+      return noteTimestamp(b) - noteTimestamp(a);
+    });
+  }
+
+  function persistNotesLocal(notes, ts) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY + '_ts', String(Date.now())); } catch (e) {}
-    fetchKnowledgeApi({
+    try { localStorage.setItem(STORAGE_KEY + '_ts', String(ts || Date.now())); } catch (e) {}
+  }
+
+  function pushNotesToCloud(notes, ts) {
+    return fetchKnowledgeApi({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: notes, ts: Date.now() })
-    }).catch(function (e) { console.warn('[KB] 云端保存失败', e); });
+      body: JSON.stringify({ notes: notes, ts: ts || Date.now() })
+    }).catch(function (e) {
+      console.warn('[KB] 云端保存失败', e);
+    });
+  }
+
+  function pushNotesToObsidian(notes) {
+    if (!window.workbenchApi || typeof window.workbenchApi.obsidianWriteNotes !== 'function') {
+      return Promise.resolve(null);
+    }
+    return window.workbenchApi.obsidianWriteNotes(notes).catch(function (e) {
+      console.warn('[KB] Obsidian 写入失败', e);
+      return null;
+    });
+  }
+
+  /* 保存到 localStorage + 同步推送服务端 */
+  function saveNotes(notes) {
+    var now = Date.now();
+    var normalized = (Array.isArray(notes) ? notes : []).map(function (note) {
+      var next = normalizeNote(note) || note;
+      if (next && !next.updatedAt) next.updatedAt = new Date(now).toISOString();
+      return next;
+    });
+    persistNotesLocal(normalized, now);
+    pushNotesToCloud(normalized, now);
+    pushNotesToObsidian(normalized);
   }
 
   /*
@@ -527,6 +599,51 @@ File Name: X4U-2.10.2.6610.z
    *  - 本地无自定义数据（仅 DEFAULT_NOTES）→ 用远端覆盖
    */
   function syncFromServer(onDone) {
+    var localNotes = loadNotesLocal();
+    if (window.workbenchApi && typeof window.workbenchApi.obsidianReadNotes === 'function') {
+      Promise.all([
+        fetchKnowledgeApi({ method: 'GET' })
+          .then(function (res) { return res.json(); })
+          .catch(function () { return null; }),
+        window.workbenchApi.obsidianReadNotes()
+          .catch(function () { return { notes: [] }; })
+      ]).then(function (results) {
+        var cloudData = results[0];
+        var obsidianData = results[1];
+        var remoteNotes = null;
+        var remoteTs = 0;
+
+        if (cloudData && Array.isArray(cloudData.notes) && cloudData.notes.length > 0) {
+          remoteNotes = cloudData.notes;
+          remoteTs = cloudData.ts || 0;
+        } else if (Array.isArray(cloudData) && cloudData.length > 0) {
+          remoteNotes = cloudData;
+        }
+
+        var merged = mergeNotesByFreshness(localNotes, remoteNotes, obsidianData && obsidianData.notes);
+        var mergedTs = Math.max(
+          remoteTs || 0,
+          parseInt(localStorage.getItem(STORAGE_KEY + '_ts'), 10) || 0,
+          Date.now()
+        );
+
+        state.notes = merged.length ? merged : localNotes;
+        persistNotesLocal(state.notes, mergedTs);
+        renderTagBar();
+        renderNoteList();
+
+        pushNotesToCloud(state.notes, mergedTs);
+        pushNotesToObsidian(state.notes);
+        if (onDone) onDone();
+      }).catch(function () {
+        state.notes = localNotes;
+        renderTagBar();
+        renderNoteList();
+        if (onDone) onDone();
+      });
+      return;
+    }
+
     fetchKnowledgeApi({ method: 'GET' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -567,6 +684,24 @@ File Name: X4U-2.10.2.6610.z
       .catch(function () {
         if (onDone) onDone();
       });
+  }
+
+  var obsidianUnsubscribe = null;
+
+  function bindObsidianSync() {
+    if (!window.workbenchApi || typeof window.workbenchApi.onObsidianChanged !== 'function') return;
+    if (obsidianUnsubscribe) return;
+    obsidianUnsubscribe = window.workbenchApi.onObsidianChanged(function (payload) {
+      var merged = mergeNotesByFreshness(state.notes, payload && payload.notes);
+      if (!merged.length) return;
+      state.notes = merged;
+      persistNotesLocal(state.notes, payload && payload.ts ? payload.ts : Date.now());
+      renderTagBar();
+      renderNoteList();
+      if (state.currentNoteId) openNoteDetail(state.currentNoteId);
+      showToast('已同步 Obsidian 笔记变更', 'success');
+      pushNotesToCloud(state.notes, payload && payload.ts ? payload.ts : Date.now());
+    });
   }
 
   /* ================================================================
@@ -904,6 +1039,7 @@ File Name: X4U-2.10.2.6610.z
     if (!note) return;
     /* 阅读量 +1 */
     note.views = (note.views || 0) + 1;
+    note.updatedAt = new Date().toISOString();
     saveNotes(state.notes);
 
     state.currentNoteId = noteId;
@@ -1008,13 +1144,15 @@ File Name: X4U-2.10.2.6610.z
         note.title = title; note.category = category; note.tags = tags;
         note.summary = summary; note.content = content;
         note.author = author; note.pinned = pinned;
+        note.updatedAt = new Date().toISOString();
       }
     } else {
       state.notes.unshift({
         id: genId(), title: title, category: category, tags: tags,
         summary: summary, content: content, author: author,
         date: new Date().toISOString().slice(0, 10),
-        views: 0, pinned: pinned
+        views: 0, pinned: pinned,
+        updatedAt: new Date().toISOString()
       });
     }
         saveNotes(state.notes);
@@ -1230,6 +1368,7 @@ File Name: X4U-2.10.2.6610.z
     if (searchInput) searchInput.value = '';
 
     bindKbSearch();
+    bindObsidianSync();
     renderTagBar();
     renderNoteList();
 
