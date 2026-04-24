@@ -1042,6 +1042,11 @@ File Name: X4U-2.10.2.6610.z
     note.updatedAt = new Date().toISOString();
     saveNotes(state.notes);
 
+    /* 记录最近使用（调用 app.js 的全局函数） */
+    if (window.addRecentActivity) {
+      window.addRecentActivity('knowledge', noteId, note.title || '未命名笔记', note.category || '');
+    }
+
     state.currentNoteId = noteId;
 
     var listView = document.getElementById('kb-list-view');
@@ -1387,7 +1392,25 @@ File Name: X4U-2.10.2.6610.z
   /* 暴露给 router 使用 */
   window.KnowledgeBase = {
     init: initKnowledge,
-    bindAll: bindAll
+    bindAll: bindAll,
+    getNotes: function () {
+      return Array.isArray(state.notes) ? state.notes.slice() : [];
+    },
+    openNote: function (noteId) {
+      if (!noteId) return;
+      openNoteDetail(noteId);
+    },
+    openEditor: function (noteId) {
+      openNoteEditor(noteId || null);
+    },
+    setSearch: function (keyword) {
+      var input = document.getElementById('kb-search-input');
+      state.searchQ = (keyword || '').trim();
+      if (input) input.value = state.searchQ;
+      if (state.currentNoteId && state.searchQ) closeNoteDetail();
+      renderTagBar();
+      renderNoteList();
+    }
   };
 
   /* DOM 就绪后绑定事件（事件只绑定一次，渲染按需触发） */
