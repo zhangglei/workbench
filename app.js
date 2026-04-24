@@ -208,6 +208,7 @@
     state.collapsedModules = raw.collapsedModules || {};
   }
   state.todoFilter = 'all';
+  state.todoTagFilter = 'all'; /* 标签筛选状态 */
   var todoUIState = loadTodoUI();
   state.todoView = todoUIState.todoView;
   state.todoSelectedDate = todoUIState.selectedDate;
@@ -289,6 +290,7 @@
   var loginOverlay = document.getElementById('loginOverlay');
   var todoForm = document.getElementById('todoForm');
   var todoInput = document.getElementById('todoInput');
+  var todoTags = document.getElementById('todoTags');
   var todoPriority = document.getElementById('todoPriority');
   var todoList = document.getElementById('todoList');
   var todoSummary = document.getElementById('todoSummary');
@@ -751,14 +753,36 @@
     return '中优先级';
   }
 
+  /* 收集所有待办标签并去重 */
+  function getAllTodoTags() {
+    var tags = [];
+    (state.todos || []).forEach(function (todo) {
+      if (todo.tags && Array.isArray(todo.tags)) {
+        todo.tags.forEach(function (tag) {
+          if (tags.indexOf(tag) === -1) tags.push(tag);
+        });
+      }
+    });
+    return tags.sort();
+  }
+
   function getFilteredTodos() {
     var list = Array.isArray(state.todos) ? state.todos.slice() : [];
+    
+    /* 按状态筛选 */
     if (state.todoFilter === 'active') {
-      return list.filter(function (item) { return !item.done; });
+      list = list.filter(function (item) { return !item.done; });
+    } else if (state.todoFilter === 'done') {
+      list = list.filter(function (item) { return !!item.done; });
     }
-    if (state.todoFilter === 'done') {
-      return list.filter(function (item) { return !!item.done; });
+    
+    /* 按标签筛选 */
+    if (state.todoTagFilter && state.todoTagFilter !== 'all') {
+      list = list.filter(function (item) {
+        return item.tags && item.tags.indexOf(state.todoTagFilter) !== -1;
+      });
     }
+    
     return list;
   }
 
@@ -1026,18 +1050,49 @@
     var items = getFilteredTodos();
     todoList.innerHTML = '';
     if (todoEmpty) todoEmpty.classList.toggle('hidden', state.todoView === 'calendar' || items.length > 0);
+    
+    /* 渲染状态筛选按钮 */
     if (todoFilter) {
       todoFilter.querySelectorAll('.todo-filter-btn').forEach(function (btn) {
         btn.classList.toggle('todo-filter-btn--active', btn.dataset.filter === state.todoFilter);
       });
     }
+    
+    /* 动态渲染标签筛选按钮 */
+    var tagFilterContainer = document.getElementById('todoTagFilter');
+    if (tagFilterContainer) {
+      var allTags = getAllTodoTags();
+      if (allTags.length > 0) {
+        tagFilterContainer.innerHTML = '<span class="todo-tag-filter-label">标签：</span>' +
+          '<button type="button" class="todo-tag-filter-btn' + (state.todoTagFilter === 'all' ? ' todo-tag-filter-btn--active' : '') + '" data-tag="all">全部</button>' +
+          allTags.map(function (tag) {
+            return '<button type="button" class="todo-tag-filter-btn' + (state.todoTagFilter === tag ? ' todo-tag-filter-btn--active' : '') + '" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '</button>';
+          }).join('');
+        tagFilterContainer.classList.remove('hidden');
+      } else {
+        tagFilterContainer.innerHTML = '';
+        tagFilterContainer.classList.add('hidden');
+      }
+    }
     items.forEach(function (item) {
       var row = document.createElement('div');
       row.className = 'todo-item' + (item.done ? ' is-done' : '');
+      
+      /* 渲染标签 */
+      var tagsHtml = '';
+      if (item.tags && item.tags.length > 0) {
+        tagsHtml = '<div class="todo-tags">' +
+          item.tags.map(function (tag) {
+            return '<span class="todo-tag">' + escapeHtml(tag) + '</span>';
+          }).join('') +
+        '</div>';
+      }
+      
       row.innerHTML = '' +
         '<input class="todo-check" type="checkbox" ' + (item.done ? 'checked' : '') + ' aria-label="切换完成状态">' +
         '<div class="todo-content">' +
           '<p class="todo-text"></p>' +
+          tagsHtml +
           '<div class="todo-meta">' +
             '<span class="todo-badge todo-badge--' + escapeHtml(item.priority || 'medium') + '">' + escapeHtml(getTodoPriorityText(item.priority)) + '</span>' +
             '<span class="todo-time">创建于 ' + escapeHtml(item.createdAtText || '') + '</span>' +
@@ -1079,10 +1134,15 @@
           if (todoInput) todoInput.focus();
           return;
         }
+        /* 解析标签：用空格分隔 */
+        var tagsText = todoTags ? todoTags.value.trim() : '';
+        var tags = tagsText ? tagsText.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
+        
         state.todos = state.todos || [];
         state.todos.unshift({
           id: id(),
           text: text,
+          tags: tags,
           priority: todoPriority ? todoPriority.value : 'medium',
           done: false,
           createdAt: Date.now(),
@@ -1094,6 +1154,7 @@
         persistTodoUI();
         renderTodos();
         if (todoInput) todoInput.value = '';
+        if (todoTags) todoTags.value = '';
         if (todoPriority) todoPriority.value = 'medium';
         showToast('待办已添加', 'success');
       });
@@ -1108,6 +1169,14 @@
         renderTodos();
       });
     }
+
+    /* 绑定标签筛选按钮点击事件 */
+    document.addEventListener('click', function (event) {
+      var tagBtn = event.target.closest('.todo-tag-filter-btn');
+      if (!tagBtn) return;
+      state.todoTagFilter = tagBtn.dataset.tag || 'all';
+      renderTodos();
+    });
 
     if (todoViewSwitch && todoViewSwitch.dataset.boundTodo !== '1') {
       todoViewSwitch.dataset.boundTodo = '1';
@@ -1160,14 +1229,30 @@
   function matchSearch(module, item) {
     var q = getSearchText();
     if (!q) return true;
+    
+    /* 使用高级搜索模块 */
+    if (window.AdvancedSearch) {
+      var searchCriteria = window.AdvancedSearch.parseSearchQuery(q);
+      
+      if (item) {
+        /* 条目匹配：使用高级搜索 */
+        return window.AdvancedSearch.matchesSearchCriteria(item, searchCriteria);
+      } else {
+        /* 模块名匹配：仅检查文本 */
+        if (searchCriteria.text) {
+          return (module.name || '').toLowerCase().indexOf(searchCriteria.text) !== -1;
+        }
+        return true;
+      }
+    }
+    
+    /* 降级：使用简单搜索 */
     if (item) {
-      /* 条目匹配：标题 + URL + 正文 + 附件文件名 */
       var attNames = (Array.isArray(item.attachments) ? item.attachments : [])
         .map(function (a) { return a.name || ''; }).join(' ');
       var text = (item.title + ' ' + (item.url || '') + ' ' + (item.content || '') + ' ' + attNames).toLowerCase();
       return text.indexOf(q) !== -1;
     } else {
-      /* 模块名匹配 */
       return (module.name || '').toLowerCase().indexOf(q) !== -1;
     }
   }
@@ -2518,7 +2603,39 @@
     document.getElementById('viewContentModal').classList.remove('show');
   }
 
-  if (searchInput) searchInput.addEventListener('input', function () { renderModules(); });
+  /* 搜索防抖优化：避免频繁渲染 + 高级搜索提示 */
+  var searchDebounceTimer;
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(function () {
+        renderModules();
+        updateSearchHint();
+      }, 300);
+    });
+  }
+  
+  /* 更新搜索提示 */
+  function updateSearchHint() {
+    var searchHintEl = document.getElementById('searchHint');
+    if (!searchHintEl) return;
+    
+    var q = getSearchText();
+    if (!q || !window.AdvancedSearch) {
+      searchHintEl.style.display = 'none';
+      return;
+    }
+    
+    var searchCriteria = window.AdvancedSearch.parseSearchQuery(q);
+    var hint = window.AdvancedSearch.getSearchHint(searchCriteria);
+    
+    if (hint) {
+      searchHintEl.textContent = hint;
+      searchHintEl.style.display = 'block';
+    } else {
+      searchHintEl.style.display = 'none';
+    }
+  }
   /* 暴露给 theme-glass.js 的 filterCards 调用 */
   window._appRenderModules = renderModules;
 
@@ -2574,6 +2691,32 @@
         gallery.appendChild(btn);
       });
     }
+    /* 初始化主题选择器 */
+    var themeSelector = document.getElementById('themeSelector');
+    if (themeSelector && window.ThemeSystem) {
+      var currentTheme = window.ThemeSystem.getCurrentTheme();
+      var themes = window.ThemeSystem.getThemeList();
+      themeSelector.innerHTML = themes.map(function(theme) {
+        return '<button type="button" class="theme-card' + (theme.key === currentTheme ? ' active' : '') + '" data-theme="' + theme.key + '">' +
+          '<div class="theme-card-icon">' + theme.icon + '</div>' +
+          '<div class="theme-card-name">' + theme.name + '</div>' +
+        '</button>';
+      }).join('');
+      
+      /* 绑定主题切换事件 */
+      themeSelector.querySelectorAll('.theme-card').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var themeKey = btn.dataset.theme;
+          window.ThemeSystem.applyTheme(themeKey);
+          /* 更新激活状态 */
+          themeSelector.querySelectorAll('.theme-card').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.theme === themeKey);
+          });
+          showToast('主题已切换', 'success');
+        });
+      });
+    }
+    
     if (window.workbenchApi) {
       document.getElementById('dataPathSection').style.display = '';
       if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
@@ -2661,10 +2804,10 @@
   });
 
     var btnExportState = document.getElementById('btnExportState');
-  if (btnExportState) btnExportState.addEventListener('click', function () {
-    exportStateToFile();
-    showToast('数据已导出', 'success');
-  });
+    if (btnExportState) btnExportState.addEventListener('click', function () {
+      exportStateToFile(false);
+      showToast('数据已导出', 'success');
+    });
 
   var btnImportState = document.getElementById('btnImportState');
   var importStateFile = document.getElementById('importStateFile');
@@ -2727,15 +2870,24 @@
   /* 初始化概览卡片和最近使用 */
   renderOverviewMetrics();
   renderRecentActivity();
+  
+  /* 检查是否需要备份提醒 */
+  checkBackupReminder();
 
   /* 暴露全局函数供 knowledge.js 调用 */
   window.addRecentActivity = addRecentActivity;
   window.renderOverviewMetrics = renderOverviewMetrics;
 
   /* ── 全局快捷键 ──────────────────────────────────────────
-   * Ctrl+K  → 打开命令面板
-   * Ctrl+N  → 打开"添加内容"弹窗（需已登录管理员）
-   * Esc     → 依次关闭最顶层弹窗 / 清空搜索
+   * Ctrl+K        → 打开命令面板
+   * Ctrl+N        → 新建内容（管理员）
+   * Ctrl+F        → 聚焦搜索框
+   * Ctrl+B        → 立即备份数据
+   * Ctrl+,        → 打开设置
+   * Ctrl+Shift+T  → 新建待办
+   * Ctrl+Shift+N  → 新建笔记（管理员）
+   * Ctrl+Shift+F  → 打开命令面板（全局搜索）
+   * Esc           → 关闭弹窗/清空搜索
    * ──────────────────────────────────────────────────────── */
   document.addEventListener('keydown', function (e) {
     var tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -2748,11 +2900,73 @@
       return;
     }
 
-    // Ctrl+N / Cmd+N：打开添加内容弹窗（仅 admin）
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    // Ctrl+F / Cmd+F：聚焦搜索框
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !inInput) {
+      e.preventDefault();
+      if (getCurrentView() === 'dashboard' && searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      } else if (getCurrentView() === 'knowledge') {
+        var kbSearch = document.getElementById('kb-search-input');
+        if (kbSearch) {
+          kbSearch.focus();
+          kbSearch.select();
+        }
+      }
+      return;
+    }
+
+    // Ctrl+B / Cmd+B：立即备份数据
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b' && !inInput) {
+      e.preventDefault();
+      if (window.workbenchBackup) {
+        window.workbenchBackup();
+      }
+      return;
+    }
+
+    // Ctrl+, / Cmd+,：打开设置
+    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+      e.preventDefault();
+      if (canEdit()) {
+        openSettings();
+      }
+      return;
+    }
+
+    // Ctrl+Shift+T：新建待办
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+      e.preventDefault();
+      if (getCurrentView() === 'dashboard' && todoInput) {
+        todoInput.focus();
+        todoInput.select();
+      }
+      return;
+    }
+
+    // Ctrl+Shift+N：新建笔记（管理员）
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
+      e.preventDefault();
+      if (canEdit()) {
+        if (typeof window.showView === 'function') window.showView('knowledge');
+        if (window.KnowledgeBase && typeof window.KnowledgeBase.openEditor === 'function') {
+          window.KnowledgeBase.openEditor(null);
+        }
+      }
+      return;
+    }
+
+    // Ctrl+Shift+F：打开命令面板（全局搜索）
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      openCommandPalette('');
+      return;
+    }
+
+    // Ctrl+N / Cmd+N：新建内容（管理员）
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !e.shiftKey) {
       e.preventDefault();
       if (canEdit() && state.modules.length > 0) {
-        // 默认向第一个模块添加内容
         openItemModal(state.modules[0].id, null);
       } else if (canEdit()) {
         openModuleModal(null);
@@ -2860,7 +3074,7 @@
   };
 
 
-  function exportStateToFile() {
+  function exportStateToFile(autoBackup) {
     var toSave = {
       layout: state.layout,
       bg: state.bg,
@@ -2868,14 +3082,36 @@
       todos: state.todos || [],
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {}
+      collapsedModules: state.collapsedModules || {},
+      exportTime: new Date().toISOString(),
+      version: '1.0'
     };
     var blob = new Blob([JSON.stringify(toSave, null, 2)], { type: 'application/json;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'workbench-state.json';
+    
+    /* 生成带时间戳的文件名 */
+    var now = new Date();
+    var timestamp = now.getFullYear() +
+      pad2(now.getMonth() + 1) +
+      pad2(now.getDate()) + '_' +
+      pad2(now.getHours()) +
+      pad2(now.getMinutes()) +
+      pad2(now.getSeconds());
+    
+    a.download = autoBackup
+      ? 'workbench-backup-' + timestamp + '.json'
+      : 'workbench-export-' + timestamp + '.json';
+    
     a.click();
     URL.revokeObjectURL(a.href);
+    
+    /* 记录最后备份时间 */
+    if (autoBackup) {
+      try {
+        localStorage.setItem('workbench_last_backup', now.toISOString());
+      } catch (_) {}
+    }
   }
 
   function importStateFromFile(file) {
@@ -2904,4 +3140,38 @@
       reader.readAsText(file, 'UTF-8');
     });
   }
+/* 备份提醒功能 */
+function checkBackupReminder() {
+  try {
+    var lastBackup = localStorage.getItem('workbench_last_backup');
+    var backupInterval = 7 * 24 * 60 * 60 * 1000; // 7天
+    
+    if (!lastBackup || (Date.now() - new Date(lastBackup).getTime() > backupInterval)) {
+      /* 7天未备份，显示提醒 */
+      setTimeout(function() {
+        if (window.WorkbenchUI && typeof window.WorkbenchUI.confirm === 'function') {
+          window.WorkbenchUI.confirm({
+            title: '数据备份提醒',
+            message: '您已经超过7天未备份数据，建议立即备份以防数据丢失。',
+            confirmText: '立即备份',
+            cancelText: '稍后提醒',
+            danger: false
+          }).then(function(ok) {
+            if (ok) {
+              exportStateToFile(true);
+              showToast('备份已保存', 'success');
+            }
+          });
+        }
+      }, 3000); // 3秒后显示提醒
+    }
+  } catch (_) {}
+}
+
+/* 暴露备份函数供外部调用 */
+window.workbenchBackup = function() {
+  exportStateToFile(true);
+  showToast('备份已保存', 'success');
+};
+
 })();

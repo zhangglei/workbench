@@ -192,6 +192,113 @@ body[data-bg-type="image"] {
   flex: 1;
   min-width: 0;
   max-width: 320px;
+  position: relative;
+}
+
+.search-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 154, 102, 0.2);
+  border-radius: 12px;
+  font-size: 0.78rem;
+  color: var(--c-text-body);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+.search-hint::before {
+  content: '🔍 ';
+  margin-right: 4px;
+}
+
+/* 笔记模板选择器 */
+.kb-template-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.kb-template-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 154, 102, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--c-text-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.kb-template-btn:hover {
+  border-color: rgba(255, 154, 102, 0.4);
+  background: rgba(255, 154, 102, 0.08);
+  transform: translateY(-1px);
+}
+
+.kb-template-btn.active {
+  border-color: var(--c-orange);
+  background: rgba(255, 154, 102, 0.15);
+  color: var(--c-orange-dark);
+  font-weight: 600;
+}
+
+/* 主题选择器 */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 2px solid var(--c-card-border);
+  border-radius: 12px;
+  background: var(--c-card-bg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-card:hover {
+  border-color: var(--c-orange);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 154, 102, 0.2);
+}
+
+.theme-card.active {
+  border-color: var(--c-orange);
+  background: rgba(255, 154, 102, 0.12);
+  box-shadow: 0 4px 12px rgba(255, 154, 102, 0.25);
+}
+
+.theme-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.theme-card-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text-title);
+  text-align: center;
+}
+
+.theme-card.active .theme-card-name {
+  color: var(--c-orange-dark);
 }
 
 .header-actions {
@@ -1058,6 +1165,33 @@ button.recent-activity-item {
 .todo-badge--low {
   background: rgba(16, 185, 129, 0.14);
   color: #059669;
+}
+
+/* 待办标签 */
+.todo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.todo-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: rgba(102, 209, 255, 0.12);
+  color: #2a7fd4;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.todo-tags-input {
+  flex: 1;
+  min-width: 200px;
 }
 
 .todo-time {

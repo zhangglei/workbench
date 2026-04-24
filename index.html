@@ -46,7 +46,8 @@
 
       <div class="header-right">
         <div class="header-search" id="headerSearchWrap">
-          <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
+          <input type="text" id="searchInput" class="search-input" placeholder="搜索：tag:标签 date:2024-12 &quot;精确匹配&quot;">
+          <div class="search-hint" id="searchHint" style="display:none;"></div>
         </div>
         <div class="header-actions">
           <button type="button" class="btn btn-secondary btn-sm command-palette-trigger" id="btnCommandPalette" title="打开命令面板（Ctrl+K）">
@@ -121,6 +122,7 @@
 
         <form class="todo-form" id="todoForm" action="javascript:;">
           <input type="text" id="todoInput" class="search-input todo-input" placeholder="添加待办，例如：整理知识库同步逻辑">
+          <input type="text" id="todoTags" class="search-input todo-tags-input" placeholder="标签（用空格分隔，如：工作 紧急）">
           <select id="todoPriority" class="todo-select" aria-label="待办优先级">
             <option value="high">高优先级</option>
             <option value="medium" selected>中优先级</option>
@@ -134,6 +136,8 @@
           <button type="button" class="todo-filter-btn" data-filter="active">进行中</button>
           <button type="button" class="todo-filter-btn" data-filter="done">已完成</button>
         </div>
+
+        <div class="todo-tag-filter hidden" id="todoTagFilter"></div>
 
         <div class="todo-empty hidden" id="todoEmpty">还没有待办，先添加一条开始吧。</div>
         <div class="todo-list" id="todoList"></div>
@@ -240,6 +244,10 @@
         <button type="button" class="btn btn-icon btn-close" id="kb-editor-close">×</button>
       </div>
       <div class="modal-body kb-editor-body">
+        <div class="kb-template-selector" id="kb-template-selector" style="margin-bottom: 16px;">
+          <label class="kb-editor-label">使用模板（可选）</label>
+          <div class="kb-template-buttons" id="kb-template-buttons"></div>
+        </div>
         <label class="kb-editor-label">标题 <input type="text" id="kb-edit-title" placeholder="笔记标题"></label>
         <div class="kb-editor-row">
           <label class="kb-editor-label" style="flex:1">分类 <input type="text" id="kb-edit-category" placeholder="如：Linux、Git、BSP"></label>
@@ -288,6 +296,11 @@
         <h3>管理员账号（每行 用户名:密码）</h3>
         <p class="setting-hint">拥有全部编辑权限；当前已填写的账号会被视为管理员。</p>
         <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
+      </section>
+      <section class="setting-section">
+        <h3>主题</h3>
+        <p class="setting-hint">选择界面主题，立即生效</p>
+        <div class="theme-selector" id="themeSelector"></div>
       </section>
       <section class="setting-section">
         <h3>排版</h3>
@@ -504,6 +517,14 @@
 
     
 
+  <!-- 模块化拆分：先加载工具和状态管理 -->
+  <script src="modules/utils.js"></script>
+  <script src="modules/state.js"></script>
+  <script src="modules/advanced-search.js"></script>
+  <script src="modules/note-templates.js"></script>
+  <script src="modules/theme-system.js"></script>
+  
+  <!-- 主应用逻辑 -->
   <script src="app.js"></script>
   <script src="knowledge.js"></script>
   <script src="ui-enhancements.js"></script>

@@ -25,12 +25,15 @@
     </div>
   </div>
 
-  <div id="app">
+    <div id="app">
     <header class="header">
-      <h1 class="title" id="headerTitle">我的工作台</h1>
+      <div class="header-brand">
+        <h1 class="title" id="headerTitle">我的工作台</h1>
+        <span class="sync-status" id="syncStatus" aria-live="polite">浏览器本地数据</span>
+      </div>
 
       <!-- SPA 导航按钮 -->
-      <nav class="spa-nav" id="spaNav">
+      <nav class="spa-nav" id="spaNav" aria-label="主导航">
         <button type="button" class="spa-nav-btn spa-nav-btn--active" data-view="dashboard" id="navDashboard">
           <i class="ri-layout-grid-line"></i>
           <span>工作台</span>
@@ -42,16 +45,125 @@
       </nav>
 
       <div class="header-right">
-        <input type="text" id="searchInput" class="search-input" placeholder="搜索模块、网页…">
-        <span class="user-area" id="userArea">
-          <button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>
-        </span>
-        <button type="button" class="btn btn-icon" id="btnSettings" title="设置" style="display: none;">⚙️</button>
+        <div class="header-search" id="headerSearchWrap">
+          <input type="text" id="searchInput" class="search-input" placeholder="搜索：tag:标签 date:2024-12 &quot;精确匹配&quot;">
+          <div class="search-hint" id="searchHint" style="display:none;"></div>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-secondary btn-sm command-palette-trigger" id="btnCommandPalette" title="打开命令面板（Ctrl+K）">
+            <i class="ri-command-line"></i>
+            <span>命令</span>
+          </button>
+          <span class="user-area" id="userArea">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>
+          </span>
+          <button type="button" class="btn btn-icon" id="btnSettings" title="设置" aria-label="打开设置" style="display: none;">⚙️</button>
+        </div>
       </div>
     </header>
 
     <!-- ── Dashboard 视图 ── -->
     <div id="dashboard-view">
+      <section class="dashboard-overview" id="dashboardOverview" aria-labelledby="dashboardOverviewTitle">
+        <div class="dashboard-overview-header">
+          <div>
+            <h2 class="dashboard-overview-title" id="dashboardOverviewTitle"><i class="ri-dashboard-line"></i> 工作概览</h2>
+            <p class="dashboard-overview-subtitle" id="dashboardOverviewSubtitle">集中查看待办、知识库与最近使用内容</p>
+          </div>
+        </div>
+        <div class="overview-metrics" id="overviewMetrics">
+          <article class="overview-card">
+            <span class="overview-card-label">今日待办</span>
+            <strong class="overview-card-value" id="overviewTodoToday">0</strong>
+            <span class="overview-card-meta" id="overviewTodoTodayMeta">今日新增待办</span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-card-label">进行中</span>
+            <strong class="overview-card-value" id="overviewTodoActive">0</strong>
+            <span class="overview-card-meta" id="overviewTodoActiveMeta">待完成事项</span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-card-label">知识库笔记</span>
+            <strong class="overview-card-value" id="overviewKnowledgeCount">0</strong>
+            <span class="overview-card-meta" id="overviewKnowledgeMeta">已收录笔记总数</span>
+          </article>
+          <article class="overview-card">
+            <span class="overview-card-label">本周新增笔记</span>
+            <strong class="overview-card-value" id="overviewKnowledgeWeek">0</strong>
+            <span class="overview-card-meta" id="overviewKnowledgeWeekMeta">最近 7 天沉淀</span>
+          </article>
+        </div>
+        <div class="recent-activity-panel" id="recentActivityPanel">
+          <div class="recent-activity-header">
+            <div>
+              <h3 class="recent-activity-title"><i class="ri-history-line"></i> 最近使用</h3>
+              <p class="recent-activity-subtitle">记录最近打开的工作台条目与知识库笔记</p>
+            </div>
+          </div>
+          <div class="recent-activity-empty hidden" id="recentActivityEmpty">还没有最近使用记录，先打开一个条目或笔记吧。</div>
+          <div class="recent-activity-list" id="recentActivityList"></div>
+        </div>
+      </section>
+
+      <section class="todo-panel" id="todoPanel" aria-labelledby="todoPanelTitle">
+        <div class="todo-panel-header">
+          <div>
+            <h2 class="todo-panel-title" id="todoPanelTitle"><i class="ri-task-line"></i> 待办清单</h2>
+            <p class="todo-panel-subtitle" id="todoSummary">把今天要做的事先记下来</p>
+          </div>
+          <div class="todo-panel-actions">
+            <div class="todo-view-switch" id="todoViewSwitch" role="tablist" aria-label="待办视图切换">
+              <button type="button" class="todo-view-btn todo-view-btn--active" data-view="list">列表</button>
+              <button type="button" class="todo-view-btn" data-view="calendar">日历</button>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnTodoClearDone">清除已完成</button>
+          </div>
+        </div>
+
+        <form class="todo-form" id="todoForm" action="javascript:;">
+          <input type="text" id="todoInput" class="search-input todo-input" placeholder="添加待办，例如：整理知识库同步逻辑">
+          <input type="text" id="todoTags" class="search-input todo-tags-input" placeholder="标签（用空格分隔，如：工作 紧急）">
+          <select id="todoPriority" class="todo-select" aria-label="待办优先级">
+            <option value="high">高优先级</option>
+            <option value="medium" selected>中优先级</option>
+            <option value="low">低优先级</option>
+          </select>
+          <button type="submit" class="btn btn-primary" id="btnAddTodo">添加待办</button>
+        </form>
+
+        <div class="todo-filter" id="todoFilter" role="tablist" aria-label="待办筛选">
+          <button type="button" class="todo-filter-btn todo-filter-btn--active" data-filter="all">全部</button>
+          <button type="button" class="todo-filter-btn" data-filter="active">进行中</button>
+          <button type="button" class="todo-filter-btn" data-filter="done">已完成</button>
+        </div>
+
+        <div class="todo-tag-filter hidden" id="todoTagFilter"></div>
+
+        <div class="todo-empty hidden" id="todoEmpty">还没有待办，先添加一条开始吧。</div>
+        <div class="todo-list" id="todoList"></div>
+        <div class="todo-calendar hidden" id="todoCalendar">
+          <div class="todo-calendar-toolbar">
+            <button type="button" class="todo-calendar-nav" id="btnTodoPrevMonth" aria-label="上一个月">←</button>
+            <div class="todo-calendar-title-wrap">
+              <h3 class="todo-calendar-title" id="todoCalendarTitle">-</h3>
+              <p class="todo-calendar-subtitle" id="todoCalendarSubtitle">点击日期查看当天待办</p>
+            </div>
+            <button type="button" class="todo-calendar-nav" id="btnTodoNextMonth" aria-label="下一个月">→</button>
+          </div>
+          <div class="todo-calendar-weekdays" aria-hidden="true">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+          </div>
+          <div class="todo-calendar-grid" id="todoCalendarGrid"></div>
+          <div class="todo-calendar-detail" id="todoCalendarDetail">
+            <div class="todo-calendar-detail-header">
+              <h4 id="todoCalendarDetailTitle">选择日期查看待办</h4>
+              <span class="todo-calendar-detail-count" id="todoCalendarDetailCount"></span>
+            </div>
+            <div class="todo-calendar-detail-empty" id="todoCalendarDetailEmpty">当前日期暂无待办。</div>
+            <div class="todo-calendar-detail-list" id="todoCalendarDetailList"></div>
+          </div>
+        </div>
+      </section>
       <main class="main" id="mainGrid"></main>
     </div>
 
@@ -96,19 +208,46 @@
       </div>
     </div>
 
-    <footer class="footer" id="footerBar">
+        <footer class="footer" id="footerBar">
       <button type="button" class="btn btn-primary" id="btnAddModule">+ 添加模块</button>
     </footer>
   </div>
 
+  <button type="button" class="fab-add-module hidden" id="fabAddModule" aria-label="添加模块">
+    <i class="ri-add-line"></i>
+    <span>添加模块</span>
+  </button>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="modal" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-content modal-content-sm">
+      <div class="modal-header">
+        <h2 id="confirmModalTitle">请确认操作</h2>
+        <button type="button" class="btn btn-icon btn-close" id="btnCloseConfirmModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-modal-message" id="confirmModalMessage">确认继续吗？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelConfirmModal">取消</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmModalOk">确定</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 知识库笔记编辑器弹窗 -->
-  <div class="modal kb-editor-modal" id="kb-editor-modal">
+    <div class="modal kb-editor-modal" id="kb-editor-modal" role="dialog" aria-modal="true" aria-labelledby="kb-editor-title">
     <div class="modal-content kb-editor-content">
       <div class="modal-header">
-        <h2>编辑笔记</h2>
+        <h2 id="kb-editor-title">编辑笔记</h2>
         <button type="button" class="btn btn-icon btn-close" id="kb-editor-close">×</button>
       </div>
       <div class="modal-body kb-editor-body">
+        <div class="kb-template-selector" id="kb-template-selector" style="margin-bottom: 16px;">
+          <label class="kb-editor-label">使用模板（可选）</label>
+          <div class="kb-template-buttons" id="kb-template-buttons"></div>
+        </div>
         <label class="kb-editor-label">标题 <input type="text" id="kb-edit-title" placeholder="笔记标题"></label>
         <div class="kb-editor-row">
           <label class="kb-editor-label" style="flex:1">分类 <input type="text" id="kb-edit-category" placeholder="如：Linux、Git、BSP"></label>
@@ -159,6 +298,11 @@
         <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
       </section>
       <section class="setting-section">
+        <h3>主题</h3>
+        <p class="setting-hint">选择界面主题，立即生效</p>
+        <div class="theme-selector" id="themeSelector"></div>
+      </section>
+      <section class="setting-section">
         <h3>排版</h3>
         <label>列数 <input type="number" id="layoutCols" min="1" max="6" value="3"></label>
         <label>间距 <input type="number" id="layoutGap" min="0" max="48" value="16"> px</label>
@@ -203,6 +347,13 @@
         <label>目录 <input type="text" id="dataPathInput" readonly></label>
         <button type="button" class="btn btn-secondary" id="btnChooseDataPath">选择文件夹</button>
       </section>
+      <section class="setting-section" id="obsidianPathSection" style="display: none;">
+        <h3>Obsidian 双向同步</h3>
+        <p class="setting-hint">仅桌面版可用。选择 Vault 目录后，工作台会在其中的 <code>WorkbenchSync</code> 子目录中同步 Markdown 笔记，并继续同步现有知识库数据。</p>
+        <label>Vault 目录 <input type="text" id="obsidianVaultPathInput" readonly></label>
+        <label>同步子目录 <input type="text" id="obsidianSyncFolderInput" value="WorkbenchSync" placeholder="WorkbenchSync"></label>
+        <button type="button" class="btn btn-secondary" id="btnChooseObsidianVaultPath">选择 Vault 文件夹</button>
+      </section>
 
       <button type="button" class="btn btn-secondary" id="btnApplySettings">应用设置</button>
     </div>
@@ -210,7 +361,7 @@
   <div class="overlay" id="settingsOverlay"></div>
 
   <!-- 添加/编辑 模块 弹窗 -->
-  <div class="modal" id="moduleModal">
+  <div class="modal" id="moduleModal" role="dialog" aria-modal="true" aria-labelledby="moduleModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="moduleModalTitle">添加模块</h2>
@@ -231,7 +382,7 @@
   </div>
 
   <!-- 添加/编辑 内容（网页）弹窗 -->
-  <div class="modal" id="itemModal">
+  <div class="modal" id="itemModal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="itemModalTitle">添加内容</h2>
@@ -279,7 +430,7 @@
   </div>
 
   <!-- 查看内容（只读）弹窗 -->
-  <div class="modal" id="viewContentModal">
+  <div class="modal" id="viewContentModal" role="dialog" aria-modal="true" aria-labelledby="viewContentTitle">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="viewContentTitle">查看内容</h2>
@@ -292,10 +443,10 @@
   </div>
 
   <!-- 附件列表弹窗（只读查看） -->
-  <div class="modal" id="attachmentsListModal">
+  <div class="modal" id="attachmentsListModal" role="dialog" aria-modal="true" aria-labelledby="attachmentsListTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>附件列表</h2>
+        <h2 id="attachmentsListTitle">附件列表</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseAttachmentsListModal">×</button>
       </div>
       <div class="modal-body">
@@ -305,10 +456,10 @@
   </div>
 
   <!-- 评论 弹窗 -->
-  <div class="modal" id="commentsModal">
+  <div class="modal" id="commentsModal" role="dialog" aria-modal="true" aria-labelledby="commentsModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>评论</h2>
+        <h2 id="commentsModalTitle">评论</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseCommentsModal">×</button>
       </div>
       <div class="modal-body">
@@ -323,10 +474,10 @@
   </div>
 
   <!-- 登录 弹窗 -->
-  <div class="modal" id="loginModal">
+  <div class="modal" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>登录</h2>
+        <h2 id="loginModalTitle">登录</h2>
         <button type="button" class="btn btn-icon btn-close" id="btnCloseLoginModal">×</button>
       </div>
       <form id="loginForm" class="modal-body" action="javascript:;">
@@ -340,9 +491,43 @@
     </div>
   </div>
 
+  <!-- 全局命令面板 -->
+  <div class="cmdk-overlay" id="commandPalette" aria-hidden="true">
+    <div class="cmdk-panel" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
+      <div class="cmdk-header">
+        <i class="ri-search-line cmdk-header-icon"></i>
+        <input
+          type="text"
+          id="commandPaletteInput"
+          class="cmdk-input"
+          placeholder="搜索功能、模块、内容、知识库笔记…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <button type="button" class="cmdk-close" id="btnCloseCommandPalette" aria-label="关闭命令面板">Esc</button>
+      </div>
+      <div class="cmdk-meta">
+        <span id="commandPaletteTitle">全局命令面板</span>
+        <span>↑ ↓ 切换，Enter 执行</span>
+      </div>
+      <div class="cmdk-results" id="commandPaletteResults"></div>
+    </div>
+  </div>
 
+
+    
+
+  <!-- 模块化拆分：先加载工具和状态管理 -->
+  <script src="modules/utils.js"></script>
+  <script src="modules/state.js"></script>
+  <script src="modules/advanced-search.js"></script>
+  <script src="modules/note-templates.js"></script>
+  <script src="modules/theme-system.js"></script>
+  
+  <!-- 主应用逻辑 -->
   <script src="app.js"></script>
   <script src="knowledge.js"></script>
+  <script src="ui-enhancements.js"></script>
 
   <!-- Glass UI 主题增强层（只追加样式/行为，不修改原有逻辑） -->
   <link rel="stylesheet" href="theme-glass.css">
@@ -367,21 +552,24 @@
         if (el) el.style.display = k === name ? '' : 'none';
       });
       /* 切换导航按钮激活状态 */
-      document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
+            document.querySelectorAll('.spa-nav-btn').forEach(function (btn) {
         btn.classList.toggle('spa-nav-btn--active', btn.dataset.view === name);
       });
-      /* 切换搜索框 placeholder */
+      /* Dashboard 使用顶部搜索，知识库使用自身搜索 */
       var si = document.getElementById('searchInput');
-      if (si) si.placeholder = name === 'knowledge' ? '搜索笔记…（功能在知识库内）' : '搜索模块、网页…';
+      var headerSearchWrap = document.getElementById('headerSearchWrap');
+      if (si) si.placeholder = '搜索模块、网页…';
+      if (headerSearchWrap) headerSearchWrap.classList.toggle('hidden', name === 'knowledge');
       /* 隐藏 Dashboard 的 footer 按钮（知识库有自己的新建按钮；非管理员始终隐藏） */
       var footer = document.getElementById('footerBar');
-      if (footer) {
+            if (footer) {
         var _role = '';
         try { _role = localStorage.getItem('workbench_user_role'); } catch(e) {}
         footer.classList.toggle('hidden', name === 'knowledge' || _role !== 'admin');
       }
-      /* 通知 app.js 同步 footer 状态（处理 updateUserUI 可能覆盖的情况） */
+      /* 通知 app.js / UI 增强层同步状态（处理 updateUserUI 可能覆盖的情况） */
       if (typeof window._onViewChange === 'function') window._onViewChange(name);
+      if (window.WorkbenchUI && typeof window.WorkbenchUI.refreshUI === 'function') window.WorkbenchUI.refreshUI();
       /* 知识库：显示新建按钮（仅管理员），初始化 */
       if (name === 'knowledge') {
         var newBtn = document.getElementById('kb-new-btn');

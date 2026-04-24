@@ -4,6 +4,8 @@
   const STORAGE_LAYOUT = 'workbench_layout';
   const STORAGE_BG = 'workbench_bg';
   const STORAGE_STATE = 'workbench_state';
+  const STORAGE_TODOS = 'workbench_todos';
+  const STORAGE_TODO_UI = 'workbench_todo_ui';
   const STORAGE_USER = 'workbench_user';
   const STORAGE_USER_ROLE = 'workbench_user_role';
 
@@ -21,11 +23,12 @@
 
   /** 将旧版 state（modules+links 扁平）转为新版（模块为基本，网页为模块下 items） */
   function migrateState(data) {
-    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '', guestUsers: '' };
+    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '', guestUsers: '', todos: [] };
     var layout = data.layout || defaultLayout;
     var bg = data.bg || defaultBg;
     var allowedUsers = data.allowedUsers || '';
     var guestUsers = data.guestUsers || '';
+    var todos = Array.isArray(data.todos) ? data.todos : [];
     var modules = [];
     var oldModules = data.modules || [];
     var oldLinks = data.links || [];
@@ -85,7 +88,7 @@
         });
       }
     }
-    return { layout: layout, bg: bg, modules: modules, allowedUsers: allowedUsers, guestUsers: guestUsers };
+    return { layout: layout, bg: bg, modules: modules, allowedUsers: allowedUsers, guestUsers: guestUsers, todos: todos };
   }
 
   function load(key, fallback) {
@@ -97,20 +100,119 @@
     }
   }
 
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function getDateKey(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function parseDateKey(key) {
+    if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+    var parts = key.split('-').map(function (part) { return parseInt(part, 10); });
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function formatDateKey(key) {
+    var date = parseDateKey(key);
+    if (!date) return '选择日期查看待办';
+    return date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+  }
+
+  function normalizeTodos(list) {
+    return (Array.isArray(list) ? list : []).map(function (item) {
+      var createdAt = Number(item && item.createdAt);
+      if (!Number.isFinite(createdAt) || createdAt <= 0) createdAt = Date.now();
+      return Object.assign({}, item, {
+        createdAt: createdAt,
+        createdAtText: item && item.createdAtText ? item.createdAtText : new Date(createdAt).toLocaleString()
+      });
+    });
+  }
+
+  function loadTodoUI() {
+    var raw = load(STORAGE_TODO_UI, null) || {};
+    var monthStr = typeof raw.calendarMonth === 'string' ? raw.calendarMonth + '-01' : '';
+    var monthDate = parseDateKey(monthStr) || new Date();
+    return {
+      todoView: raw.todoView === 'calendar' ? 'calendar' : 'list',
+      selectedDate: parseDateKey(raw.selectedDate) ? raw.selectedDate : '',
+      calendarMonth: new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
+    };
+  }
+
+  function persistTodoUI() {
+    try {
+      localStorage.setItem(STORAGE_TODO_UI, JSON.stringify({
+        todoView: state.todoView || 'list',
+        selectedDate: state.todoSelectedDate || '',
+        calendarMonth: state.todoCalendarMonth
+          ? (state.todoCalendarMonth.getFullYear() + '-' + pad2(state.todoCalendarMonth.getMonth() + 1))
+          : ''
+      }));
+    } catch (_) {}
+  }
+
+  /* 最近使用记录管理 */
+  var STORAGE_RECENT_ACTIVITY = 'workbench_recent_activity';
+  var MAX_RECENT_ITEMS = 20;
+
+  function loadRecentActivity() {
+    return load(STORAGE_RECENT_ACTIVITY, []);
+  }
+
+  function saveRecentActivity(items) {
+    try {
+      localStorage.setItem(STORAGE_RECENT_ACTIVITY, JSON.stringify(items));
+    } catch (_) {}
+  }
+
+  function addRecentActivity(type, id, title, meta) {
+    var items = loadRecentActivity();
+    /* 去重：移除已存在的相同条目 */
+    items = items.filter(function (item) {
+      return !(item.type === type && item.id === id);
+    });
+    /* 添加到开头 */
+    items.unshift({
+      type: type,
+      id: id,
+      title: title,
+      meta: meta || '',
+      timestamp: Date.now()
+    });
+    /* 限制数量 */
+    if (items.length > MAX_RECENT_ITEMS) {
+      items = items.slice(0, MAX_RECENT_ITEMS);
+    }
+    saveRecentActivity(items);
+    renderRecentActivity();
+  }
+
   var state = migrateState(null);
   state.layout = load(STORAGE_LAYOUT, defaultLayout);
   state.bg = load(STORAGE_BG, defaultBg);
   state.allowedUsers = load('workbench_allowed_users', '');
   state.guestUsers = state.guestUsers || '';
+  state.todos = normalizeTodos(load(STORAGE_TODOS, state.todos || []));
   state.collapsedModules = state.collapsedModules || {};
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
+    if (Array.isArray(raw.todos)) state.todos = normalizeTodos(raw.todos);
     if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
   } else if (raw) {
     state = migrateState({ layout: state.layout, bg: state.bg, modules: raw.modules || [], links: raw.links || [], allowedUsers: state.allowedUsers });
+    if (Array.isArray(raw.todos)) state.todos = normalizeTodos(raw.todos);
     state.collapsedModules = raw.collapsedModules || {};
   }
+  state.todoFilter = 'all';
+  state.todoTagFilter = 'all'; /* 标签筛选状态 */
+  var todoUIState = loadTodoUI();
+  state.todoView = todoUIState.todoView;
+  state.todoSelectedDate = todoUIState.selectedDate;
+  state.todoCalendarMonth = todoUIState.calendarMonth;
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
 
@@ -144,6 +246,7 @@
       layout: state.layout,
       bg: state.bg,
       modules: state.modules,
+      todos: state.todos || [],
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
       collapsedModules: state.collapsedModules || {}
@@ -158,7 +261,8 @@
       try {
         localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(state.layout));
         localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
-        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
+        localStorage.setItem(STORAGE_TODOS, JSON.stringify(state.todos || []));
+        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, todos: state.todos || [], allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
       } catch (_) {}
       fetchFirstOk(CLOUD_STATE_URLS, {
         method: 'POST',
@@ -184,6 +288,38 @@
   var footerBar = document.getElementById('footerBar');
   var appRoot = document.getElementById('app');
   var loginOverlay = document.getElementById('loginOverlay');
+  var todoForm = document.getElementById('todoForm');
+  var todoInput = document.getElementById('todoInput');
+  var todoTags = document.getElementById('todoTags');
+  var todoPriority = document.getElementById('todoPriority');
+  var todoList = document.getElementById('todoList');
+  var todoSummary = document.getElementById('todoSummary');
+  var todoEmpty = document.getElementById('todoEmpty');
+  var todoFilter = document.getElementById('todoFilter');
+  var btnTodoClearDone = document.getElementById('btnTodoClearDone');
+  var todoViewSwitch = document.getElementById('todoViewSwitch');
+  var todoCalendar = document.getElementById('todoCalendar');
+  var todoCalendarGrid = document.getElementById('todoCalendarGrid');
+  var todoCalendarTitle = document.getElementById('todoCalendarTitle');
+  var todoCalendarSubtitle = document.getElementById('todoCalendarSubtitle');
+  var todoCalendarDetailTitle = document.getElementById('todoCalendarDetailTitle');
+  var todoCalendarDetailCount = document.getElementById('todoCalendarDetailCount');
+  var todoCalendarDetailEmpty = document.getElementById('todoCalendarDetailEmpty');
+  var todoCalendarDetailList = document.getElementById('todoCalendarDetailList');
+  var btnTodoPrevMonth = document.getElementById('btnTodoPrevMonth');
+  var btnTodoNextMonth = document.getElementById('btnTodoNextMonth');
+  var btnCommandPalette = document.getElementById('btnCommandPalette');
+  var commandPalette = document.getElementById('commandPalette');
+  var commandPaletteInput = document.getElementById('commandPaletteInput');
+  var commandPaletteResults = document.getElementById('commandPaletteResults');
+  /* 概览卡片 DOM */
+  var overviewTodoToday = document.getElementById('overviewTodoToday');
+  var overviewTodoActive = document.getElementById('overviewTodoActive');
+  var overviewKnowledgeCount = document.getElementById('overviewKnowledgeCount');
+  var overviewKnowledgeWeek = document.getElementById('overviewKnowledgeWeek');
+  /* 最近使用 DOM */
+  var recentActivityEmpty = document.getElementById('recentActivityEmpty');
+  var recentActivityList = document.getElementById('recentActivityList');
 
   var BG_LIBRARY = (function () {
     function svgDataUri(svg) {
@@ -227,6 +363,12 @@
     return div.innerHTML;
   }
 
+  function stripHtml(s) {
+    var div = document.createElement('div');
+    div.innerHTML = s == null ? '' : String(s);
+    return (div.textContent || div.innerText || '').trim();
+  }
+
   function linkify(s) {
     return String(s).replace(
       /(https?:\/\/[^\s<]+)/g,
@@ -238,17 +380,879 @@
     return (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
   }
 
+  function getCurrentView() {
+    return typeof window._currentView === 'function' ? window._currentView() : 'dashboard';
+  }
+
+  var commandPaletteState = {
+    open: false,
+    items: [],
+    activeIndex: -1,
+    query: ''
+  };
+
+  function getCommandPaletteEmptyHtml(message) {
+    return '<div class="cmdk-empty">' + escapeHtml(message || '没有找到匹配项') + '</div>';
+  }
+
+  function getCommandPaletteHint(text) {
+    return '<span class="cmdk-hint">' + escapeHtml(text || '') + '</span>';
+  }
+
+  function normalizeCommandKeywords(list) {
+    return (Array.isArray(list) ? list : []).filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function createCommandPaletteItem(type, title, meta, hint, keywords, run) {
+    return {
+      id: id(),
+      type: type,
+      title: title,
+      meta: meta || '',
+      hint: hint || '',
+      keywords: normalizeCommandKeywords(keywords),
+      run: run
+    };
+  }
+
+  function openCommandPalette(initialQuery) {
+    if (!commandPalette || !commandPaletteInput) return;
+    commandPaletteState.open = true;
+    commandPalette.classList.add('show');
+    commandPalette.setAttribute('aria-hidden', 'false');
+    commandPaletteInput.value = initialQuery != null ? String(initialQuery) : '';
+    renderCommandPalette(commandPaletteInput.value);
+    setTimeout(function () {
+      commandPaletteInput.focus();
+      commandPaletteInput.select();
+    }, 0);
+  }
+
+  function closeCommandPalette() {
+    if (!commandPalette) return;
+    commandPaletteState.open = false;
+    commandPalette.classList.remove('show');
+    commandPalette.setAttribute('aria-hidden', 'true');
+    commandPaletteState.items = [];
+    commandPaletteState.activeIndex = -1;
+  }
+
+  function activateCommandPaletteItem(nextIndex) {
+    if (!commandPaletteResults) return;
+    if (!commandPaletteState.items.length) {
+      commandPaletteState.activeIndex = -1;
+      return;
+    }
+    if (nextIndex < 0) nextIndex = commandPaletteState.items.length - 1;
+    if (nextIndex >= commandPaletteState.items.length) nextIndex = 0;
+    commandPaletteState.activeIndex = nextIndex;
+    var nodes = commandPaletteResults.querySelectorAll('.cmdk-item');
+    nodes.forEach(function (node, idx) {
+      node.classList.toggle('active', idx === nextIndex);
+    });
+    if (nodes[nextIndex] && typeof nodes[nextIndex].scrollIntoView === 'function') {
+      nodes[nextIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function getCommandPaletteItems(query) {
+    var q = String(query || '').trim().toLowerCase();
+    var items = [];
+    var currentView = getCurrentView();
+
+    items.push(createCommandPaletteItem(
+      'action',
+      '切换到工作台',
+      '视图',
+      currentView === 'dashboard' ? '当前视图' : '切换到 Dashboard',
+      ['dashboard', '工作台', '主页', 'home'],
+      function () {
+        if (typeof window.showView === 'function') window.showView('dashboard');
+      }
+    ));
+    items.push(createCommandPaletteItem(
+      'action',
+      '切换到知识库',
+      '视图',
+      currentView === 'knowledge' ? '当前视图' : '切换到 Knowledge',
+      ['knowledge', '知识库', '笔记'],
+      function () {
+        if (typeof window.showView === 'function') window.showView('knowledge');
+        if (window.KnowledgeBase && typeof window.KnowledgeBase.init === 'function') {
+          window.KnowledgeBase.init();
+        }
+      }
+    ));
+    items.push(createCommandPaletteItem(
+      'action',
+      '打开设置',
+      '系统',
+      '布局、背景、账号与同步设置',
+      ['settings', '设置', '配置'],
+      function () { openSettings(); }
+    ));
+
+    if (canEdit()) {
+      items.push(createCommandPaletteItem(
+        'action',
+        '新建模块',
+        '快捷操作',
+        '添加一个新的工作台模块',
+        ['添加模块', '新建模块', 'module'],
+        function () {
+          if (typeof window.showView === 'function') window.showView('dashboard');
+          openModuleModal(null);
+        }
+      ));
+      items.push(createCommandPaletteItem(
+        'action',
+        '新建内容',
+        '快捷操作',
+        state.modules.length ? '默认添加到第一个模块' : '当前没有模块，将先创建模块',
+        ['添加内容', '新建内容', '网页', 'item'],
+        function () {
+          if (typeof window.showView === 'function') window.showView('dashboard');
+          if (state.modules.length > 0) openItemModal(state.modules[0].id, null);
+          else openModuleModal(null);
+        }
+      ));
+      items.push(createCommandPaletteItem(
+        'action',
+        '新建知识笔记',
+        '快捷操作',
+        '打开知识库编辑器',
+        ['新建笔记', '知识库', 'note', 'kb'],
+        function () {
+          if (typeof window.showView === 'function') window.showView('knowledge');
+          if (window.KnowledgeBase && typeof window.KnowledgeBase.openEditor === 'function') {
+            window.KnowledgeBase.openEditor(null);
+          }
+        }
+      ));
+    }
+
+    items.push(createCommandPaletteItem(
+      'action',
+      '搜索工作台内容',
+      '搜索',
+      q ? ('应用关键词：' + q) : '把关键词同步到顶部搜索框',
+      ['搜索', '模块', '内容', 'search'],
+      function () {
+        if (typeof window.showView === 'function') window.showView('dashboard');
+        if (searchInput) {
+          searchInput.value = commandPaletteState.query || '';
+          renderModules();
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+    ));
+    items.push(createCommandPaletteItem(
+      'action',
+      '搜索知识库笔记',
+      '搜索',
+      q ? ('应用关键词：' + q) : '把关键词同步到知识库搜索框',
+      ['搜索', '知识库', '笔记', 'knowledge', 'note'],
+      function () {
+        if (typeof window.showView === 'function') window.showView('knowledge');
+        if (window.KnowledgeBase && typeof window.KnowledgeBase.setSearch === 'function') {
+          window.KnowledgeBase.setSearch(commandPaletteState.query || '');
+        }
+      }
+    ));
+
+    (state.todos || []).forEach(function (todo) {
+      var text = String((todo && (todo.text || todo.title || todo.content)) || '').trim();
+      if (!text) return;
+      items.push(createCommandPaletteItem(
+        'todo',
+        text,
+        todo.done ? '待办 · 已完成' : '待办 · 进行中',
+        todo.dateKey ? ('日期：' + todo.dateKey) : getTodoPriorityText(todo.priority),
+        [text, todo.priority, todo.dateKey, todo.done ? 'done completed 已完成' : 'active 进行中', 'todo 待办'],
+        function () {
+          if (typeof window.showView === 'function') window.showView('dashboard');
+          var panel = document.getElementById('todoPanel');
+          if (panel && typeof panel.scrollIntoView === 'function') panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      ));
+    });
+
+    state.modules.forEach(function (mod) {
+      var modName = (mod && mod.name) ? mod.name : '未命名模块';
+      items.push(createCommandPaletteItem(
+        'module',
+        modName,
+        '模块',
+        (mod.items || []).length + ' 项内容',
+        [modName, '模块 module'],
+        function () {
+          if (typeof window.showView === 'function') window.showView('dashboard');
+          var node = document.querySelector('[data-module-id="' + mod.id + '"]');
+          if (node && typeof node.scrollIntoView === 'function') {
+            node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            node.classList.add('module-card-flash');
+            setTimeout(function () { node.classList.remove('module-card-flash'); }, 1200);
+          }
+        }
+      ));
+
+      (mod.items || []).forEach(function (it) {
+        var contentText = stripHtml(linkify(it.content || ''));
+        var itemTitle = (it && it.title) ? it.title : '未命名内容';
+        items.push(createCommandPaletteItem(
+          'item',
+          itemTitle,
+          modName,
+          (it.url && it.content) ? '链接 + 正文' : (it.url ? '链接' : '正文'),
+          [itemTitle, modName, it.url, it.content, '内容 item link'],
+          function () {
+            if (typeof window.showView === 'function') window.showView('dashboard');
+            openItemModal(mod.id, it);
+          }
+        ));
+        if (contentText) {
+          items[items.length - 1].excerpt = contentText.slice(0, 80);
+        }
+      });
+    });
+
+    if (window.KnowledgeBase && typeof window.KnowledgeBase.getNotes === 'function') {
+      (window.KnowledgeBase.getNotes() || []).forEach(function (note) {
+        var title = String((note && note.title) || '未命名笔记');
+        var summary = String((note && note.summary) || '').trim();
+        items.push(createCommandPaletteItem(
+          'note',
+          title,
+          note.category || '知识库',
+          summary || '打开笔记详情',
+          [title, note.category, summary, note.content, (note.tags || []).join(' '), '知识库 笔记 note'],
+          function () {
+            if (typeof window.showView === 'function') window.showView('knowledge');
+            if (window.KnowledgeBase && typeof window.KnowledgeBase.openNote === 'function') {
+              window.KnowledgeBase.openNote(note.id);
+            }
+          }
+        ));
+      });
+    }
+
+    if (!q) return items.slice(0, 40);
+    return items.filter(function (item) {
+      return item.title.toLowerCase().indexOf(q) !== -1 ||
+        item.meta.toLowerCase().indexOf(q) !== -1 ||
+        item.hint.toLowerCase().indexOf(q) !== -1 ||
+        (item.excerpt && item.excerpt.toLowerCase().indexOf(q) !== -1) ||
+        item.keywords.indexOf(q) !== -1;
+    }).slice(0, 50);
+  }
+
+  function renderCommandPalette(query) {
+    if (!commandPaletteResults) return;
+    commandPaletteState.query = String(query || '').trim();
+    commandPaletteState.items = getCommandPaletteItems(commandPaletteState.query);
+    
+    /* 统计搜索结果分类 */
+    var stats = { action: 0, module: 0, item: 0, todo: 0, note: 0 };
+    commandPaletteState.items.forEach(function (item) {
+      if (stats[item.type] !== undefined) stats[item.type]++;
+    });
+    
+    if (!commandPaletteState.items.length) {
+      var emptyMsg = commandPaletteState.query
+        ? '没有找到相关命令或内容 · 全局搜索支持：工作台模块、条目、待办、知识库笔记'
+        : '输入关键词进行全局搜索 · 支持：工作台模块、条目、待办、知识库笔记';
+      commandPaletteResults.innerHTML = getCommandPaletteEmptyHtml(emptyMsg);
+      commandPaletteState.activeIndex = -1;
+      return;
+    }
+    commandPaletteResults.innerHTML = commandPaletteState.items.map(function (item, idx) {
+      return '<button type="button" class="cmdk-item' + (idx === 0 ? ' active' : '') + '" data-cmdk-index="' + idx + '">' +
+        '<span class="cmdk-item-main">' +
+          '<span class="cmdk-item-title">' + escapeHtml(item.title) + '</span>' +
+          '<span class="cmdk-item-desc">' + escapeHtml(item.meta) + '</span>' +
+        '</span>' +
+        '<span class="cmdk-item-side">' +
+          (item.hint ? getCommandPaletteHint(item.hint) : '') +
+        '</span>' +
+      '</button>';
+    }).join('');
+    
+    /* 更新搜索统计提示 */
+    var metaEl = document.querySelector('.cmdk-meta span:first-child');
+    if (metaEl && commandPaletteState.query) {
+      var parts = [];
+      if (stats.item > 0) parts.push(stats.item + ' 个工作台条目');
+      if (stats.note > 0) parts.push(stats.note + ' 篇知识库笔记');
+      if (stats.module > 0) parts.push(stats.module + ' 个模块');
+      if (stats.todo > 0) parts.push(stats.todo + ' 项待办');
+      if (stats.action > 0) parts.push(stats.action + ' 个命令');
+      
+      if (parts.length > 0) {
+        metaEl.textContent = '找到：' + parts.join('、');
+      } else {
+        metaEl.textContent = '全局搜索';
+      }
+    } else if (metaEl) {
+      metaEl.textContent = '全局命令面板';
+    }
+    
+    commandPaletteResults.querySelectorAll('.cmdk-item').forEach(function (node) {
+      node.addEventListener('click', function () {
+        var idx = parseInt(node.getAttribute('data-cmdk-index'), 10);
+        var item = commandPaletteState.items[idx];
+        if (!item) return;
+        closeCommandPalette();
+        item.run();
+      });
+    });
+    commandPaletteState.activeIndex = 0;
+  }
+
+  function bindCommandPalette() {
+    if (btnCommandPalette) {
+      btnCommandPalette.addEventListener('click', function () {
+        openCommandPalette('');
+      });
+    }
+    if (commandPalette) {
+      commandPalette.addEventListener('click', function (e) {
+        if (e.target === commandPalette) closeCommandPalette();
+      });
+    }
+    if (commandPaletteInput) {
+      commandPaletteInput.addEventListener('input', function () {
+        renderCommandPalette(this.value);
+      });
+      commandPaletteInput.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activateCommandPaletteItem(commandPaletteState.activeIndex + 1);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activateCommandPaletteItem(commandPaletteState.activeIndex - 1);
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var item = commandPaletteState.items[commandPaletteState.activeIndex];
+          if (item) {
+            closeCommandPalette();
+            item.run();
+          }
+        }
+      });
+    }
+  }
+
+  function getTodoPriorityText(priority) {
+    if (priority === 'high') return '高优先级';
+    if (priority === 'low') return '低优先级';
+    return '中优先级';
+  }
+
+  /* 收集所有待办标签并去重 */
+  function getAllTodoTags() {
+    var tags = [];
+    (state.todos || []).forEach(function (todo) {
+      if (todo.tags && Array.isArray(todo.tags)) {
+        todo.tags.forEach(function (tag) {
+          if (tags.indexOf(tag) === -1) tags.push(tag);
+        });
+      }
+    });
+    return tags.sort();
+  }
+
+  function getFilteredTodos() {
+    var list = Array.isArray(state.todos) ? state.todos.slice() : [];
+    
+    /* 按状态筛选 */
+    if (state.todoFilter === 'active') {
+      list = list.filter(function (item) { return !item.done; });
+    } else if (state.todoFilter === 'done') {
+      list = list.filter(function (item) { return !!item.done; });
+    }
+    
+    /* 按标签筛选 */
+    if (state.todoTagFilter && state.todoTagFilter !== 'all') {
+      list = list.filter(function (item) {
+        return item.tags && item.tags.indexOf(state.todoTagFilter) !== -1;
+      });
+    }
+    
+    return list;
+  }
+
+  function getTodosByDateKey(dateKey) {
+    return getFilteredTodos().filter(function (item) {
+      return getDateKey(new Date(item.createdAt || Date.now())) === dateKey;
+    });
+  }
+
+  /* 渲染概览卡片统计 */
+  function renderOverviewMetrics() {
+    if (!overviewTodoToday || !overviewTodoActive || !overviewKnowledgeCount || !overviewKnowledgeWeek) return;
+    
+    var todos = state.todos || [];
+    var today = getDateKey(new Date());
+    
+    /* 今日待办：今天创建的待办数 */
+    var todayTodos = todos.filter(function (t) {
+      var createdDate = new Date(t.createdAt);
+      return getDateKey(createdDate) === today;
+    });
+    overviewTodoToday.textContent = String(todayTodos.length);
+    
+    /* 进行中：未完成的待办数 */
+    var activeTodos = todos.filter(function (t) { return !t.done; });
+    overviewTodoActive.textContent = String(activeTodos.length);
+    
+    /* 知识库笔记总数 */
+    var notes = window.KnowledgeBase && window.KnowledgeBase.getNotes ? window.KnowledgeBase.getNotes() : [];
+    overviewKnowledgeCount.textContent = String(notes.length);
+    
+    /* 本周新增笔记：最近7天创建的笔记数 */
+    var weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    var weekNotes = notes.filter(function (n) {
+      var noteDate = new Date(n.date || n.createdAt);
+      return noteDate.getTime() >= weekAgo;
+    });
+    overviewKnowledgeWeek.textContent = String(weekNotes.length);
+  }
+
+  /* 渲染最近使用列表 */
+  function renderRecentActivity() {
+    if (!recentActivityEmpty || !recentActivityList) return;
+    
+    var items = loadRecentActivity();
+    
+    if (items.length === 0) {
+      recentActivityEmpty.classList.remove('hidden');
+      recentActivityList.innerHTML = '';
+      return;
+    }
+    
+    recentActivityEmpty.classList.add('hidden');
+    
+    recentActivityList.innerHTML = items.map(function (item) {
+      var typeClass = item.type === 'module' ? 'recent-activity-type--module' : 'recent-activity-type--knowledge';
+      var typeIcon = item.type === 'module' ? '<i class="ri-dashboard-line"></i>' : '<i class="ri-book-line"></i>';
+      var typeLabel = item.type === 'module' ? '工作台' : '知识库';
+      
+      var timeAgo = formatTimeAgo(item.timestamp);
+      
+      return '<button type="button" class="recent-activity-item" data-type="' + escapeHtml(item.type) + '" data-id="' + escapeHtml(item.id) + '">' +
+        '<div class="recent-activity-item-main">' +
+          '<div class="recent-activity-item-top">' +
+            '<h4 class="recent-activity-item-title">' + escapeHtml(item.title) + '</h4>' +
+            '<span class="recent-activity-type ' + typeClass + '">' + typeIcon + typeLabel + '</span>' +
+          '</div>' +
+          (item.meta ? '<p class="recent-activity-item-meta">' + escapeHtml(item.meta) + '</p>' : '') +
+          '<p class="recent-activity-item-time">' + timeAgo + '</p>' +
+        '</div>' +
+        '<span class="recent-activity-item-arrow"><i class="ri-arrow-right-s-line"></i></span>' +
+      '</button>';
+    }).join('');
+    
+    /* 绑定点击事件 */
+    recentActivityList.querySelectorAll('.recent-activity-item').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var type = btn.dataset.type;
+        var id = btn.dataset.id;
+        
+        if (type === 'module') {
+          /* 跳转到工作台视图并打开对应条目 */
+          var found = false;
+          state.modules.forEach(function (mod) {
+            var item = (mod.items || []).find(function (it) { return it.id === id; });
+            if (item) {
+              found = true;
+              /* 确保在 dashboard 视图 */
+              var dashboardView = document.getElementById('dashboard-view');
+              var knowledgeView = document.getElementById('knowledge-view');
+              if (dashboardView) dashboardView.style.display = '';
+              if (knowledgeView) knowledgeView.style.display = 'none';
+              
+              /* 打开条目 */
+              if (item.url && item.url.trim()) {
+                window.open(item.url, item.newTab !== false ? '_blank' : '_self');
+              } else if (canEdit()) {
+                openItemModal(mod.id, item);
+              } else {
+                openViewContentModal(item);
+              }
+            }
+          });
+          if (!found) {
+            showToast('条目不存在或已删除', 'warning');
+          }
+        } else if (type === 'knowledge') {
+          /* 跳转到知识库视图并打开笔记 */
+          var dashboardView = document.getElementById('dashboard-view');
+          var knowledgeView = document.getElementById('knowledge-view');
+          if (dashboardView) dashboardView.style.display = 'none';
+          if (knowledgeView) knowledgeView.style.display = '';
+          
+          if (window.KnowledgeBase && window.KnowledgeBase.openNote) {
+            window.KnowledgeBase.openNote(id);
+          }
+        }
+      });
+    });
+  }
+
+  /* 格式化时间为相对时间 */
+  function formatTimeAgo(timestamp) {
+    var now = Date.now();
+    var diff = now - timestamp;
+    var seconds = Math.floor(diff / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    
+    if (seconds < 60) return '刚刚';
+    if (minutes < 60) return minutes + ' 分钟前';
+    if (hours < 24) return hours + ' 小时前';
+    if (days < 7) return days + ' 天前';
+    
+    var date = new Date(timestamp);
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function updateTodoSummary() {
+    if (!todoSummary) return;
+    var all = Array.isArray(state.todos) ? state.todos : [];
+    var done = all.filter(function (item) { return !!item.done; }).length;
+    var active = all.length - done;
+    if (!all.length) {
+      todoSummary.textContent = '把今天要做的事先记下来';
+      return;
+    }
+    todoSummary.textContent = '共 ' + all.length + ' 项，进行中 ' + active + ' 项，已完成 ' + done + ' 项';
+  }
+
+  function syncTodoViewUI(items) {
+    var isCalendar = state.todoView === 'calendar';
+    if (todoList) todoList.classList.toggle('hidden', isCalendar);
+    if (todoCalendar) todoCalendar.classList.toggle('hidden', !isCalendar);
+    if (todoFilter) todoFilter.classList.toggle('hidden', isCalendar);
+    if (todoEmpty) todoEmpty.classList.toggle('hidden', isCalendar || (items && items.length > 0));
+    if (todoViewSwitch) {
+      todoViewSwitch.querySelectorAll('.todo-view-btn').forEach(function (btn) {
+        btn.classList.toggle('todo-view-btn--active', btn.dataset.view === state.todoView);
+      });
+    }
+  }
+
+  function renderTodoCalendarDetail() {
+    if (!todoCalendarDetailList || !todoCalendarDetailTitle || !todoCalendarDetailEmpty) return;
+    var selectedDate = state.todoSelectedDate;
+    var items = selectedDate ? getTodosByDateKey(selectedDate) : [];
+    todoCalendarDetailTitle.textContent = formatDateKey(selectedDate);
+    if (todoCalendarDetailCount) {
+      todoCalendarDetailCount.textContent = selectedDate ? ('共 ' + items.length + ' 项') : '';
+    }
+    todoCalendarDetailList.innerHTML = '';
+    todoCalendarDetailEmpty.classList.toggle('hidden', !selectedDate || items.length > 0);
+    if (!selectedDate || !items.length) return;
+
+    items.forEach(function (item) {
+      var row = document.createElement('div');
+      row.className = 'todo-calendar-entry' + (item.done ? ' is-done' : '');
+      row.innerHTML = '' +
+        '<label class="todo-calendar-entry-main">' +
+          '<input class="todo-check" type="checkbox" ' + (item.done ? 'checked' : '') + ' aria-label="切换完成状态">' +
+          '<span class="todo-calendar-entry-text"></span>' +
+        '</label>' +
+        '<div class="todo-calendar-entry-meta">' +
+          '<span class="todo-badge todo-badge--' + escapeHtml(item.priority || 'medium') + '">' + escapeHtml(getTodoPriorityText(item.priority)) + '</span>' +
+          '<button type="button" class="todo-icon-btn" data-action="delete" title="删除待办" aria-label="删除待办">🗑</button>' +
+        '</div>';
+      row.querySelector('.todo-calendar-entry-text').textContent = item.text || '';
+      row.querySelector('.todo-check').addEventListener('change', function () {
+        item.done = !item.done;
+        item.doneAt = item.done ? Date.now() : null;
+        persistState();
+        renderTodos();
+      });
+      row.querySelector('[data-action="delete"]').addEventListener('click', function () {
+        state.todos = (state.todos || []).filter(function (x) { return x.id !== item.id; });
+        persistState();
+        renderTodos();
+        showToast('待办已删除', 'success');
+      });
+      todoCalendarDetailList.appendChild(row);
+    });
+  }
+
+  function renderTodoCalendar() {
+    if (!todoCalendarGrid || !todoCalendar) return;
+    var month = state.todoCalendarMonth instanceof Date ? state.todoCalendarMonth : new Date();
+    var firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+    var startWeekday = (firstDay.getDay() + 6) % 7;
+    var daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    var todayKey = getDateKey(new Date());
+    var monthPrefix = month.getFullYear() + '-' + pad2(month.getMonth() + 1);
+    var counts = {};
+
+    getFilteredTodos().forEach(function (item) {
+      var key = getDateKey(new Date(item.createdAt || Date.now()));
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    if (todoCalendarTitle) {
+      todoCalendarTitle.textContent = month.getFullYear() + ' 年 ' + (month.getMonth() + 1) + ' 月';
+    }
+    if (todoCalendarSubtitle) {
+      var total = Object.keys(counts).reduce(function (sum, key) {
+        return key.indexOf(monthPrefix) === 0 ? sum + counts[key] : sum;
+      }, 0);
+      todoCalendarSubtitle.textContent = total ? ('本月共有 ' + total + ' 项待办') : '点击日期查看当天待办';
+    }
+
+    todoCalendarGrid.innerHTML = '';
+    for (var i = 0; i < startWeekday; i++) {
+      var blank = document.createElement('div');
+      blank.className = 'todo-calendar-cell todo-calendar-cell--blank';
+      todoCalendarGrid.appendChild(blank);
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      (function (d) {
+        var date = new Date(month.getFullYear(), month.getMonth(), d);
+        var key = getDateKey(date);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'todo-calendar-cell';
+        if (key === todayKey) btn.classList.add('is-today');
+        if (key === state.todoSelectedDate) btn.classList.add('is-selected');
+        if (counts[key]) btn.classList.add('has-items');
+        btn.innerHTML = '' +
+          '<span class="todo-calendar-day-num">' + d + '</span>' +
+          '<span class="todo-calendar-day-count">' + (counts[key] ? (counts[key] + ' 项') : '') + '</span>';
+        btn.addEventListener('click', function () {
+          state.todoSelectedDate = key;
+          persistTodoUI();
+          renderTodos();
+        });
+        todoCalendarGrid.appendChild(btn);
+      })(day);
+    }
+
+    renderTodoCalendarDetail();
+  }
+
+  function renderTodos() {
+    if (!todoList) return;
+    var items = getFilteredTodos();
+    todoList.innerHTML = '';
+    if (todoEmpty) todoEmpty.classList.toggle('hidden', state.todoView === 'calendar' || items.length > 0);
+    
+    /* 渲染状态筛选按钮 */
+    if (todoFilter) {
+      todoFilter.querySelectorAll('.todo-filter-btn').forEach(function (btn) {
+        btn.classList.toggle('todo-filter-btn--active', btn.dataset.filter === state.todoFilter);
+      });
+    }
+    
+    /* 动态渲染标签筛选按钮 */
+    var tagFilterContainer = document.getElementById('todoTagFilter');
+    if (tagFilterContainer) {
+      var allTags = getAllTodoTags();
+      if (allTags.length > 0) {
+        tagFilterContainer.innerHTML = '<span class="todo-tag-filter-label">标签：</span>' +
+          '<button type="button" class="todo-tag-filter-btn' + (state.todoTagFilter === 'all' ? ' todo-tag-filter-btn--active' : '') + '" data-tag="all">全部</button>' +
+          allTags.map(function (tag) {
+            return '<button type="button" class="todo-tag-filter-btn' + (state.todoTagFilter === tag ? ' todo-tag-filter-btn--active' : '') + '" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '</button>';
+          }).join('');
+        tagFilterContainer.classList.remove('hidden');
+      } else {
+        tagFilterContainer.innerHTML = '';
+        tagFilterContainer.classList.add('hidden');
+      }
+    }
+    items.forEach(function (item) {
+      var row = document.createElement('div');
+      row.className = 'todo-item' + (item.done ? ' is-done' : '');
+      
+      /* 渲染标签 */
+      var tagsHtml = '';
+      if (item.tags && item.tags.length > 0) {
+        tagsHtml = '<div class="todo-tags">' +
+          item.tags.map(function (tag) {
+            return '<span class="todo-tag">' + escapeHtml(tag) + '</span>';
+          }).join('') +
+        '</div>';
+      }
+      
+      row.innerHTML = '' +
+        '<input class="todo-check" type="checkbox" ' + (item.done ? 'checked' : '') + ' aria-label="切换完成状态">' +
+        '<div class="todo-content">' +
+          '<p class="todo-text"></p>' +
+          tagsHtml +
+          '<div class="todo-meta">' +
+            '<span class="todo-badge todo-badge--' + escapeHtml(item.priority || 'medium') + '">' + escapeHtml(getTodoPriorityText(item.priority)) + '</span>' +
+            '<span class="todo-time">创建于 ' + escapeHtml(item.createdAtText || '') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="todo-actions">' +
+          '<button type="button" class="todo-icon-btn" data-action="delete" title="删除待办" aria-label="删除待办">🗑</button>' +
+        '</div>';
+      row.querySelector('.todo-text').textContent = item.text || '';
+      row.querySelector('.todo-check').addEventListener('change', function () {
+        item.done = !item.done;
+        item.doneAt = item.done ? Date.now() : null;
+        persistState();
+        renderTodos();
+      });
+      row.querySelector('[data-action="delete"]').addEventListener('click', function () {
+        state.todos = (state.todos || []).filter(function (x) { return x.id !== item.id; });
+        persistState();
+        renderTodos();
+        renderOverviewMetrics();
+        showToast('待办已删除', 'success');
+      });
+      todoList.appendChild(row);
+    });
+    updateTodoSummary();
+    syncTodoViewUI(items);
+    renderTodoCalendar();
+    /* 更新概览统计 */
+    renderOverviewMetrics();
+  }
+
+  function bindTodoPanel() {
+    if (todoForm && todoForm.dataset.boundTodo !== '1') {
+      todoForm.dataset.boundTodo = '1';
+      todoForm.addEventListener('submit', function () {
+        var text = todoInput ? todoInput.value.trim() : '';
+        if (!text) {
+          showToast('请输入待办内容', 'warning');
+          if (todoInput) todoInput.focus();
+          return;
+        }
+        /* 解析标签：用空格分隔 */
+        var tagsText = todoTags ? todoTags.value.trim() : '';
+        var tags = tagsText ? tagsText.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
+        
+        state.todos = state.todos || [];
+        state.todos.unshift({
+          id: id(),
+          text: text,
+          tags: tags,
+          priority: todoPriority ? todoPriority.value : 'medium',
+          done: false,
+          createdAt: Date.now(),
+          createdAtText: new Date().toLocaleString()
+        });
+        state.todoCalendarMonth = new Date();
+        state.todoSelectedDate = getDateKey(new Date());
+        persistState();
+        persistTodoUI();
+        renderTodos();
+        if (todoInput) todoInput.value = '';
+        if (todoTags) todoTags.value = '';
+        if (todoPriority) todoPriority.value = 'medium';
+        showToast('待办已添加', 'success');
+      });
+    }
+
+    if (todoFilter && todoFilter.dataset.boundTodo !== '1') {
+      todoFilter.dataset.boundTodo = '1';
+      todoFilter.addEventListener('click', function (event) {
+        var btn = event.target.closest('.todo-filter-btn');
+        if (!btn) return;
+        state.todoFilter = btn.dataset.filter || 'all';
+        renderTodos();
+      });
+    }
+
+    /* 绑定标签筛选按钮点击事件 */
+    document.addEventListener('click', function (event) {
+      var tagBtn = event.target.closest('.todo-tag-filter-btn');
+      if (!tagBtn) return;
+      state.todoTagFilter = tagBtn.dataset.tag || 'all';
+      renderTodos();
+    });
+
+    if (todoViewSwitch && todoViewSwitch.dataset.boundTodo !== '1') {
+      todoViewSwitch.dataset.boundTodo = '1';
+      todoViewSwitch.addEventListener('click', function (event) {
+        var btn = event.target.closest('.todo-view-btn');
+        if (!btn) return;
+        state.todoView = btn.dataset.view === 'calendar' ? 'calendar' : 'list';
+        if (!state.todoSelectedDate && state.todos && state.todos.length) {
+          state.todoSelectedDate = getDateKey(new Date(state.todos[0].createdAt || Date.now()));
+        }
+        persistTodoUI();
+        renderTodos();
+      });
+    }
+
+    if (btnTodoPrevMonth && btnTodoPrevMonth.dataset.boundTodo !== '1') {
+      btnTodoPrevMonth.dataset.boundTodo = '1';
+      btnTodoPrevMonth.addEventListener('click', function () {
+        state.todoCalendarMonth = new Date(state.todoCalendarMonth.getFullYear(), state.todoCalendarMonth.getMonth() - 1, 1);
+        persistTodoUI();
+        renderTodoCalendar();
+      });
+    }
+
+    if (btnTodoNextMonth && btnTodoNextMonth.dataset.boundTodo !== '1') {
+      btnTodoNextMonth.dataset.boundTodo = '1';
+      btnTodoNextMonth.addEventListener('click', function () {
+        state.todoCalendarMonth = new Date(state.todoCalendarMonth.getFullYear(), state.todoCalendarMonth.getMonth() + 1, 1);
+        persistTodoUI();
+        renderTodoCalendar();
+      });
+    }
+
+    if (btnTodoClearDone && btnTodoClearDone.dataset.boundTodo !== '1') {
+      btnTodoClearDone.dataset.boundTodo = '1';
+      btnTodoClearDone.addEventListener('click', function () {
+        var before = (state.todos || []).length;
+        state.todos = (state.todos || []).filter(function (item) { return !item.done; });
+        if (state.todos.length === before) {
+          showToast('没有可清除的已完成待办', 'info');
+          return;
+        }
+        persistState();
+        renderTodos();
+        showToast('已清除完成项', 'success');
+      });
+    }
+  }
+
   function matchSearch(module, item) {
     var q = getSearchText();
     if (!q) return true;
+    
+    /* 使用高级搜索模块 */
+    if (window.AdvancedSearch) {
+      var searchCriteria = window.AdvancedSearch.parseSearchQuery(q);
+      
+      if (item) {
+        /* 条目匹配：使用高级搜索 */
+        return window.AdvancedSearch.matchesSearchCriteria(item, searchCriteria);
+      } else {
+        /* 模块名匹配：仅检查文本 */
+        if (searchCriteria.text) {
+          return (module.name || '').toLowerCase().indexOf(searchCriteria.text) !== -1;
+        }
+        return true;
+      }
+    }
+    
+    /* 降级：使用简单搜索 */
     if (item) {
-      /* 条目匹配：标题 + URL + 正文 + 附件文件名 */
       var attNames = (Array.isArray(item.attachments) ? item.attachments : [])
         .map(function (a) { return a.name || ''; }).join(' ');
       var text = (item.title + ' ' + (item.url || '') + ' ' + (item.content || '') + ' ' + attNames).toLowerCase();
       return text.indexOf(q) !== -1;
     } else {
-      /* 模块名匹配 */
       return (module.name || '').toLowerCase().indexOf(q) !== -1;
     }
   }
@@ -1019,11 +2023,19 @@
       if (!hasUrl) {
         row.addEventListener('click', function (e) {
           if (e.target.closest('.item-actions')) return;
+          /* 记录最近使用 */
+          addRecentActivity('module', it.id, it.title || '未命名', mod.name || '');
           if (canEdit()) openItemModal(mod.id, it);
           else openViewContentModal(it);
         });
       } else {
-        row.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function (e) { e.stopPropagation(); }); });
+        row.querySelectorAll('a').forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            e.stopPropagation();
+            /* 记录最近使用 */
+            addRecentActivity('module', it.id, it.title || '未命名', mod.name || '');
+          });
+        });
       }
       row.querySelectorAll('.btn-edit-item').forEach(function (btn) {
         btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openItemModal(mod.id, it); });
@@ -1591,7 +2603,39 @@
     document.getElementById('viewContentModal').classList.remove('show');
   }
 
-  if (searchInput) searchInput.addEventListener('input', function () { renderModules(); });
+  /* 搜索防抖优化：避免频繁渲染 + 高级搜索提示 */
+  var searchDebounceTimer;
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(function () {
+        renderModules();
+        updateSearchHint();
+      }, 300);
+    });
+  }
+  
+  /* 更新搜索提示 */
+  function updateSearchHint() {
+    var searchHintEl = document.getElementById('searchHint');
+    if (!searchHintEl) return;
+    
+    var q = getSearchText();
+    if (!q || !window.AdvancedSearch) {
+      searchHintEl.style.display = 'none';
+      return;
+    }
+    
+    var searchCriteria = window.AdvancedSearch.parseSearchQuery(q);
+    var hint = window.AdvancedSearch.getSearchHint(searchCriteria);
+    
+    if (hint) {
+      searchHintEl.textContent = hint;
+      searchHintEl.style.display = 'block';
+    } else {
+      searchHintEl.style.display = 'none';
+    }
+  }
   /* 暴露给 theme-glass.js 的 filterCards 调用 */
   window._appRenderModules = renderModules;
 
@@ -1647,10 +2691,39 @@
         gallery.appendChild(btn);
       });
     }
+    /* 初始化主题选择器 */
+    var themeSelector = document.getElementById('themeSelector');
+    if (themeSelector && window.ThemeSystem) {
+      var currentTheme = window.ThemeSystem.getCurrentTheme();
+      var themes = window.ThemeSystem.getThemeList();
+      themeSelector.innerHTML = themes.map(function(theme) {
+        return '<button type="button" class="theme-card' + (theme.key === currentTheme ? ' active' : '') + '" data-theme="' + theme.key + '">' +
+          '<div class="theme-card-icon">' + theme.icon + '</div>' +
+          '<div class="theme-card-name">' + theme.name + '</div>' +
+        '</button>';
+      }).join('');
+      
+      /* 绑定主题切换事件 */
+      themeSelector.querySelectorAll('.theme-card').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var themeKey = btn.dataset.theme;
+          window.ThemeSystem.applyTheme(themeKey);
+          /* 更新激活状态 */
+          themeSelector.querySelectorAll('.theme-card').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.theme === themeKey);
+          });
+          showToast('主题已切换', 'success');
+        });
+      });
+    }
+    
     if (window.workbenchApi) {
       document.getElementById('dataPathSection').style.display = '';
+      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
       window.workbenchApi.getConfig().then(function (cfg) {
         document.getElementById('dataPathInput').value = (cfg && cfg.dataPath) || '';
+        if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
+        if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
       });
     }
     settingsPanel.classList.add('open');
@@ -1687,6 +2760,13 @@
     state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
 
     persistState();
+    if (window.workbenchApi) {
+      window.workbenchApi.setConfig({
+        dataPath: (document.getElementById('dataPathInput').value || '').trim(),
+        obsidianVaultPath: (document.getElementById('obsidianVaultPathInput') ? document.getElementById('obsidianVaultPathInput').value : '').trim(),
+        obsidianSyncFolder: (document.getElementById('obsidianSyncFolderInput') ? document.getElementById('obsidianSyncFolderInput').value : 'WorkbenchSync').trim() || 'WorkbenchSync'
+      });
+    }
     applyLayout();
     applyBackground();
     closeSettings();
@@ -1724,10 +2804,10 @@
   });
 
     var btnExportState = document.getElementById('btnExportState');
-  if (btnExportState) btnExportState.addEventListener('click', function () {
-    exportStateToFile();
-    showToast('数据已导出', 'success');
-  });
+    if (btnExportState) btnExportState.addEventListener('click', function () {
+      exportStateToFile(false);
+      showToast('数据已导出', 'success');
+    });
 
   var btnImportState = document.getElementById('btnImportState');
   var importStateFile = document.getElementById('importStateFile');
@@ -1744,41 +2824,149 @@
     });
   }
 
+  if (window.workbenchApi) {
+    window.workbenchApi.getConfig().then(function (cfg) {
+      if (document.getElementById('dataPathSection')) document.getElementById('dataPathSection').style.display = '';
+      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
+      if (document.getElementById('dataPathInput') && cfg && cfg.dataPath) document.getElementById('dataPathInput').value = cfg.dataPath;
+      if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
+      if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
+    }).catch(function () {});
+
+    var chooseBtn = document.getElementById('btnChooseDataPath');
+    if (chooseBtn) chooseBtn.addEventListener('click', function () {
+      window.workbenchApi.chooseDataPath().then(function (path) {
+        if (!path) return;
+        window.workbenchApi.setConfig({ dataPath: path });
+        document.getElementById('dataPathInput').value = path;
+      });
+    });
+
+    var chooseObsidianBtn = document.getElementById('btnChooseObsidianVaultPath');
+    if (chooseObsidianBtn) chooseObsidianBtn.addEventListener('click', function () {
+      window.workbenchApi.chooseObsidianVaultPath().then(function (vaultPath) {
+        if (!vaultPath) return;
+        var syncFolderInput = document.getElementById('obsidianSyncFolderInput');
+        var syncFolder = ((syncFolderInput && syncFolderInput.value) || 'WorkbenchSync').trim() || 'WorkbenchSync';
+        window.workbenchApi.setConfig({ obsidianVaultPath: vaultPath, obsidianSyncFolder: syncFolder });
+        document.getElementById('obsidianVaultPathInput').value = vaultPath;
+      });
+    });
+  }
+
   bindModuleModal();
   bindItemModal();
   bindCommentsModal();
   bindViewContentModal();
   bindAttachmentModals();
   bindLoginModal();
+  bindTodoPanel();
+  bindCommandPalette();
   updateUserUI();
   applyLayout();
   applyBackground();
+  renderTodos();
   renderModules();
+  /* 初始化概览卡片和最近使用 */
+  renderOverviewMetrics();
+  renderRecentActivity();
+  
+  /* 检查是否需要备份提醒 */
+  checkBackupReminder();
+
+  /* 暴露全局函数供 knowledge.js 调用 */
+  window.addRecentActivity = addRecentActivity;
+  window.renderOverviewMetrics = renderOverviewMetrics;
 
   /* ── 全局快捷键 ──────────────────────────────────────────
-   * Ctrl+K  → 聚焦搜索框并全选
-   * Ctrl+N  → 打开"添加内容"弹窗（需已登录管理员）
-   * Esc     → 依次关闭最顶层弹窗 / 清空搜索
+   * Ctrl+K        → 打开命令面板
+   * Ctrl+N        → 新建内容（管理员）
+   * Ctrl+F        → 聚焦搜索框
+   * Ctrl+B        → 立即备份数据
+   * Ctrl+,        → 打开设置
+   * Ctrl+Shift+T  → 新建待办
+   * Ctrl+Shift+N  → 新建笔记（管理员）
+   * Ctrl+Shift+F  → 打开命令面板（全局搜索）
+   * Esc           → 关闭弹窗/清空搜索
    * ──────────────────────────────────────────────────────── */
   document.addEventListener('keydown', function (e) {
     var tag = (document.activeElement && document.activeElement.tagName) || '';
     var inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
-    // Ctrl+K / Cmd+K：聚焦搜索框
+    // Ctrl+K / Cmd+K：打开命令面板
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
-      if (searchInput) {
+      openCommandPalette(getCurrentView() === 'dashboard' && searchInput ? searchInput.value : '');
+      return;
+    }
+
+    // Ctrl+F / Cmd+F：聚焦搜索框
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !inInput) {
+      e.preventDefault();
+      if (getCurrentView() === 'dashboard' && searchInput) {
         searchInput.focus();
         searchInput.select();
+      } else if (getCurrentView() === 'knowledge') {
+        var kbSearch = document.getElementById('kb-search-input');
+        if (kbSearch) {
+          kbSearch.focus();
+          kbSearch.select();
+        }
       }
       return;
     }
 
-    // Ctrl+N / Cmd+N：打开添加内容弹窗（仅 admin）
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    // Ctrl+B / Cmd+B：立即备份数据
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b' && !inInput) {
+      e.preventDefault();
+      if (window.workbenchBackup) {
+        window.workbenchBackup();
+      }
+      return;
+    }
+
+    // Ctrl+, / Cmd+,：打开设置
+    if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+      e.preventDefault();
+      if (canEdit()) {
+        openSettings();
+      }
+      return;
+    }
+
+    // Ctrl+Shift+T：新建待办
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+      e.preventDefault();
+      if (getCurrentView() === 'dashboard' && todoInput) {
+        todoInput.focus();
+        todoInput.select();
+      }
+      return;
+    }
+
+    // Ctrl+Shift+N：新建笔记（管理员）
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
+      e.preventDefault();
+      if (canEdit()) {
+        if (typeof window.showView === 'function') window.showView('knowledge');
+        if (window.KnowledgeBase && typeof window.KnowledgeBase.openEditor === 'function') {
+          window.KnowledgeBase.openEditor(null);
+        }
+      }
+      return;
+    }
+
+    // Ctrl+Shift+F：打开命令面板（全局搜索）
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      openCommandPalette('');
+      return;
+    }
+
+    // Ctrl+N / Cmd+N：新建内容（管理员）
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !e.shiftKey) {
       e.preventDefault();
       if (canEdit() && state.modules.length > 0) {
-        // 默认向第一个模块添加内容
         openItemModal(state.modules[0].id, null);
       } else if (canEdit()) {
         openModuleModal(null);
@@ -1789,6 +2977,10 @@
     // Esc：关闭弹窗 → 关闭设置面板 → 清空搜索
     if (e.key === 'Escape') {
       // 已在输入框内且有值时先 blur，防止误关弹窗
+      if (commandPaletteState.open) {
+        closeCommandPalette();
+        return;
+      }
       var modals = ['itemModal', 'moduleModal', 'commentsModal', 'viewContentModal',
                     'loginModal', 'attachmentsListModal'];
       var closed = false;
@@ -1814,38 +3006,25 @@
   });
 
   if (window.workbenchApi) {
-    window.workbenchApi.getConfig().then(function (cfg) {
-      if (document.getElementById('dataPathSection')) document.getElementById('dataPathSection').style.display = '';
-      if (document.getElementById('dataPathInput') && cfg && cfg.dataPath) document.getElementById('dataPathInput').value = cfg.dataPath;
-    });
     window.workbenchApi.loadState().then(function (data) {
       if (data) {
         state = migrateState(data);
         if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
         if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
+        state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
       }
       applyLayout();
       applyBackground();
+      renderTodos();
       renderModules();
     }).catch(function () {});
-    var chooseBtn = document.getElementById('btnChooseDataPath');
-    if (chooseBtn) chooseBtn.addEventListener('click', function () {
-      window.workbenchApi.chooseDataPath().then(function (path) {
-        if (!path) return;
-        window.workbenchApi.setConfig({ dataPath: path });
-        document.getElementById('dataPathInput').value = path;
-        window.workbenchApi.loadState().then(function (data) {
-          if (data) state = migrateState(data);
-          renderModules();
-        });
-      });
-    });
   } else {
     var rawState = load(STORAGE_STATE, null);
     if (rawState) {
       if (rawState.modules) state.modules = rawState.modules;
       if (rawState.allowedUsers !== undefined) state.allowedUsers = rawState.allowedUsers;
+      if (Array.isArray(rawState.todos)) state.todos = normalizeTodos(rawState.todos);
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
@@ -1862,9 +3041,11 @@
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
+          state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
           applyLayout();
           applyBackground();
+          renderTodos();
           renderModules();
         }
       })
@@ -1893,21 +3074,44 @@
   };
 
 
-  function exportStateToFile() {
+  function exportStateToFile(autoBackup) {
     var toSave = {
       layout: state.layout,
       bg: state.bg,
       modules: state.modules,
+      todos: state.todos || [],
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {}
+      collapsedModules: state.collapsedModules || {},
+      exportTime: new Date().toISOString(),
+      version: '1.0'
     };
     var blob = new Blob([JSON.stringify(toSave, null, 2)], { type: 'application/json;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'workbench-state.json';
+    
+    /* 生成带时间戳的文件名 */
+    var now = new Date();
+    var timestamp = now.getFullYear() +
+      pad2(now.getMonth() + 1) +
+      pad2(now.getDate()) + '_' +
+      pad2(now.getHours()) +
+      pad2(now.getMinutes()) +
+      pad2(now.getSeconds());
+    
+    a.download = autoBackup
+      ? 'workbench-backup-' + timestamp + '.json'
+      : 'workbench-export-' + timestamp + '.json';
+    
     a.click();
     URL.revokeObjectURL(a.href);
+    
+    /* 记录最后备份时间 */
+    if (autoBackup) {
+      try {
+        localStorage.setItem('workbench_last_backup', now.toISOString());
+      } catch (_) {}
+    }
   }
 
   function importStateFromFile(file) {
@@ -1920,10 +3124,12 @@
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
+          state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : []);
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
           persistState();
           applyLayout();
           applyBackground();
+          renderTodos();
           renderModules();
           resolve();
         } catch (e) {
@@ -1934,4 +3140,38 @@
       reader.readAsText(file, 'UTF-8');
     });
   }
+/* 备份提醒功能 */
+function checkBackupReminder() {
+  try {
+    var lastBackup = localStorage.getItem('workbench_last_backup');
+    var backupInterval = 7 * 24 * 60 * 60 * 1000; // 7天
+    
+    if (!lastBackup || (Date.now() - new Date(lastBackup).getTime() > backupInterval)) {
+      /* 7天未备份，显示提醒 */
+      setTimeout(function() {
+        if (window.WorkbenchUI && typeof window.WorkbenchUI.confirm === 'function') {
+          window.WorkbenchUI.confirm({
+            title: '数据备份提醒',
+            message: '您已经超过7天未备份数据，建议立即备份以防数据丢失。',
+            confirmText: '立即备份',
+            cancelText: '稍后提醒',
+            danger: false
+          }).then(function(ok) {
+            if (ok) {
+              exportStateToFile(true);
+              showToast('备份已保存', 'success');
+            }
+          });
+        }
+      }, 3000); // 3秒后显示提醒
+    }
+  } catch (_) {}
+}
+
+/* 暴露备份函数供外部调用 */
+window.workbenchBackup = function() {
+  exportStateToFile(true);
+  showToast('备份已保存', 'success');
+};
+
 })();
