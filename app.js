@@ -1918,6 +1918,94 @@
     document.getElementById('loginModal').classList.remove('show');
   }
 
+  /* ============================================================
+     模块折叠/展开控制函数
+     ============================================================ */
+  
+  function toggleModuleCollapse(moduleId) {
+    var wasCollapsed = state.collapsedModules[moduleId];
+    
+    if (state.accordionMode && !wasCollapsed) {
+      /* 手风琴模式：收起其他所有模块 */
+      Object.keys(state.collapsedModules).forEach(function (id) {
+        if (id !== moduleId) {
+          state.collapsedModules[id] = true;
+        }
+      });
+      /* 同时更新所有模块的 UI */
+      document.querySelectorAll('.module-card').forEach(function (card) {
+        var cardModuleId = card.dataset.moduleId;
+        if (cardModuleId && cardModuleId !== moduleId) {
+          card.classList.add('collapsed');
+          var btn = card.querySelector('.btn-collapse');
+          if (btn) {
+            btn.title = '展开';
+            btn.textContent = '▶';
+          }
+        }
+      });
+    }
+    
+    /* 切换当前模块 */
+    state.collapsedModules[moduleId] = !wasCollapsed;
+    state.currentExpandedModule = wasCollapsed ? moduleId : null;
+    
+    persistState();
+    
+    /* 更新当前模块 UI */
+    var currentCard = document.querySelector('[data-module-id="' + moduleId + '"]');
+    if (currentCard) {
+      currentCard.classList.toggle('collapsed', !wasCollapsed);
+      var btn = currentCard.querySelector('.btn-collapse');
+      if (btn) {
+        btn.title = wasCollapsed ? '收起' : '展开';
+        btn.textContent = wasCollapsed ? '▼' : '▶';
+      }
+    }
+  }
+  
+  function expandAllModules() {
+    state.modules.forEach(function (mod) {
+      state.collapsedModules[mod.id] = false;
+    });
+    state.currentExpandedModule = null;
+    /* 全部展开时自动关闭手风琴模式 */
+    state.accordionMode = false;
+    persistState();
+    try {
+      localStorage.setItem('workbench_accordion_mode', JSON.stringify(false));
+    } catch (_) {}
+    renderModules();
+    updateModuleToolbar();
+  }
+  
+  function collapseAllModules() {
+    state.modules.forEach(function (mod) {
+      state.collapsedModules[mod.id] = true;
+    });
+    state.currentExpandedModule = null;
+    persistState();
+    renderModules();
+  }
+  
+  function toggleAccordionMode() {
+    state.accordionMode = !state.accordionMode;
+    persistState();
+    try {
+      localStorage.setItem('workbench_accordion_mode', JSON.stringify(state.accordionMode));
+    } catch (_) {}
+    updateModuleToolbar();
+    showToast(state.accordionMode ? '已开启手风琴模式' : '已关闭手风琴模式', 'success');
+  }
+  
+  function updateModuleToolbar() {
+    var toggleBtn = document.getElementById('btnToggleAccordion');
+    if (toggleBtn) {
+      toggleBtn.className = 'btn btn-sm module-toolbar-btn' + (state.accordionMode ? ' active' : '');
+      toggleBtn.innerHTML = '<i class="ri-music-line"></i> 手风琴: ' + (state.accordionMode ? '开' : '关');
+    }
+  }
+
   function buildNormalModuleCard(mod, itemsToShow, forceExpand) {
     /* itemsToShow：外部传入的已过滤条目列表；forceExpand：搜索时强制展开 */
     var items = itemsToShow !== undefined
@@ -2240,94 +2328,6 @@
       });
     }
     return card;
-  }
-
-  /* ============================================================
-     模块折叠/展开控制函数
-     ============================================================ */
-  
-  function toggleModuleCollapse(moduleId) {
-    var wasCollapsed = state.collapsedModules[moduleId];
-    
-    if (state.accordionMode && !wasCollapsed) {
-      /* 手风琴模式：收起其他所有模块 */
-      Object.keys(state.collapsedModules).forEach(function (id) {
-        if (id !== moduleId) {
-          state.collapsedModules[id] = true;
-        }
-      });
-      /* 同时更新所有模块的 UI */
-      document.querySelectorAll('.module-card').forEach(function (card) {
-        var cardModuleId = card.dataset.moduleId;
-        if (cardModuleId && cardModuleId !== moduleId) {
-          card.classList.add('collapsed');
-          var btn = card.querySelector('.btn-collapse');
-          if (btn) {
-            btn.title = '展开';
-            btn.textContent = '▶';
-          }
-        }
-      });
-    }
-    
-    /* 切换当前模块 */
-    state.collapsedModules[moduleId] = !wasCollapsed;
-    state.currentExpandedModule = wasCollapsed ? moduleId : null;
-    
-    persistState();
-    
-    /* 更新当前模块 UI */
-    var currentCard = document.querySelector('[data-module-id="' + moduleId + '"]');
-    if (currentCard) {
-      currentCard.classList.toggle('collapsed', !wasCollapsed);
-      var btn = currentCard.querySelector('.btn-collapse');
-      if (btn) {
-        btn.title = wasCollapsed ? '收起' : '展开';
-        btn.textContent = wasCollapsed ? '▼' : '▶';
-      }
-    }
-  }
-  
-  function expandAllModules() {
-    state.modules.forEach(function (mod) {
-      state.collapsedModules[mod.id] = false;
-    });
-    state.currentExpandedModule = null;
-    /* 全部展开时自动关闭手风琴模式 */
-    state.accordionMode = false;
-    persistState();
-    try {
-      localStorage.setItem('workbench_accordion_mode', JSON.stringify(false));
-    } catch (_) {}
-    renderModules();
-    updateModuleToolbar();
-  }
-  
-  function collapseAllModules() {
-    state.modules.forEach(function (mod) {
-      state.collapsedModules[mod.id] = true;
-    });
-    state.currentExpandedModule = null;
-    persistState();
-    renderModules();
-  }
-  
-  function toggleAccordionMode() {
-    state.accordionMode = !state.accordionMode;
-    persistState();
-    try {
-      localStorage.setItem('workbench_accordion_mode', JSON.stringify(state.accordionMode));
-    } catch (_) {}
-    updateModuleToolbar();
-    showToast(state.accordionMode ? '已开启手风琴模式' : '已关闭手风琴模式', 'success');
-  }
-  
-  function updateModuleToolbar() {
-    var toggleBtn = document.getElementById('btnToggleAccordion');
-    if (toggleBtn) {
-      toggleBtn.className = 'btn btn-sm module-toolbar-btn' + (state.accordionMode ? ' active' : '');
-      toggleBtn.innerHTML = '<i class="ri-music-line"></i> 手风琴: ' + (state.accordionMode ? '开' : '关');
-    }
   }
 
   function renderModules() {

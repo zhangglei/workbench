@@ -9,6 +9,18 @@
   <meta name="apple-mobile-web-app-title" content="工作台">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
+  
+  <!-- V2.0 架构：基础样式系统 -->
+  <link rel="stylesheet" href="src/styles/base/reset.css">
+  <link rel="stylesheet" href="src/styles/base/variables.css">
+  <link rel="stylesheet" href="src/styles/base/typography.css">
+  
+  <!-- V2.0 架构：UI 组件样式 -->
+  <link rel="stylesheet" href="src/styles/components/button.css">
+  <link rel="stylesheet" href="src/styles/components/card.css">
+  <link rel="stylesheet" href="src/styles/components/modal.css">
+  <link rel="stylesheet" href="src/styles/components/toast.css">
+  
   <!-- Remix Icon：preload 预连接 + media trick 实现非阻塞异步加载，避免 CDN 超时导致灰屏 -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"
@@ -535,6 +547,32 @@
 
     
 
+  <!-- V2.0 架构：核心框架（优先加载） -->
+  <script src="src/core/event-bus.js"></script>
+  <script src="src/core/state-manager.js"></script>
+  <script src="src/core/router.js"></script>
+  
+  <!-- V2.0 架构：工具模块 -->
+  <script src="src/utils/performance.js"></script>
+  <script src="src/utils/storage.js"></script>
+  <script src="src/utils/validator.js"></script>
+  <script src="src/utils/http.js"></script>
+  <script src="src/utils/animation.js"></script>
+  
+  <!-- V2.0 架构：配置系统 -->
+  <script src="src/config/app-config.js"></script>
+  <script src="src/config/theme-config.js"></script>
+  <script src="src/config/module-config.js"></script>
+  
+  <!-- V2.0 架构：UI 组件库 -->
+  <script src="src/components/ui/button.js"></script>
+  <script src="src/components/ui/card.js"></script>
+  <script src="src/components/ui/modal.js"></script>
+  <script src="src/components/ui/toast.js"></script>
+  
+  <!-- V2.0 架构：主应用初始化 -->
+  <script src="src/core/app.js"></script>
+  
   <!-- 模块化拆分：先加载工具和状态管理 -->
   <script src="modules/utils.js"></script>
   <script src="modules/state.js"></script>

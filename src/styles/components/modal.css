@@ -1,0 +1,139 @@
+/**
+ * Modal 组件样式
+ */
+
+/* 遮罩层 */
+.wb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+
+.wb-modal-overlay--show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 模态框容器 */
+.wb-modal {
+  position: relative;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2xl);
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: transform var(--transition-base);
+}
+
+.wb-modal-overlay--show .wb-modal {
+  transform: scale(1);
+}
+
+/* 尺寸变体 */
+.wb-modal--sm {
+  width: 400px;
+}
+
+.wb-modal--md {
+  width: 600px;
+}
+
+.wb-modal--lg {
+  width: 800px;
+}
+
+.wb-modal--xl {
+  width: 1000px;
+}
+
+.wb-modal--full {
+  width: calc(100vw - var(--spacing-8));
+  height: calc(100vh - var(--spacing-8));
+  max-height: none;
+}
+
+/* 模态框头部 */
+.wb-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-5) var(--spacing-6);
+  border-bottom: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-subtle);
+}
+
+.wb-modal__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-tight);
+}
+
+.wb-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+}
+
+.wb-modal__close:hover {
+  background-color: var(--color-neutral-200);
+  color: var(--color-text-primary);
+}
+
+/* 模态框内容 */
+.wb-modal__content {
+  flex: 1;
+  padding: var(--spacing-6);
+  overflow-y: auto;
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+/* 模态框底部 */
+.wb-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  padding: var(--spacing-5) var(--spacing-6);
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-subtle);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .wb-modal {
+    width: calc(100vw - var(--spacing-4));
+    max-height: calc(100vh - var(--spacing-4));
+  }
+  
+  .wb-modal--sm,
+  .wb-modal--md,
+  .wb-modal--lg,
+  .wb-modal--xl {
+    width: calc(100vw - var(--spacing-4));
+  }
+}

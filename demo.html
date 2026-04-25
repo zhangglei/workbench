@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作台 V2.0 组件演示</title>
+  
+  <!-- V2.0 架构：基础样式系统 -->
+  <link rel="stylesheet" href="src/styles/base/reset.css">
+  <link rel="stylesheet" href="src/styles/base/variables.css">
+  <link rel="stylesheet" href="src/styles/base/typography.css">
+  
+  <!-- V2.0 架构：UI 组件样式 -->
+  <link rel="stylesheet" href="src/styles/components/button.css">
+  <link rel="stylesheet" href="src/styles/components/card.css">
+  <link rel="stylesheet" href="src/styles/components/modal.css">
+  <link rel="stylesheet" href="src/styles/components/toast.css">
+  
+  <!-- Remix Icon -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css">
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: var(--spacing-6);
+    }
+    
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .demo-header {
+      text-align: center;
+      color: white;
+      margin-bottom: var(--spacing-8);
+    }
+    
+    .demo-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-2);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .demo-header p {
+      font-size: 1.125rem;
+      opacity: 0.9;
+    }
+    
+    .demo-section {
+      margin-bottom: var(--spacing-6);
+    }
+    
+    .demo-section-title {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-4);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-2);
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-4);
+    }
+    
+    .demo-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-3);
+      padding: var(--spacing-4);
+    }
+    
+    .demo-code {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-3);
+      margin-top: var(--spacing-3);
+      color: #e2e8f0;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.875rem;
+      overflow-x: auto;
+    }
+    
+    .theme-switcher {
+      position: fixed;
+      top: var(--spacing-4);
+      right: var(--spacing-4);
+      display: flex;
+      gap: var(--spacing-2);
+      background: white;
+      padding: var(--spacing-2);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .theme-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .theme-btn:hover {
+      transform: scale(1.1);
+    }
+    
+    .theme-btn.active {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    
+    .theme-default { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .theme-dark { background: linear-gradient(135deg, #1a1b26 0%, #24283b 100%); }
+    .theme-enterprise { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+  </style>
+</head>
+<body>
+  <!-- 主题切换器 -->
+  <div class="theme-switcher">
+    <button class="theme-btn theme-default active" data-theme="default" title="默认主题"></button>
+    <button class="theme-btn theme-dark" data-theme="dark" title="暗色主题"></button>
+    <button class="theme-btn theme-enterprise" data-theme="enterprise" title="企业主题"></button>
+  </div>
+
+  <div class="demo-container">
+    <!-- 页面标题 -->
+    <div class="demo-header">
+      <h1>🚀 工作台 V2.0 组件演示</h1>
+      <p>企业级 UI 组件库 · 现代化设计系统 · 灵活可扩展</p>
+    </div>
+
+    <!-- 按钮组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-checkbox-circle-line"></i>
+        按钮组件 (Button)
+      </h2>
+      <div class="demo-grid">
+        <div id="button-demo-1"></div>
+        <div id="button-demo-2"></div>
+        <div id="button-demo-3"></div>
+      </div>
+    </section>
+
+    <!-- 卡片组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-layout-grid-line"></i>
+        卡片组件 (Card)
+      </h2>
+      <div class="demo-grid">
+        <div id="card-demo-1"></div>
+        <div id="card-demo-2"></div>
+        <div id="card-demo-3"></div>
+      </div>
+    </section>
+
+    <!-- 模态框组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-window-line"></i>
+        模态框组件 (Modal)
+      </h2>
+      <div class="demo-grid">
+        <div id="modal-demo"></div>
+      </div>
+    </section>
+
+    <!-- Toast 通知演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-notification-line"></i>
+        Toast 通知组件
+      </h2>
+      <div class="demo-grid">
+        <div id="toast-demo"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- V2.0 架构：核心框架 -->
+  <script src="src/core/event-bus.js"></script>
+  <script src="src/core/state-manager.js"></script>
+  <script src="src/core/router.js"></script>
+  
+  <!-- V2.0 架构：配置系统 -->
+  <script src="src/config/app-config.js"></script>
+  <script src="src/config/theme-config.js"></script>
+  <script src="src/config/module-config.js"></script>
+  
+  <!-- V2.0 架构：UI 组件库 -->
+  <script src="src/components/ui/button.js"></script>
+  <script src="src/components/ui/card.js"></script>
+  <script src="src/components/ui/modal.js"></script>
+  <script src="src/components/ui/toast.js"></script>
+  
+  <!-- V2.0 架构：主应用初始化 -->
+  <script src="src/core/app.js"></script>
+
+  <!-- 演示脚本 -->
+  <script>
+    (function() {
+      'use strict';
+
+      // 等待组件加载完成
+      if (!window.WBButton || !window.WBCard || !window.WBModal || !window.WBToast) {
+        console.error('组件未加载完成');
+        return;
+      }
+
+      // ========== 按钮演示 ==========
+      
+      // 演示1：不同变体的按钮
+      const buttonDemo1 = window.WBCard.create({
+        title: '按钮变体',
+        content: '<div class="demo-buttons" id="button-variants"></div>' +
+                 '<div class="demo-code">WBButton.create({ text: \'主要按钮\', variant: \'primary\' })</div>'
+      });
+      document.getElementById('button-demo-1').appendChild(buttonDemo1);
+
+      const variantsContainer = document.getElementById('button-variants');
+      ['primary', 'secondary', 'danger', 'ghost'].forEach(variant => {
+        const btn = window.WBButton.create({
+          text: variant.charAt(0).toUpperCase() + variant.slice(1),
+          variant: variant,
+          onClick: function() {
+            window.WBToast.info('点击了 ' + variant + ' 按钮');
+          }
+        });
+        variantsContainer.appendChild(btn);
+      });
+
+      // 演示2：不同尺寸的按钮
+      const buttonDemo2 = window.WBCard.create({
+        title: '按钮尺寸',
+        content: '<div class="demo-buttons" id="button-sizes"></div>' +
+                 '<div class="demo-code">WBButton.create({ text: \'大按钮\', size: \'lg\' })</div>'
+      });
+      document.getElementById('button-demo-2').appendChild(buttonDemo2);
+
+      const sizesContainer = document.getElementById('button-sizes');
+      ['sm', 'md', 'lg'].forEach(size => {
+        const btn = window.WBButton.create({
+          text: size.toUpperCase() + ' 按钮',
+          size: size,
+          variant: 'primary',
+          onClick: function() {
+            window.WBToast.success('点击了 ' + size + ' 尺寸按钮');
+          }
+        });
+        sizesContainer.appendChild(btn);
+      });
+
+      // 演示3：带图标的按钮
+      const buttonDemo3 = window.WBCard.create({
+        title: '图标按钮',
+        content: '<div class="demo-buttons" id="button-icons"></div>' +
+                 '<div class="demo-code">WBButton.create({ text: \'添加\', icon: \'ri-add-line\' })</div>'
+      });
+      document.getElementById('button-demo-3').appendChild(buttonDemo3);
+
+      const iconsContainer = document.getElementById('button-icons');
+      [
+        { icon: 'ri-add-line', text: '添加' },
+        { icon: 'ri-delete-bin-line', text: '删除', variant: 'danger' },
+        { icon: 'ri-edit-line', text: '编辑', variant: 'secondary' },
+        { icon: 'ri-save-line', text: '保存' }
+      ].forEach(config => {
+        const btn = window.WBButton.create({
+          text: config.text,
+          icon: config.icon,
+          variant: config.variant || 'primary',
+          onClick: function() {
+            window.WBToast.info('点击了 ' + config.text + ' 按钮');
+          }
+        });
+        iconsContainer.appendChild(btn);
+      });
+
+      // ========== 卡片演示 ==========
+      
+      // 演示1：基础卡片
+      const card1 = window.WBCard.create({
+        title: '基础卡片',
+        content: '这是一个基础卡片组件，支持标题、内容和底部区域。' +
+                 '<div class="demo-code" style="margin-top: 12px;">WBCard.create({ title: \'标题\', content: \'内容\' })</div>',
+        footer: '<small style="color: var(--color-text-secondary);">卡片底部信息</small>'
+      });
+      document.getElementById('card-demo-1').appendChild(card1);
+
+      // 演示2：可悬停卡片
+      const card2 = window.WBCard.create({
+        title: '可悬停卡片',
+        content: '鼠标悬停时会有阴影效果，点击会触发事件。' +
+                 '<div class="demo-code" style="margin-top: 12px;">WBCard.create({ hoverable: true, onClick: fn })</div>',
+        hoverable: true,
+        onClick: function() {
+          window.WBToast.success('卡片被点击了！');
+        }
+      });
+      document.getElementById('card-demo-2').appendChild(card2);
+
+      // 演示3：自定义内容卡片
+      const customContent = document.createElement('div');
+      customContent.style.cssText = 'display: flex; flex-direction: column; gap: 12px;';
+      customContent.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <i class="ri-user-line" style="font-size: 2rem; color: var(--color-primary);"></i>
+          <div>
+            <div style="font-weight: 600;">用户信息</div>
+            <div style="font-size: 0.875rem; color: var(--color-text-secondary);">admin@example.com</div>
+          </div>
+        </div>
+        <div class="demo-code">支持传入 DOM 元素作为内容</div>
+      `;
+      
+      const card3 = window.WBCard.create({
+        title: '自定义内容',
+        content: customContent
+      });
+      document.getElementById('card-demo-3').appendChild(card3);
+
+      // ========== 模态框演示 ==========
+      
+      const modalDemoCard = window.WBCard.create({
+        title: '模态框演示',
+        content: '<div class="demo-buttons" id="modal-buttons"></div>' +
+                 '<div class="demo-code">const modal = WBModal.create({ ... });<br>modal.open();</div>'
+      });
+      document.getElementById('modal-demo').appendChild(modalDemoCard);
+
+      const modalButtonsContainer = document.getElementById('modal-buttons');
+
+      // 小尺寸模态框
+      const btnSmallModal = window.WBButton.create({
+        text: '小模态框',
+        icon: 'ri-window-line',
+        onClick: function() {
+          const modal = window.WBModal.create({
+            title: '小尺寸模态框',
+            content: '这是一个小尺寸的模态框，适合简单的提示信息。',
+            size: 'sm',
+            onConfirm: function() {
+              window.WBToast.success('确认操作');
+            }
+          });
+          modal.open();
+        }
+      });
+      modalButtonsContainer.appendChild(btnSmallModal);
+
+      // 中等尺寸模态框
+      const btnMediumModal = window.WBButton.create({
+        text: '中等模态框',
+        icon: 'ri-window-2-line',
+        variant: 'secondary',
+        onClick: function() {
+          const modal = window.WBModal.create({
+            title: '中等尺寸模态框',
+            content: '这是一个中等尺寸的模态框，适合大多数场景使用。可以包含更多的内容和表单元素。',
+            size: 'md',
+            confirmText: '保存',
+            cancelText: '取消',
+            onConfirm: function() {
+              window.WBToast.success('保存成功');
+            },
+            onCancel: function() {
+              window.WBToast.info('已取消');
+            }
+          });
+          modal.open();
+        }
+      });
+      modalButtonsContainer.appendChild(btnMediumModal);
+
+      // 大尺寸模态框
+      const btnLargeModal = window.WBButton.create({
+        text: '大模态框',
+        icon: 'ri-window-fill',
+        onClick: function() {
+          const content = document.createElement('div');
+          content.innerHTML = `
+            <p>这是一个大尺寸的模态框，适合展示复杂的内容。</p>
+            <div style="margin-top: 16px; padding: 16px; background: var(--color-bg-secondary); border-radius: 8px;">
+              <h4 style="margin-bottom: 8px;">功能特性：</h4>
+              <ul style="margin-left: 20px;">
+                <li>支持多种尺寸：sm、md、lg、xl、full</li>
+                <li>可自定义确认和取消按钮文本</li>
+                <li>支持回调函数处理用户操作</li>
+                <li>响应式设计，适配各种屏幕</li>
+              </ul>
+            </div>
+          `;
+          
+          const modal = window.WBModal.create({
+            title: '大尺寸模态框',
+            content: content,
+            size: 'lg',
+            confirmText: '我知道了',
+            showCancel: false,
+            onConfirm: function() {
+              window.WBToast.success('已确认');
+            }
+          });
+          modal.open();
+        }
+      });
+      modalButtonsContainer.appendChild(btnLargeModal);
+
+      // ========== Toast 演示 ==========
+      
+      const toastDemoCard = window.WBCard.create({
+        title: 'Toast 通知演示',
+        content: '<div class="demo-buttons" id="toast-buttons"></div>' +
+                 '<div class="demo-code">WBToast.success(\'操作成功\');<br>WBToast.error(\'操作失败\');</div>'
+      });
+      document.getElementById('toast-demo').appendChild(toastDemoCard);
+
+      const toastButtonsContainer = document.getElementById('toast-buttons');
+
+      // 成功提示
+      const btnSuccess = window.WBButton.create({
+        text: '成功提示',
+        icon: 'ri-checkbox-circle-line',
+        variant: 'primary',
+        onClick: function() {
+          window.WBToast.success('操作成功！数据已保存。');
+        }
+      });
+      toastButtonsContainer.appendChild(btnSuccess);
+
+      // 错误提示
+      const btnError = window.WBButton.create({
+        text: '错误提示',
+        icon: 'ri-error-warning-line',
+        variant: 'danger',
+        onClick: function() {
+          window.WBToast.error('操作失败！请检查网络连接。');
+        }
+      });
+      toastButtonsContainer.appendChild(btnError);
+
+      // 警告提示
+      const btnWarning = window.WBButton.create({
+        text: '警告提示',
+        icon: 'ri-alert-line',
+        variant: 'secondary',
+        onClick: function() {
+          window.WBToast.warning('警告：此操作不可撤销！');
+        }
+      });
+      toastButtonsContainer.appendChild(btnWarning);
+
+      // 信息提示
+      const btnInfo = window.WBButton.create({
+        text: '信息提示',
+        icon: 'ri-information-line',
+        variant: 'ghost',
+        onClick: function() {
+          window.WBToast.info('这是一条普通的信息提示。');
+        }
+      });
+      toastButtonsContainer.appendChild(btnInfo);
+
+      // ========== 主题切换 ==========
+      
+      const themeButtons = document.querySelectorAll('.theme-btn');
+      themeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const theme = this.dataset.theme;
+          
+          // 更新按钮状态
+          themeButtons.forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // 应用主题
+          if (window.WorkbenchV2 && window.WorkbenchV2.ThemeConfig) {
+            window.WorkbenchV2.ThemeConfig.setTheme(theme);
+            window.WBToast.success('已切换到' + 
+              (theme === 'default' ? '默认' : theme === 'dark' ? '暗色' : '企业') + '主题');
+          }
+        });
+      });
+
+      console.log('✅ 组件演示页面加载完成');
+    })();
+  </script>
+</body>
+</html>

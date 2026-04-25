@@ -1,0 +1,85 @@
+/**
+ * Card 组件样式
+ */
+
+/* 基础卡片 */
+.wb-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: var(--transition-all);
+}
+
+/* 悬停效果 */
+.wb-card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-border-medium);
+}
+
+/* 卡片头部 */
+.wb-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-4) var(--spacing-5);
+  border-bottom: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-subtle);
+}
+
+.wb-card__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-tight);
+}
+
+.wb-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* 卡片内容 */
+.wb-card__content {
+  flex: 1;
+  padding: var(--spacing-5);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+/* 卡片底部 */
+.wb-card__footer {
+  padding: var(--spacing-4) var(--spacing-5);
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-bg-subtle);
+}
+
+/* 变体 */
+.wb-card--bordered {
+  border-width: 2px;
+}
+
+.wb-card--shadow {
+  box-shadow: var(--shadow-md);
+}
+
+.wb-card--flat {
+  box-shadow: none;
+  border: none;
+}
+
+/* 紧凑模式 */
+.wb-card--compact .wb-card__header,
+.wb-card--compact .wb-card__footer {
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.wb-card--compact .wb-card__content {
+  padding: var(--spacing-4);
+}

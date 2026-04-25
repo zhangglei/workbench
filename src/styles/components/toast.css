@@ -1,0 +1,117 @@
+/**
+ * Toast 组件样式
+ */
+
+/* Toast 容器 */
+.wb-toast-container {
+  position: fixed;
+  top: var(--spacing-6);
+  right: var(--spacing-6);
+  z-index: var(--z-tooltip);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  pointer-events: none;
+}
+
+/* Toast 元素 */
+.wb-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 300px;
+  max-width: 500px;
+  padding: var(--spacing-4) var(--spacing-5);
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border-light);
+  pointer-events: auto;
+  transform: translateX(calc(100% + var(--spacing-6)));
+  transition: transform var(--transition-base);
+}
+
+.wb-toast--show {
+  transform: translateX(0);
+}
+
+/* Toast 图标 */
+.wb-toast__icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Toast 消息 */
+.wb-toast__message {
+  flex: 1;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+}
+
+/* Toast 关闭按钮 */
+.wb-toast__close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.wb-toast__close:hover {
+  color: var(--color-text-primary);
+}
+
+/* Toast 类型变体 */
+.wb-toast--success {
+  border-color: var(--color-success);
+}
+
+.wb-toast--success .wb-toast__icon {
+  color: var(--color-success);
+}
+
+.wb-toast--error {
+  border-color: var(--color-error);
+}
+
+.wb-toast--error .wb-toast__icon {
+  color: var(--color-error);
+}
+
+.wb-toast--warning {
+  border-color: var(--color-warning);
+}
+
+.wb-toast--warning .wb-toast__icon {
+  color: var(--color-warning);
+}
+
+.wb-toast--info {
+  border-color: var(--color-info);
+}
+
+.wb-toast--info .wb-toast__icon {
+  color: var(--color-info);
+}
+
+/* 响应式 */
+@media (max-width: 640px) {
+  .wb-toast-container {
+    top: var(--spacing-4);
+    right: var(--spacing-4);
+    left: var(--spacing-4);
+  }
+  
+  .wb-toast {
+    min-width: 0;
+    max-width: none;
+  }
+}
