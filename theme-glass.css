@@ -164,8 +164,23 @@ body::before {
 .todo-form .search-input {
   min-width: 0 !important;
   padding: 7px 14px !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+  background-color: #ffffff !important;
   background-image: none !important;
   background-position: initial !important;
+}
+
+.todo-form .search-input::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+.todo-form .search-input:focus {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  background-color: #ffffff !important;
 }
 
 

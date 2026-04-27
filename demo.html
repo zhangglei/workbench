@@ -15,6 +15,16 @@
   <link rel="stylesheet" href="src/styles/components/card.css">
   <link rel="stylesheet" href="src/styles/components/modal.css">
   <link rel="stylesheet" href="src/styles/components/toast.css">
+  <link rel="stylesheet" href="src/styles/components/input.css">
+  <link rel="stylesheet" href="src/styles/components/form.css">
+  <link rel="stylesheet" href="src/styles/components/loading.css">
+  <link rel="stylesheet" href="src/styles/components/checkbox.css">
+  <link rel="stylesheet" href="src/styles/components/radio.css">
+  <link rel="stylesheet" href="src/styles/components/datepicker.css">
+  <link rel="stylesheet" href="src/styles/components/table.css">
+  <link rel="stylesheet" href="src/styles/components/pagination.css">
+  <link rel="stylesheet" href="src/styles/components/tabs.css">
+  <link rel="stylesheet" href="src/styles/components/dropdown.css">
   
   <!-- Remix Icon -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css">
@@ -184,6 +194,84 @@
         <div id="toast-demo"></div>
       </div>
     </section>
+
+    <!-- Loading 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-loader-4-line"></i>
+        Loading 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="loading-demo"></div>
+      </div>
+    </section>
+
+    <!-- Checkbox & Radio 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-checkbox-multiple-line"></i>
+        Checkbox / Radio 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="checkbox-demo"></div>
+        <div id="radio-demo"></div>
+      </div>
+    </section>
+
+    <!-- Form 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-file-list-3-line"></i>
+        Form 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="form-demo"></div>
+      </div>
+    </section>
+
+    <!-- DatePicker 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-calendar-line"></i>
+        DatePicker 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="datepicker-demo"></div>
+      </div>
+    </section>
+
+    <!-- Table 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-table-line"></i>
+        Table 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="table-demo"></div>
+      </div>
+    </section>
+
+    <!-- Tabs 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-folder-tab-line"></i>
+        Tabs 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="tabs-demo"></div>
+      </div>
+    </section>
+
+    <!-- Dropdown 组件演示 -->
+    <section class="demo-section">
+      <h2 class="demo-section-title">
+        <i class="ri-arrow-down-s-line"></i>
+        Dropdown 组件
+      </h2>
+      <div class="demo-grid">
+        <div id="dropdown-demo"></div>
+      </div>
+    </section>
   </div>
 
   <!-- V2.0 架构：核心框架 -->
@@ -196,11 +284,23 @@
   <script src="src/config/theme-config.js"></script>
   <script src="src/config/module-config.js"></script>
   
+  <script src="src/utils/validator.js"></script>
+
   <!-- V2.0 架构：UI 组件库 -->
   <script src="src/components/ui/button.js"></script>
   <script src="src/components/ui/card.js"></script>
   <script src="src/components/ui/modal.js"></script>
   <script src="src/components/ui/toast.js"></script>
+  <script src="src/components/ui/input.js"></script>
+  <script src="src/components/ui/form.js"></script>
+  <script src="src/components/ui/loading.js"></script>
+  <script src="src/components/ui/checkbox.js"></script>
+  <script src="src/components/ui/radio.js"></script>
+  <script src="src/components/ui/datepicker.js"></script>
+  <script src="src/components/ui/table.js"></script>
+  <script src="src/components/ui/pagination.js"></script>
+  <script src="src/components/ui/tabs.js"></script>
+  <script src="src/components/ui/dropdown.js"></script>
   
   <!-- V2.0 架构：主应用初始化 -->
   <script src="src/core/app.js"></script>
@@ -211,7 +311,10 @@
       'use strict';
 
       // 等待组件加载完成
-      if (!window.WBButton || !window.WBCard || !window.WBModal || !window.WBToast) {
+      if (!window.WBButton || !window.WBCard || !window.WBModal || !window.WBToast ||
+          !window.WBInput || !window.WBForm || !window.WBValidator || !window.WBLoading ||
+          !window.WBCheckbox || !window.WBRadio || !window.WBDatePicker ||
+          !window.WBTable || !window.WBPagination || !window.WBTabs || !window.WBDropdown) {
         console.error('组件未加载完成');
         return;
       }
@@ -469,6 +572,381 @@
         }
       });
       toastButtonsContainer.appendChild(btnInfo);
+
+      // ========== Loading 演示 ==========
+
+      const loadingDemoCard = window.WBCard.create({
+        title: 'Loading 演示',
+        content: '<div class="demo-buttons" id="loading-buttons"></div>' +
+                 '<div class="demo-code">WBLoading.show(target, { type: \'spinner\' });<br>WBLoading.fullscreen({ text: \'加载中...\' });</div>'
+      });
+      document.getElementById('loading-demo').appendChild(loadingDemoCard);
+
+      const loadingButtonsContainer = document.getElementById('loading-buttons');
+
+      const btnLocalLoading = window.WBButton.create({
+        text: '局部加载',
+        icon: 'ri-loader-4-line',
+        onClick: function() {
+          const loading = window.WBLoading.show(loadingDemoCard, {
+            text: '卡片内容加载中...',
+            type: 'spinner'
+          });
+          setTimeout(function() {
+            loading.close();
+            window.WBToast.success('局部加载完成');
+          }, 1200);
+        }
+      });
+      loadingButtonsContainer.appendChild(btnLocalLoading);
+
+      const btnDotsLoading = window.WBButton.create({
+        text: '点状加载',
+        icon: 'ri-more-2-fill',
+        variant: 'secondary',
+        onClick: function() {
+          const loading = window.WBLoading.show(loadingDemoCard, {
+            text: '同步中...',
+            type: 'dots'
+          });
+          setTimeout(function() {
+            loading.close();
+            window.WBToast.info('点状加载结束');
+          }, 1200);
+        }
+      });
+      loadingButtonsContainer.appendChild(btnDotsLoading);
+
+      const btnFullscreenLoading = window.WBButton.create({
+        text: '全屏加载',
+        icon: 'ri-fullscreen-line',
+        variant: 'ghost',
+        onClick: function() {
+          window.WBLoading.fullscreen({ text: '正在初始化工作台...', type: 'bar' });
+          setTimeout(function() {
+            window.WBLoading.closeFullscreen();
+            window.WBToast.success('初始化完成');
+          }, 1500);
+        }
+      });
+      loadingButtonsContainer.appendChild(btnFullscreenLoading);
+
+      // ========== Checkbox 演示 ==========
+
+      const checkboxDemoCard = window.WBCard.create({
+        title: 'Checkbox 演示',
+        content: '<div class="demo-buttons" id="checkbox-wrap" style="flex-direction: column; align-items: flex-start;"></div>' +
+                 '<div class="demo-code">WBCheckbox.create({ label: \'启用提醒\', checked: true })<br>WBCheckbox.createGroup({ options: [...] })</div>'
+      });
+      document.getElementById('checkbox-demo').appendChild(checkboxDemoCard);
+
+      const checkboxWrap = document.getElementById('checkbox-wrap');
+      const singleCheckbox = window.WBCheckbox.create({
+        label: '启用工作台提醒',
+        checked: true,
+        onChange: function(checked) {
+          window.WBToast.info('提醒状态：' + (checked ? '已开启' : '已关闭'));
+        }
+      });
+      checkboxWrap.appendChild(singleCheckbox);
+
+      const checkboxGroup = window.WBCheckbox.createGroup({
+        direction: 'vertical',
+        value: ['dashboard', 'knowledge'],
+        options: [
+          { label: '工作台模块', value: 'dashboard' },
+          { label: '知识库模块', value: 'knowledge' },
+          { label: '系统设置', value: 'settings', disabled: true }
+        ],
+        onChange: function(values) {
+          console.log('checkbox-group', values);
+        }
+      });
+      checkboxWrap.appendChild(checkboxGroup);
+
+      // ========== Form 演示 ==========
+
+      const formDemoCard = window.WBCard.create({
+        title: 'Form 演示',
+        content: '<div id="form-wrap"></div>' +
+                 '<div class="demo-code">const form = WBForm.create({ layout: \'horizontal\', rules: { ... } });<br>form.addItem({ name: \'username\', component: WBInput.create(...) });<br>form.addActions({ submitText: \'保存\', resetText: \'重置\' });</div>'
+      });
+      document.getElementById('form-demo').appendChild(formDemoCard);
+
+      const formWrap = document.getElementById('form-wrap');
+      const form = window.WBForm.create({
+        layout: 'horizontal',
+        labelWidth: 92,
+        labelAlign: 'right',
+        data: {
+          username: 'workbench-admin',
+          email: 'admin@example.com',
+          phone: '13800138000',
+          intro: '负责工作台组件库与模块集成。'
+        },
+        rules: {
+          username: {
+            required: { message: '请输入用户名' },
+            minLength: { value: 4, message: '用户名至少 4 个字符' }
+          },
+          email: {
+            required: { message: '请输入邮箱' },
+            email: { message: '邮箱格式不正确' }
+          },
+          phone: {
+            phone: { message: '请输入有效的手机号' }
+          },
+          intro: {
+            maxLength: { value: 80, message: '简介不能超过 80 个字符' }
+          }
+        },
+        onSubmit: function(values) {
+          console.log('form-submit', values);
+          window.WBToast.success('表单提交成功');
+        },
+        onReset: function(values) {
+          console.log('form-reset', values);
+          window.WBToast.info('表单已重置');
+        },
+        onValidate: function(valid, errorMap) {
+          console.log('form-validate', valid, errorMap);
+        }
+      });
+
+      form.addItem({
+        label: '用户名',
+        name: 'username',
+        required: true,
+        help: '用于展示当前维护人标识',
+        component: window.WBInput.create({
+          placeholder: '请输入用户名',
+          prefixIcon: 'ri-user-line',
+          clearable: true
+        })
+      });
+
+      form.addItem({
+        label: '邮箱',
+        name: 'email',
+        required: true,
+        help: '提交后用于接收通知',
+        component: window.WBInput.create({
+          type: 'email',
+          placeholder: '请输入邮箱地址',
+          prefixIcon: 'ri-mail-line',
+          clearable: true
+        })
+      });
+
+      form.addItem({
+        label: '手机号',
+        name: 'phone',
+        help: '选填，用于异常告警联系',
+        component: window.WBInput.create({
+          type: 'tel',
+          placeholder: '请输入手机号',
+          prefixIcon: 'ri-smartphone-line',
+          clearable: true
+        })
+      });
+
+      form.addItem({
+        label: '简介',
+        name: 'intro',
+        help: '支持多行输入，并联动最大长度校验',
+        component: window.WBInput.createTextarea({
+          rows: 4,
+          maxLength: 80,
+          showCount: true,
+          placeholder: '请输入模块说明'
+        })
+      });
+
+      form.addActions({
+        submitText: '保存配置',
+        resetText: '恢复初始值',
+        align: 'left'
+      });
+
+      formWrap.appendChild(form);
+
+      // ========== Radio 演示 ==========
+
+      const radioDemoCard = window.WBCard.create({
+        title: 'Radio 演示',
+        content: '<div class="demo-buttons" id="radio-wrap" style="flex-direction: column; align-items: flex-start;"></div>' +
+                 '<div class="demo-code">WBRadio.createGroup({ value: \'enterprise\', options: [...] })</div>'
+      });
+      document.getElementById('radio-demo').appendChild(radioDemoCard);
+
+      const radioWrap = document.getElementById('radio-wrap');
+      const radioGroup = window.WBRadio.createGroup({
+        direction: 'vertical',
+        value: 'enterprise',
+        options: [
+          { label: '默认主题', value: 'default' },
+          { label: '暗色主题', value: 'dark' },
+          { label: '企业主题', value: 'enterprise' }
+        ],
+        onChange: function(value) {
+          window.WBToast.success('已选择主题：' + value);
+        }
+      });
+      radioWrap.appendChild(radioGroup);
+
+      // ========== DatePicker 演示 ==========
+
+      const datePickerDemoCard = window.WBCard.create({
+        title: 'DatePicker 演示',
+        content: '<div class="demo-buttons" id="datepicker-wrap" style="flex-direction: column; align-items: stretch;"></div>' +
+                 '<div class="demo-code">WBDatePicker.create({ value: \'2026-04-25\' })<br>WBDatePicker.create({ range: true, showShortcuts: true })</div>'
+      });
+      document.getElementById('datepicker-demo').appendChild(datePickerDemoCard);
+
+      const datepickerWrap = document.getElementById('datepicker-wrap');
+      const singleDatePicker = window.WBDatePicker.create({
+        value: '2026-04-25',
+        onChange: function(value) {
+          console.log('single-date', value);
+        }
+      });
+      datepickerWrap.appendChild(singleDatePicker);
+
+      const rangeDatePicker = window.WBDatePicker.create({
+        range: true,
+        showShortcuts: true,
+        valueRange: { start: '2026-04-21', end: '2026-04-25' },
+        onChange: function(value) {
+          console.log('range-date', value);
+        }
+      });
+      datepickerWrap.appendChild(rangeDatePicker);
+
+      // ========== Table 演示 ==========
+
+      const tableDemoCard = window.WBCard.create({
+        title: 'Table 演示',
+        content: '<div id="table-wrap"></div>' +
+                 '<div class="demo-code">WBTable.create({ selectable: true, filterable: true, pagination: true, pageSize: 5, columns: [...] })</div>'
+      });
+      document.getElementById('table-demo').appendChild(tableDemoCard);
+
+      const tableWrap = document.getElementById('table-wrap');
+      const tableData = [
+        { id: 1, module: 'Dashboard', owner: '张三', status: '正常', count: 128, updatedAt: '2026-04-25 09:30' },
+        { id: 2, module: 'Knowledge', owner: '李四', status: '正常', count: 96, updatedAt: '2026-04-25 09:10' },
+        { id: 3, module: 'Todo', owner: '王五', status: '警告', count: 42, updatedAt: '2026-04-25 08:45' },
+        { id: 4, module: 'Settings', owner: '赵六', status: '正常', count: 18, updatedAt: '2026-04-25 08:30' },
+        { id: 5, module: 'Search', owner: '陈晨', status: '延迟', count: 65, updatedAt: '2026-04-24 21:15' },
+        { id: 6, module: 'Sync', owner: '周宁', status: '正常', count: 203, updatedAt: '2026-04-24 20:40' },
+        { id: 7, module: 'Theme', owner: '孙敏', status: '警告', count: 33, updatedAt: '2026-04-24 19:25' },
+        { id: 8, module: 'Router', owner: '钱进', status: '正常', count: 57, updatedAt: '2026-04-24 18:20' },
+        { id: 9, module: 'Storage', owner: '吴双', status: '正常', count: 149, updatedAt: '2026-04-24 17:05' },
+        { id: 10, module: 'Notification', owner: '郑浩', status: '延迟', count: 24, updatedAt: '2026-04-24 16:40' },
+        { id: 11, module: 'Calendar', owner: '冯悦', status: '正常', count: 76, updatedAt: '2026-04-24 15:30' },
+        { id: 12, module: 'Import/Export', owner: '褚凡', status: '警告', count: 39, updatedAt: '2026-04-24 14:50' }
+      ];
+
+      function renderTableStatus(status) {
+        const statusMap = {
+          '正常': { text: '#16a34a', bg: 'rgba(22, 163, 74, 0.12)' },
+          '警告': { text: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' },
+          '延迟': { text: '#dc2626', bg: 'rgba(220, 38, 38, 0.12)' }
+        };
+        const style = statusMap[status] || { text: 'var(--color-text-primary)', bg: 'var(--color-bg-muted)' };
+        return '<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;background:' + style.bg + ';color:' + style.text + ';font-size:12px;font-weight:600;">' + status + '</span>';
+      }
+
+      const table = window.WBTable.create({
+        rowKey: 'id',
+        selectable: true,
+        striped: true,
+        filterable: true,
+        filterFields: ['module', 'owner', 'status'],
+        filterPlaceholder: '搜索模块、负责人或状态',
+        pagination: true,
+        pageSize: 5,
+        pageSizes: [5, 10, 20],
+        showQuickJumper: true,
+        columns: [
+          { title: '模块', dataIndex: 'module' },
+          { title: '负责人', dataIndex: 'owner' },
+          {
+            title: '状态',
+            dataIndex: 'status',
+            render: function(value) {
+              return renderTableStatus(value);
+            }
+          },
+          { title: '记录数', dataIndex: 'count', sortable: true, align: 'right' },
+          { title: '更新时间', dataIndex: 'updatedAt', sortable: true, width: 180 }
+        ],
+        data: tableData,
+        onSelectionChange: function(rows, keys) {
+          console.log('table-selection', keys, rows);
+        },
+        onPageChange: function(state) {
+          console.log('table-page', state);
+        }
+      });
+      tableWrap.appendChild(table);
+
+      // ========== Tabs 演示 ==========
+
+      const tabsDemoCard = window.WBCard.create({
+        title: 'Tabs 演示',
+        content: '<div id="tabs-wrap"></div>' +
+                 '<div class="demo-code">WBTabs.create({ draggable: true, closable: true, tabs: [...] })</div>'
+      });
+      document.getElementById('tabs-demo').appendChild(tabsDemoCard);
+
+      const tabsWrap = document.getElementById('tabs-wrap');
+      const tabs = window.WBTabs.create({
+        type: 'card',
+        closable: true,
+        draggable: true,
+        tabs: [
+          { key: 'overview', title: '概览', icon: 'ri-dashboard-line', content: '<div style="padding: 8px 0;">展示工作台关键指标与最新动态。</div>' },
+          { key: 'todo', title: '待办', icon: 'ri-task-line', content: '<div style="padding: 8px 0;">查看待办事项、优先级与日历安排。</div>' },
+          { key: 'knowledge', title: '知识库', icon: 'ri-book-2-line', content: '<div style="padding: 8px 0;">沉淀文档、模板与经验记录。</div>' }
+        ],
+        onChange: function(key) {
+          console.log('tabs-change', key);
+        }
+      });
+      tabsWrap.appendChild(tabs);
+
+      // ========== Dropdown 演示 ==========
+
+      const dropdownDemoCard = window.WBCard.create({
+        title: 'Dropdown 演示',
+        content: '<div class="demo-buttons" id="dropdown-wrap"></div>' +
+                 '<div class="demo-code">WBDropdown.create({ items: [{ label: \'刷新\', icon: \'ri-refresh-line\' }] })</div>'
+      });
+      document.getElementById('dropdown-demo').appendChild(dropdownDemoCard);
+
+      const dropdownWrap = document.getElementById('dropdown-wrap');
+      const actionDropdown = window.WBDropdown.create({
+        text: '更多操作',
+        icon: 'ri-more-2-line',
+        items: [
+          { label: '刷新数据', icon: 'ri-refresh-line', shortcut: 'F5', onClick: function() { window.WBToast.success('开始刷新数据'); } },
+          { label: '导出报表', icon: 'ri-download-line', shortcut: 'Ctrl+E', onClick: function() { window.WBToast.info('已触发导出'); } },
+          { type: 'divider' },
+          {
+            label: '更多功能',
+            icon: 'ri-function-line',
+            children: [
+              { label: '复制链接', icon: 'ri-links-line', onClick: function() { window.WBToast.success('链接已复制'); } },
+              { label: '权限设置', icon: 'ri-shield-keyhole-line', onClick: function() { window.WBToast.info('打开权限设置'); } }
+            ]
+          },
+          { type: 'group', label: '危险操作', children: [
+            { label: '删除记录', icon: 'ri-delete-bin-line', danger: true, onClick: function() { window.WBToast.warning('已执行删除演示'); } }
+          ] }
+        ]
+      });
+      dropdownWrap.appendChild(actionDropdown);
 
       // ========== 主题切换 ==========
       

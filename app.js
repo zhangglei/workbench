@@ -1142,9 +1142,9 @@
         var tagsText = todoTags ? todoTags.value.trim() : '';
         var tags = tagsText ? tagsText.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
         
-        /* 日历视图下优先使用当前选中的日期创建待办，避免始终落到今天 */
+        /* 仅在日历视图下使用当前选中的日期；列表视图始终按当前时间创建 */
         var now = new Date();
-        var selectedDate = parseDateKey(state.todoSelectedDate);
+        var selectedDate = state.todoView === 'calendar' ? parseDateKey(state.todoSelectedDate) : null;
         var todoDate = selectedDate
           ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
           : now;
