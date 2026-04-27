@@ -509,15 +509,87 @@ File Name: X4U-2.10.2.6610.z
     return loadNotesLocal();
   }
 
-  /* 保存到 localStorage + 同步推送服务端 */
-  function saveNotes(notes) {
+  function noteTimestamp(note) {
+    if (!note) return 0;
+    var updated = Date.parse(note.updatedAt || '');
+    if (!isNaN(updated) && updated > 0) return updated;
+    var dateOnly = Date.parse(note.date || '');
+    if (!isNaN(dateOnly) && dateOnly > 0) return dateOnly;
+    return 0;
+  }
+
+  function normalizeNote(note) {
+    if (!note || !note.id) return null;
+    var normalized = Object.assign({}, note);
+    normalized.title = String(normalized.title || '未命名').trim();
+    normalized.category = String(normalized.category || '').trim();
+    normalized.tags = Array.isArray(normalized.tags)
+      ? normalized.tags.map(function (t) { return String(t || '').trim(); }).filter(Boolean)
+      : [];
+    if (!normalized.category && normalized.tags.length) normalized.category = normalized.tags[0];
+    normalized.summary = String(normalized.summary || '').trim();
+    normalized.content = String(normalized.content || '');
+    normalized.author = String(normalized.author || 'Admin').trim();
+    normalized.date = String(normalized.date || new Date().toISOString().slice(0, 10)).trim();
+    normalized.views = parseInt(normalized.views, 10) || 0;
+    normalized.pinned = !!normalized.pinned;
+    normalized.updatedAt = String(normalized.updatedAt || new Date(noteTimestamp(normalized) || Date.now()).toISOString());
+    return normalized;
+  }
+
+  function mergeNotesByFreshness() {
+    var map = {};
+    Array.prototype.slice.call(arguments).forEach(function (list) {
+      (Array.isArray(list) ? list : []).forEach(function (rawNote) {
+        var note = normalizeNote(rawNote);
+        if (!note) return;
+        var existing = map[note.id];
+        if (!existing || noteTimestamp(note) >= noteTimestamp(existing)) {
+          map[note.id] = note;
+        }
+      });
+    });
+    return Object.keys(map).map(function (id) { return map[id]; }).sort(function (a, b) {
+      return noteTimestamp(b) - noteTimestamp(a);
+    });
+  }
+
+  function persistNotesLocal(notes, ts) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
-    try { localStorage.setItem(STORAGE_KEY + '_ts', String(Date.now())); } catch (e) {}
-    fetchKnowledgeApi({
+    try { localStorage.setItem(STORAGE_KEY + '_ts', String(ts || Date.now())); } catch (e) {}
+  }
+
+  function pushNotesToCloud(notes, ts) {
+    return fetchKnowledgeApi({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: notes, ts: Date.now() })
-    }).catch(function (e) { console.warn('[KB] 云端保存失败', e); });
+      body: JSON.stringify({ notes: notes, ts: ts || Date.now() })
+    }).catch(function (e) {
+      console.warn('[KB] 云端保存失败', e);
+    });
+  }
+
+  function pushNotesToObsidian(notes) {
+    if (!window.workbenchApi || typeof window.workbenchApi.obsidianWriteNotes !== 'function') {
+      return Promise.resolve(null);
+    }
+    return window.workbenchApi.obsidianWriteNotes(notes).catch(function (e) {
+      console.warn('[KB] Obsidian 写入失败', e);
+      return null;
+    });
+  }
+
+  /* 保存到 localStorage + 同步推送服务端 */
+  function saveNotes(notes) {
+    var now = Date.now();
+    var normalized = (Array.isArray(notes) ? notes : []).map(function (note) {
+      var next = normalizeNote(note) || note;
+      if (next && !next.updatedAt) next.updatedAt = new Date(now).toISOString();
+      return next;
+    });
+    persistNotesLocal(normalized, now);
+    pushNotesToCloud(normalized, now);
+    pushNotesToObsidian(normalized);
   }
 
   /*
@@ -527,6 +599,51 @@ File Name: X4U-2.10.2.6610.z
    *  - 本地无自定义数据（仅 DEFAULT_NOTES）→ 用远端覆盖
    */
   function syncFromServer(onDone) {
+    var localNotes = loadNotesLocal();
+    if (window.workbenchApi && typeof window.workbenchApi.obsidianReadNotes === 'function') {
+      Promise.all([
+        fetchKnowledgeApi({ method: 'GET' })
+          .then(function (res) { return res.json(); })
+          .catch(function () { return null; }),
+        window.workbenchApi.obsidianReadNotes()
+          .catch(function () { return { notes: [] }; })
+      ]).then(function (results) {
+        var cloudData = results[0];
+        var obsidianData = results[1];
+        var remoteNotes = null;
+        var remoteTs = 0;
+
+        if (cloudData && Array.isArray(cloudData.notes) && cloudData.notes.length > 0) {
+          remoteNotes = cloudData.notes;
+          remoteTs = cloudData.ts || 0;
+        } else if (Array.isArray(cloudData) && cloudData.length > 0) {
+          remoteNotes = cloudData;
+        }
+
+        var merged = mergeNotesByFreshness(localNotes, remoteNotes, obsidianData && obsidianData.notes);
+        var mergedTs = Math.max(
+          remoteTs || 0,
+          parseInt(localStorage.getItem(STORAGE_KEY + '_ts'), 10) || 0,
+          Date.now()
+        );
+
+        state.notes = merged.length ? merged : localNotes;
+        persistNotesLocal(state.notes, mergedTs);
+        renderTagBar();
+        renderNoteList();
+
+        pushNotesToCloud(state.notes, mergedTs);
+        pushNotesToObsidian(state.notes);
+        if (onDone) onDone();
+      }).catch(function () {
+        state.notes = localNotes;
+        renderTagBar();
+        renderNoteList();
+        if (onDone) onDone();
+      });
+      return;
+    }
+
     fetchKnowledgeApi({ method: 'GET' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -567,6 +684,24 @@ File Name: X4U-2.10.2.6610.z
       .catch(function () {
         if (onDone) onDone();
       });
+  }
+
+  var obsidianUnsubscribe = null;
+
+  function bindObsidianSync() {
+    if (!window.workbenchApi || typeof window.workbenchApi.onObsidianChanged !== 'function') return;
+    if (obsidianUnsubscribe) return;
+    obsidianUnsubscribe = window.workbenchApi.onObsidianChanged(function (payload) {
+      var merged = mergeNotesByFreshness(state.notes, payload && payload.notes);
+      if (!merged.length) return;
+      state.notes = merged;
+      persistNotesLocal(state.notes, payload && payload.ts ? payload.ts : Date.now());
+      renderTagBar();
+      renderNoteList();
+      if (state.currentNoteId) openNoteDetail(state.currentNoteId);
+      showToast('已同步 Obsidian 笔记变更', 'success');
+      pushNotesToCloud(state.notes, payload && payload.ts ? payload.ts : Date.now());
+    });
   }
 
   /* ================================================================
@@ -644,6 +779,138 @@ File Name: X4U-2.10.2.6610.z
     return Promise.resolve(false);
   }
 
+  function stripMdFrontmatter(markdown) {
+    var text = String(markdown || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    if (text.indexOf('---\n') !== 0) return text;
+    var end = text.indexOf('\n---\n', 4);
+    return end >= 0 ? text.slice(end + 5) : text;
+  }
+
+  function parseMdFrontmatter(markdown) {
+    var text = String(markdown || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    if (text.indexOf('---\n') !== 0) return { attrs: {}, body: text };
+    var end = text.indexOf('\n---\n', 4);
+    if (end < 0) return { attrs: {}, body: text };
+    var raw = text.slice(4, end).split('\n');
+    var attrs = {};
+    var currentKey = '';
+    raw.forEach(function (line) {
+      var m = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (m) {
+        currentKey = m[1];
+        attrs[currentKey] = m[2] || '';
+        return;
+      }
+      if (currentKey === 'tags') {
+        var tag = line.replace(/^\s*-\s*/, '').trim();
+        if (tag) attrs.tags = (attrs.tags ? attrs.tags + ',' : '') + tag;
+      }
+    });
+    return { attrs: attrs, body: text.slice(end + 5) };
+  }
+
+  function getFirstMarkdownTitle(content) {
+    var m = String(content || '').match(/^#\s+(.+)$/m);
+    return m ? m[1].trim() : '';
+  }
+
+  function sanitizeMdFileName(name) {
+    var safe = String(name || '未命名笔记').replace(/[\\/:*?"<>|]/g, '_').trim();
+    return (safe || '未命名笔记') + '.md';
+  }
+
+  function parseImportedMarkdown(fileName, markdown) {
+    var parsed = parseMdFrontmatter(markdown);
+    var attrs = parsed.attrs || {};
+    var body = parsed.body || '';
+    var baseName = String(fileName || '').replace(/\.(md|markdown)$/i, '').trim();
+    var tags = attrs.tags
+      ? String(attrs.tags).split(',').map(function (t) { return t.trim().replace(/^\[|\]$/g, ''); }).filter(Boolean)
+      : [];
+    var category = String(attrs.category || '').trim() || (tags.length ? tags[0] : '导入');
+    if (category && tags.indexOf(category) === -1) tags.unshift(category);
+
+    return normalizeNote({
+      id: genId(),
+      title: String(attrs.title || getFirstMarkdownTitle(body) || baseName || '导入笔记').trim(),
+      category: category,
+      tags: tags,
+      summary: String(attrs.summary || '').replace(/^"|"$/g, '').trim(),
+      content: body,
+      author: String(attrs.author || localStorage.getItem('workbench_user') || 'Admin').trim(),
+      date: String(attrs.date || new Date().toISOString().slice(0, 10)).trim(),
+      views: 0,
+      pinned: String(attrs.pinned || '').toLowerCase() === 'true',
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  function noteToMarkdown(note) {
+    var tags = Array.isArray(note.tags) ? note.tags.filter(Boolean) : [];
+    var lines = [
+      '---',
+      'id: ' + String(note.id || ''),
+      'source: workbench',
+      'title: ' + String(note.title || ''),
+      'category: ' + String(note.category || ''),
+      'author: ' + String(note.author || ''),
+      'date: ' + String(note.date || ''),
+      'pinned: ' + String(!!note.pinned),
+      'views: ' + String(note.views || 0),
+      'summary: ' + JSON.stringify(String(note.summary || '')),
+      'updatedAt: ' + String(note.updatedAt || new Date().toISOString()),
+      'tags:'
+    ];
+    tags.forEach(function (tag) { lines.push('  - ' + tag); });
+    lines.push('---', '');
+    return lines.join('\n') + stripMdFrontmatter(note.content || '');
+  }
+
+  function downloadMarkdownNote(note) {
+    if (!note) {
+      showToast('未找到要下载的笔记', 'warning');
+      return;
+    }
+    var blob = new Blob([noteToMarkdown(note)], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeMdFileName(note.title);
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+
+  function importMarkdownFile(file) {
+    if (!file) return;
+    if (!/\.(md|markdown)$/i.test(file.name || '')) {
+      showToast('请选择 .md 或 .markdown 文件', 'warning');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var note = parseImportedMarkdown(file.name, reader.result || '');
+      if (!note || !note.content.trim()) {
+        showToast('Markdown 文件内容为空', 'warning');
+        return;
+      }
+      state.notes = state.notes || [];
+      state.notes.unshift(note);
+      saveNotes(state.notes);
+      renderTagBar();
+      renderNoteList();
+      openNoteDetail(note.id);
+      showToast('Markdown 笔记已导入', 'success');
+    };
+    reader.onerror = function () {
+      showToast('读取 Markdown 文件失败', 'error');
+    };
+    reader.readAsText(file, 'utf-8');
+  }
 
 
   /* 类别对应颜色 */
@@ -904,7 +1171,13 @@ File Name: X4U-2.10.2.6610.z
     if (!note) return;
     /* 阅读量 +1 */
     note.views = (note.views || 0) + 1;
+    note.updatedAt = new Date().toISOString();
     saveNotes(state.notes);
+
+    /* 记录最近使用（调用 app.js 的全局函数） */
+    if (window.addRecentActivity) {
+      window.addRecentActivity('knowledge', noteId, note.title || '未命名笔记', note.category || '');
+    }
 
     state.currentNoteId = noteId;
 
@@ -925,7 +1198,10 @@ File Name: X4U-2.10.2.6610.z
         '<span class="kb-card-meta"><i class="ri-user-line"></i>' + escHtml(note.author) + '</span>' +
         '<span class="kb-card-meta"><i class="ri-calendar-line"></i>' + formatDate(note.date) + '</span>' +
         '<span class="kb-card-meta"><i class="ri-eye-line"></i>' + note.views + ' 阅读</span>' +
+        '<button type="button" class="kb-btn-sm kb-detail-download-btn"><i class="ri-download-line"></i> 下载 md</button>' +
         (isAdmin() ? '<button type="button" class="kb-btn-sm kb-detail-edit-btn"><i class="ri-edit-line"></i> 编辑</button>' : '');
+      var downloadBtn = metaEl.querySelector('.kb-detail-download-btn');
+      if (downloadBtn) downloadBtn.addEventListener('click', function () { downloadMarkdownNote(note); });
       var editBtn = metaEl.querySelector('.kb-detail-edit-btn');
       if (editBtn) editBtn.addEventListener('click', function () { openNoteEditor(noteId); });
     }
@@ -1008,13 +1284,15 @@ File Name: X4U-2.10.2.6610.z
         note.title = title; note.category = category; note.tags = tags;
         note.summary = summary; note.content = content;
         note.author = author; note.pinned = pinned;
+        note.updatedAt = new Date().toISOString();
       }
     } else {
       state.notes.unshift({
         id: genId(), title: title, category: category, tags: tags,
         summary: summary, content: content, author: author,
         date: new Date().toISOString().slice(0, 10),
-        views: 0, pinned: pinned
+        views: 0, pinned: pinned,
+        updatedAt: new Date().toISOString()
       });
     }
         saveNotes(state.notes);
@@ -1178,6 +1456,10 @@ File Name: X4U-2.10.2.6610.z
         case 'kb-new-btn':
           openNoteEditor(null);
           break;
+        case 'kb-import-md-btn':
+          var mdInput = document.getElementById('kb-md-file-input');
+          if (mdInput) mdInput.click();
+          break;
         case 'kb-back-btn':
           closeNoteDetail();
           break;
@@ -1206,6 +1488,15 @@ File Name: X4U-2.10.2.6610.z
       }
     });
 
+    var mdFileInput = document.getElementById('kb-md-file-input');
+    if (mdFileInput && mdFileInput.dataset.boundMdImport !== '1') {
+      mdFileInput.dataset.boundMdImport = '1';
+      mdFileInput.addEventListener('change', function () {
+        importMarkdownFile(this.files && this.files[0]);
+        this.value = '';
+      });
+    }
+
     bindKbSearch();
     bindImageUpload();
   }
@@ -1230,16 +1521,17 @@ File Name: X4U-2.10.2.6610.z
     if (searchInput) searchInput.value = '';
 
     bindKbSearch();
+    bindObsidianSync();
     renderTagBar();
     renderNoteList();
 
-    /* 根据角色决定新建按钮可见性 */
+    /* 根据角色决定新建 / 导入按钮可见性 */
+    var role = '';
+    try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
     var newBtn = document.getElementById('kb-new-btn');
-    if (newBtn) {
-      var role = '';
-      try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
-      newBtn.style.display = role === 'admin' ? '' : 'none';
-    }
+    if (newBtn) newBtn.style.display = role === 'admin' ? '' : 'none';
+    var importBtn = document.getElementById('kb-import-md-btn');
+    if (importBtn) importBtn.style.display = role === 'admin' ? '' : 'none';
 
     /* 从服务端拉取最新数据（局域网多设备同步） */
     syncFromServer(null);
@@ -1248,7 +1540,25 @@ File Name: X4U-2.10.2.6610.z
   /* 暴露给 router 使用 */
   window.KnowledgeBase = {
     init: initKnowledge,
-    bindAll: bindAll
+    bindAll: bindAll,
+    getNotes: function () {
+      return Array.isArray(state.notes) ? state.notes.slice() : [];
+    },
+    openNote: function (noteId) {
+      if (!noteId) return;
+      openNoteDetail(noteId);
+    },
+    openEditor: function (noteId) {
+      openNoteEditor(noteId || null);
+    },
+    setSearch: function (keyword) {
+      var input = document.getElementById('kb-search-input');
+      state.searchQ = (keyword || '').trim();
+      if (input) input.value = state.searchQ;
+      if (state.currentNoteId && state.searchQ) closeNoteDetail();
+      renderTagBar();
+      renderNoteList();
+    }
   };
 
   /* DOM 就绪后绑定事件（事件只绑定一次，渲染按需触发） */

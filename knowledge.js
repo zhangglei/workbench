@@ -779,6 +779,138 @@ File Name: X4U-2.10.2.6610.z
     return Promise.resolve(false);
   }
 
+  function stripMdFrontmatter(markdown) {
+    var text = String(markdown || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    if (text.indexOf('---\n') !== 0) return text;
+    var end = text.indexOf('\n---\n', 4);
+    return end >= 0 ? text.slice(end + 5) : text;
+  }
+
+  function parseMdFrontmatter(markdown) {
+    var text = String(markdown || '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    if (text.indexOf('---\n') !== 0) return { attrs: {}, body: text };
+    var end = text.indexOf('\n---\n', 4);
+    if (end < 0) return { attrs: {}, body: text };
+    var raw = text.slice(4, end).split('\n');
+    var attrs = {};
+    var currentKey = '';
+    raw.forEach(function (line) {
+      var m = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (m) {
+        currentKey = m[1];
+        attrs[currentKey] = m[2] || '';
+        return;
+      }
+      if (currentKey === 'tags') {
+        var tag = line.replace(/^\s*-\s*/, '').trim();
+        if (tag) attrs.tags = (attrs.tags ? attrs.tags + ',' : '') + tag;
+      }
+    });
+    return { attrs: attrs, body: text.slice(end + 5) };
+  }
+
+  function getFirstMarkdownTitle(content) {
+    var m = String(content || '').match(/^#\s+(.+)$/m);
+    return m ? m[1].trim() : '';
+  }
+
+  function sanitizeMdFileName(name) {
+    var safe = String(name || '未命名笔记').replace(/[\\/:*?"<>|]/g, '_').trim();
+    return (safe || '未命名笔记') + '.md';
+  }
+
+  function parseImportedMarkdown(fileName, markdown) {
+    var parsed = parseMdFrontmatter(markdown);
+    var attrs = parsed.attrs || {};
+    var body = parsed.body || '';
+    var baseName = String(fileName || '').replace(/\.(md|markdown)$/i, '').trim();
+    var tags = attrs.tags
+      ? String(attrs.tags).split(',').map(function (t) { return t.trim().replace(/^\[|\]$/g, ''); }).filter(Boolean)
+      : [];
+    var category = String(attrs.category || '').trim() || (tags.length ? tags[0] : '导入');
+    if (category && tags.indexOf(category) === -1) tags.unshift(category);
+
+    return normalizeNote({
+      id: genId(),
+      title: String(attrs.title || getFirstMarkdownTitle(body) || baseName || '导入笔记').trim(),
+      category: category,
+      tags: tags,
+      summary: String(attrs.summary || '').replace(/^"|"$/g, '').trim(),
+      content: body,
+      author: String(attrs.author || localStorage.getItem('workbench_user') || 'Admin').trim(),
+      date: String(attrs.date || new Date().toISOString().slice(0, 10)).trim(),
+      views: 0,
+      pinned: String(attrs.pinned || '').toLowerCase() === 'true',
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  function noteToMarkdown(note) {
+    var tags = Array.isArray(note.tags) ? note.tags.filter(Boolean) : [];
+    var lines = [
+      '---',
+      'id: ' + String(note.id || ''),
+      'source: workbench',
+      'title: ' + String(note.title || ''),
+      'category: ' + String(note.category || ''),
+      'author: ' + String(note.author || ''),
+      'date: ' + String(note.date || ''),
+      'pinned: ' + String(!!note.pinned),
+      'views: ' + String(note.views || 0),
+      'summary: ' + JSON.stringify(String(note.summary || '')),
+      'updatedAt: ' + String(note.updatedAt || new Date().toISOString()),
+      'tags:'
+    ];
+    tags.forEach(function (tag) { lines.push('  - ' + tag); });
+    lines.push('---', '');
+    return lines.join('\n') + stripMdFrontmatter(note.content || '');
+  }
+
+  function downloadMarkdownNote(note) {
+    if (!note) {
+      showToast('未找到要下载的笔记', 'warning');
+      return;
+    }
+    var blob = new Blob([noteToMarkdown(note)], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = sanitizeMdFileName(note.title);
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+
+  function importMarkdownFile(file) {
+    if (!file) return;
+    if (!/\.(md|markdown)$/i.test(file.name || '')) {
+      showToast('请选择 .md 或 .markdown 文件', 'warning');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var note = parseImportedMarkdown(file.name, reader.result || '');
+      if (!note || !note.content.trim()) {
+        showToast('Markdown 文件内容为空', 'warning');
+        return;
+      }
+      state.notes = state.notes || [];
+      state.notes.unshift(note);
+      saveNotes(state.notes);
+      renderTagBar();
+      renderNoteList();
+      openNoteDetail(note.id);
+      showToast('Markdown 笔记已导入', 'success');
+    };
+    reader.onerror = function () {
+      showToast('读取 Markdown 文件失败', 'error');
+    };
+    reader.readAsText(file, 'utf-8');
+  }
 
 
   /* 类别对应颜色 */
@@ -1066,7 +1198,10 @@ File Name: X4U-2.10.2.6610.z
         '<span class="kb-card-meta"><i class="ri-user-line"></i>' + escHtml(note.author) + '</span>' +
         '<span class="kb-card-meta"><i class="ri-calendar-line"></i>' + formatDate(note.date) + '</span>' +
         '<span class="kb-card-meta"><i class="ri-eye-line"></i>' + note.views + ' 阅读</span>' +
+        '<button type="button" class="kb-btn-sm kb-detail-download-btn"><i class="ri-download-line"></i> 下载 md</button>' +
         (isAdmin() ? '<button type="button" class="kb-btn-sm kb-detail-edit-btn"><i class="ri-edit-line"></i> 编辑</button>' : '');
+      var downloadBtn = metaEl.querySelector('.kb-detail-download-btn');
+      if (downloadBtn) downloadBtn.addEventListener('click', function () { downloadMarkdownNote(note); });
       var editBtn = metaEl.querySelector('.kb-detail-edit-btn');
       if (editBtn) editBtn.addEventListener('click', function () { openNoteEditor(noteId); });
     }
@@ -1321,6 +1456,10 @@ File Name: X4U-2.10.2.6610.z
         case 'kb-new-btn':
           openNoteEditor(null);
           break;
+        case 'kb-import-md-btn':
+          var mdInput = document.getElementById('kb-md-file-input');
+          if (mdInput) mdInput.click();
+          break;
         case 'kb-back-btn':
           closeNoteDetail();
           break;
@@ -1348,6 +1487,15 @@ File Name: X4U-2.10.2.6610.z
         if (state.currentNoteId) closeNoteDetail();
       }
     });
+
+    var mdFileInput = document.getElementById('kb-md-file-input');
+    if (mdFileInput && mdFileInput.dataset.boundMdImport !== '1') {
+      mdFileInput.dataset.boundMdImport = '1';
+      mdFileInput.addEventListener('change', function () {
+        importMarkdownFile(this.files && this.files[0]);
+        this.value = '';
+      });
+    }
 
     bindKbSearch();
     bindImageUpload();
@@ -1377,13 +1525,13 @@ File Name: X4U-2.10.2.6610.z
     renderTagBar();
     renderNoteList();
 
-    /* 根据角色决定新建按钮可见性 */
+    /* 根据角色决定新建 / 导入按钮可见性 */
+    var role = '';
+    try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
     var newBtn = document.getElementById('kb-new-btn');
-    if (newBtn) {
-      var role = '';
-      try { role = localStorage.getItem('workbench_user_role'); } catch (e) {}
-      newBtn.style.display = role === 'admin' ? '' : 'none';
-    }
+    if (newBtn) newBtn.style.display = role === 'admin' ? '' : 'none';
+    var importBtn = document.getElementById('kb-import-md-btn');
+    if (importBtn) importBtn.style.display = role === 'admin' ? '' : 'none';
 
     /* 从服务端拉取最新数据（局域网多设备同步） */
     syncFromServer(null);

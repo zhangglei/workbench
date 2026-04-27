@@ -126,6 +126,7 @@
       if (!Number.isFinite(createdAt) || createdAt <= 0) createdAt = Date.now();
       return Object.assign({}, item, {
         createdAt: createdAt,
+        dateKey: item && item.dateKey ? item.dateKey : getDateKey(new Date(createdAt)),
         createdAtText: item && item.createdAtText ? item.createdAtText : new Date(createdAt).toLocaleString()
       });
     });
@@ -197,6 +198,9 @@
   state.guestUsers = state.guestUsers || '';
   state.todos = normalizeTodos(load(STORAGE_TODOS, state.todos || []));
   state.collapsedModules = state.collapsedModules || {};
+  /* 手风琴模式：同一时间只展开一个模块 */
+  state.accordionMode = load('workbench_accordion_mode', true); // 默认开启
+  state.currentExpandedModule = null;
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
@@ -1138,6 +1142,14 @@
         var tagsText = todoTags ? todoTags.value.trim() : '';
         var tags = tagsText ? tagsText.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
         
+        /* 仅在日历视图下使用当前选中的日期；列表视图始终按当前时间创建 */
+        var now = new Date();
+        var selectedDate = state.todoView === 'calendar' ? parseDateKey(state.todoSelectedDate) : null;
+        var todoDate = selectedDate
+          ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
+          : now;
+        var todoDateKey = getDateKey(todoDate);
+
         state.todos = state.todos || [];
         state.todos.unshift({
           id: id(),
@@ -1145,11 +1157,12 @@
           tags: tags,
           priority: todoPriority ? todoPriority.value : 'medium',
           done: false,
-          createdAt: Date.now(),
-          createdAtText: new Date().toLocaleString()
+          dateKey: todoDateKey,
+          createdAt: todoDate.getTime(),
+          createdAtText: todoDate.toLocaleString()
         });
-        state.todoCalendarMonth = new Date();
-        state.todoSelectedDate = getDateKey(new Date());
+        state.todoCalendarMonth = new Date(todoDate.getFullYear(), todoDate.getMonth(), 1);
+        state.todoSelectedDate = todoDateKey;
         persistState();
         persistTodoUI();
         renderTodos();
@@ -1915,6 +1928,94 @@
     document.getElementById('loginModal').classList.remove('show');
   }
 
+  /* ============================================================
+     模块折叠/展开控制函数
+     ============================================================ */
+  
+  function toggleModuleCollapse(moduleId) {
+    var wasCollapsed = state.collapsedModules[moduleId];
+    
+    if (state.accordionMode && !wasCollapsed) {
+      /* 手风琴模式：收起其他所有模块 */
+      Object.keys(state.collapsedModules).forEach(function (id) {
+        if (id !== moduleId) {
+          state.collapsedModules[id] = true;
+        }
+      });
+      /* 同时更新所有模块的 UI */
+      document.querySelectorAll('.module-card').forEach(function (card) {
+        var cardModuleId = card.dataset.moduleId;
+        if (cardModuleId && cardModuleId !== moduleId) {
+          card.classList.add('collapsed');
+          var btn = card.querySelector('.btn-collapse');
+          if (btn) {
+            btn.title = '展开';
+            btn.textContent = '▶';
+          }
+        }
+      });
+    }
+    
+    /* 切换当前模块 */
+    state.collapsedModules[moduleId] = !wasCollapsed;
+    state.currentExpandedModule = wasCollapsed ? moduleId : null;
+    
+    persistState();
+    
+    /* 更新当前模块 UI */
+    var currentCard = document.querySelector('[data-module-id="' + moduleId + '"]');
+    if (currentCard) {
+      currentCard.classList.toggle('collapsed', !wasCollapsed);
+      var btn = currentCard.querySelector('.btn-collapse');
+      if (btn) {
+        btn.title = wasCollapsed ? '收起' : '展开';
+        btn.textContent = wasCollapsed ? '▼' : '▶';
+      }
+    }
+  }
+  
+  function expandAllModules() {
+    state.modules.forEach(function (mod) {
+      state.collapsedModules[mod.id] = false;
+    });
+    state.currentExpandedModule = null;
+    /* 全部展开时自动关闭手风琴模式 */
+    state.accordionMode = false;
+    persistState();
+    try {
+      localStorage.setItem('workbench_accordion_mode', JSON.stringify(false));
+    } catch (_) {}
+    renderModules();
+    updateModuleToolbar();
+  }
+  
+  function collapseAllModules() {
+    state.modules.forEach(function (mod) {
+      state.collapsedModules[mod.id] = true;
+    });
+    state.currentExpandedModule = null;
+    persistState();
+    renderModules();
+  }
+  
+  function toggleAccordionMode() {
+    state.accordionMode = !state.accordionMode;
+    persistState();
+    try {
+      localStorage.setItem('workbench_accordion_mode', JSON.stringify(state.accordionMode));
+    } catch (_) {}
+    updateModuleToolbar();
+    showToast(state.accordionMode ? '已开启手风琴模式' : '已关闭手风琴模式', 'success');
+  }
+  
+  function updateModuleToolbar() {
+    var toggleBtn = document.getElementById('btnToggleAccordion');
+    if (toggleBtn) {
+      toggleBtn.className = 'btn btn-sm module-toolbar-btn' + (state.accordionMode ? ' active' : '');
+      toggleBtn.innerHTML = '<i class="ri-music-line"></i> 手风琴: ' + (state.accordionMode ? '开' : '关');
+    }
+  }
+
   function buildNormalModuleCard(mod, itemsToShow, forceExpand) {
     /* itemsToShow：外部传入的已过滤条目列表；forceExpand：搜索时强制展开 */
     var items = itemsToShow !== undefined
@@ -1940,14 +2041,7 @@
       '<div class="module-items"></div>' +
       (canEdit() ? '<button type="button" class="btn btn-secondary btn-add-item">+ 添加内容</button>' : '');
     card.querySelector('.btn-collapse').addEventListener('click', function () {
-      var nowCollapsed = !state.collapsedModules[mod.id];
-      state.collapsedModules[mod.id] = nowCollapsed;
-      persistState();
-      /* 只更新当前卡片 class/按钮，避免整个 grid 重渲染引起视觉跳动 */
-      card.classList.toggle('collapsed', nowCollapsed);
-      var btn = card.querySelector('.btn-collapse');
-      btn.title = nowCollapsed ? '展开' : '收起';
-      btn.textContent = nowCollapsed ? '▶' : '▼';
+      toggleModuleCollapse(mod.id);
     });
     var itemsEl = card.querySelector('.module-items');
     items.forEach(function (it) {
@@ -2248,6 +2342,12 @@
 
   function renderModules() {
     if (!mainGrid) return;
+    
+    /* 检查工具栏可见性 */
+    if (typeof window._checkModuleToolbarVisibility === 'function') {
+      window._checkModuleToolbarVisibility();
+    }
+    
     var q = getSearchText();
     var sorted = state.modules.slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
     sorted = sorted.filter(function (mod) { return mod.visibleToAll !== false || canEdit(); });
@@ -3173,5 +3273,42 @@ window.workbenchBackup = function() {
   exportStateToFile(true);
   showToast('备份已保存', 'success');
 };
+
+/* ============================================================
+   模块工具栏事件绑定
+   ============================================================ */
+(function initModuleToolbar() {
+  var btnExpandAll = document.getElementById('btnExpandAll');
+  var btnCollapseAll = document.getElementById('btnCollapseAll');
+  var btnToggleAccordion = document.getElementById('btnToggleAccordion');
+  var moduleToolbar = document.getElementById('moduleToolbar');
+  
+  if (btnExpandAll) {
+    btnExpandAll.addEventListener('click', expandAllModules);
+  }
+  
+  if (btnCollapseAll) {
+    btnCollapseAll.addEventListener('click', collapseAllModules);
+  }
+  
+  if (btnToggleAccordion) {
+    btnToggleAccordion.addEventListener('click', toggleAccordionMode);
+  }
+  
+  /* 初始化工具栏状态 */
+  updateModuleToolbar();
+  
+  /* 当有模块时显示工具栏 */
+  window._checkModuleToolbarVisibility = function() {
+    if (moduleToolbar && state.modules && state.modules.length > 0) {
+      moduleToolbar.style.display = 'flex';
+    } else if (moduleToolbar) {
+      moduleToolbar.style.display = 'none';
+    }
+  };
+  
+  /* 初始检查 */
+  window._checkModuleToolbarVisibility();
+})();
 
 })();
