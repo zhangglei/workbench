@@ -1,0 +1,119 @@
+/**
+ * Pagination 分页组件样式
+ */
+
+.wb-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-3, 0.75rem);
+  color: var(--color-text-primary, #212121);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.wb-pagination__total {
+  color: var(--color-text-secondary, #757575);
+  white-space: nowrap;
+}
+
+.wb-pagination__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1, 0.25rem);
+}
+
+.wb-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--spacing-2, 0.5rem);
+  color: var(--color-text-primary, #212121);
+  font: inherit;
+  background: var(--color-bg-base, #fff);
+  border: 1px solid var(--color-border-medium, #e0e0e0);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: var(--transition-all, all 0.2s ease);
+}
+
+.wb-pagination__btn:hover:not(:disabled) {
+  color: var(--color-primary, #2196f3);
+  border-color: var(--color-primary, #2196f3);
+}
+
+.wb-pagination__btn:disabled {
+  color: var(--color-text-disabled, #bdbdbd);
+  background: var(--color-bg-muted, #f5f5f5);
+  cursor: not-allowed;
+}
+
+.wb-pagination__btn--active,
+.wb-pagination__btn--active:hover:not(:disabled) {
+  color: var(--color-text-inverse, #fff);
+  background: var(--color-primary, #2196f3);
+  border-color: var(--color-primary, #2196f3);
+}
+
+.wb-pagination__btn--nav {
+  padding: 0;
+  font-size: 1.125rem;
+}
+
+.wb-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  color: var(--color-text-secondary, #757575);
+}
+
+.wb-pagination__size-select,
+.wb-pagination__jumper-input {
+  height: 32px;
+  color: var(--color-text-primary, #212121);
+  font: inherit;
+  background: var(--color-bg-base, #fff);
+  border: 1px solid var(--color-border-medium, #e0e0e0);
+  border-radius: var(--radius-md, 6px);
+  outline: none;
+  transition: var(--transition-all, all 0.2s ease);
+}
+
+.wb-pagination__size-select {
+  padding: 0 var(--spacing-2, 0.5rem);
+  cursor: pointer;
+}
+
+.wb-pagination__jumper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2, 0.5rem);
+  color: var(--color-text-secondary, #757575);
+  white-space: nowrap;
+}
+
+.wb-pagination__jumper-input {
+  width: 56px;
+  padding: 0 var(--spacing-2, 0.5rem);
+  text-align: center;
+}
+
+.wb-pagination__size-select:focus,
+.wb-pagination__jumper-input:focus {
+  border-color: var(--color-primary, #2196f3);
+  box-shadow: var(--shadow-focus, 0 0 0 3px rgba(33, 150, 243, 0.15));
+}
+
+@media (max-width: 768px) {
+  .wb-pagination {
+    justify-content: center;
+  }
+
+  .wb-pagination__total {
+    width: 100%;
+    text-align: center;
+  }
+}

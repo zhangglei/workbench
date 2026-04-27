@@ -1,0 +1,268 @@
+/**
+ * Input 输入框组件样式
+ */
+
+/* ========== Input 容器 ========== */
+.wb-input-wrapper {
+  display: inline-block;
+  width: 100%;
+  position: relative;
+}
+
+.wb-input-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+}
+
+.wb-input-container:hover {
+  border-color: var(--color-primary);
+}
+
+.wb-input-wrapper--focused .wb-input-container {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.wb-input-wrapper--error .wb-input-container {
+  border-color: var(--color-danger);
+}
+
+.wb-input-wrapper--error.wb-input-wrapper--focused .wb-input-container {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.wb-input-wrapper--disabled .wb-input-container {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.wb-input-wrapper--readonly .wb-input-container {
+  background: var(--color-bg-secondary);
+  cursor: default;
+}
+
+/* ========== Input 输入框 ========== */
+.wb-input {
+  flex: 1;
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.wb-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.wb-input:disabled {
+  cursor: not-allowed;
+}
+
+.wb-input:read-only {
+  cursor: default;
+}
+
+/* ========== 尺寸变体 ========== */
+.wb-input-wrapper--sm .wb-input {
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+.wb-input-wrapper--sm .wb-input-container {
+  min-height: 32px;
+}
+
+.wb-input-wrapper--md .wb-input {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-base);
+}
+
+.wb-input-wrapper--md .wb-input-container {
+  min-height: 40px;
+}
+
+.wb-input-wrapper--lg .wb-input {
+  padding: var(--spacing-3) var(--spacing-4);
+  font-size: var(--font-size-lg);
+}
+
+.wb-input-wrapper--lg .wb-input-container {
+  min-height: 48px;
+}
+
+/* ========== 前缀/后缀图标 ========== */
+.wb-input-prefix,
+.wb-input-suffix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+  transition: color 0.2s;
+}
+
+.wb-input-prefix {
+  padding-left: var(--spacing-3);
+  padding-right: var(--spacing-2);
+}
+
+.wb-input-suffix {
+  padding-left: var(--spacing-2);
+  padding-right: var(--spacing-3);
+}
+
+.wb-input-container--prefix .wb-input {
+  padding-left: 0;
+}
+
+.wb-input-container--suffix .wb-input {
+  padding-right: 0;
+}
+
+.wb-input-wrapper--focused .wb-input-prefix,
+.wb-input-wrapper--focused .wb-input-suffix {
+  color: var(--color-primary);
+}
+
+/* ========== 清除按钮 ========== */
+.wb-input-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--spacing-2);
+  color: var(--color-text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.wb-input-clear:hover {
+  color: var(--color-text-secondary);
+}
+
+.wb-input-container--clearable .wb-input {
+  padding-right: 0;
+}
+
+/* ========== 错误提示 ========== */
+.wb-input-error {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  line-height: 1.5;
+}
+
+/* ========== Textarea 文本域 ========== */
+.wb-textarea-wrapper {
+  display: inline-block;
+  width: 100%;
+  position: relative;
+}
+
+.wb-textarea {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: vertical;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.wb-textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.wb-textarea:hover {
+  border-color: var(--color-primary);
+}
+
+.wb-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.wb-textarea:disabled {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.wb-textarea:read-only {
+  background: var(--color-bg-secondary);
+  cursor: default;
+}
+
+.wb-textarea-wrapper--focused .wb-textarea {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.wb-textarea-wrapper--error .wb-textarea {
+  border-color: var(--color-danger);
+}
+
+.wb-textarea-wrapper--error.wb-textarea-wrapper--focused .wb-textarea {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.wb-textarea-wrapper--disabled .wb-textarea {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.wb-textarea-wrapper--readonly .wb-textarea {
+  background: var(--color-bg-secondary);
+  cursor: default;
+}
+
+/* ========== 字符计数 ========== */
+.wb-textarea-count {
+  position: absolute;
+  bottom: var(--spacing-2);
+  right: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+/* ========== Textarea 错误提示 ========== */
+.wb-textarea-error {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  line-height: 1.5;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .wb-input-wrapper--lg .wb-input {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-base);
+  }
+  
+  .wb-input-wrapper--lg .wb-input-container {
+    min-height: 40px;
+  }
+}

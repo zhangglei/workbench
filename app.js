@@ -126,6 +126,7 @@
       if (!Number.isFinite(createdAt) || createdAt <= 0) createdAt = Date.now();
       return Object.assign({}, item, {
         createdAt: createdAt,
+        dateKey: item && item.dateKey ? item.dateKey : getDateKey(new Date(createdAt)),
         createdAtText: item && item.createdAtText ? item.createdAtText : new Date(createdAt).toLocaleString()
       });
     });
@@ -1141,6 +1142,14 @@
         var tagsText = todoTags ? todoTags.value.trim() : '';
         var tags = tagsText ? tagsText.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
         
+        /* 日历视图下优先使用当前选中的日期创建待办，避免始终落到今天 */
+        var now = new Date();
+        var selectedDate = parseDateKey(state.todoSelectedDate);
+        var todoDate = selectedDate
+          ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
+          : now;
+        var todoDateKey = getDateKey(todoDate);
+
         state.todos = state.todos || [];
         state.todos.unshift({
           id: id(),
@@ -1148,11 +1157,12 @@
           tags: tags,
           priority: todoPriority ? todoPriority.value : 'medium',
           done: false,
-          createdAt: Date.now(),
-          createdAtText: new Date().toLocaleString()
+          dateKey: todoDateKey,
+          createdAt: todoDate.getTime(),
+          createdAtText: todoDate.toLocaleString()
         });
-        state.todoCalendarMonth = new Date();
-        state.todoSelectedDate = getDateKey(new Date());
+        state.todoCalendarMonth = new Date(todoDate.getFullYear(), todoDate.getMonth(), 1);
+        state.todoSelectedDate = todoDateKey;
         persistState();
         persistTodoUI();
         renderTodos();

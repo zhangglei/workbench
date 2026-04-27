@@ -161,6 +161,13 @@ body::before {
   outline: none !important;
 }
 
+.todo-form .search-input {
+  min-width: 0 !important;
+  padding: 7px 14px !important;
+  background-image: none !important;
+  background-position: initial !important;
+}
+
 
 /* ================================================================
    §5  Glass 卡片（覆盖所有 .card）

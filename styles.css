@@ -1054,9 +1054,28 @@ button.recent-activity-item {
 
 .todo-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px auto;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr) 132px auto;
   gap: 10px;
+  align-items: stretch;
   margin-bottom: 14px;
+}
+
+.todo-form .search-input {
+  min-width: 0;
+  color: var(--c-text-title);
+  background: var(--c-input-bg);
+  border-color: var(--c-input-border);
+}
+
+.todo-form .search-input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.todo-form .search-input:focus {
+  background: #fff;
+  border-color: rgba(255, 154, 102, 0.4);
+  box-shadow: 0 0 0 3px rgba(255,154,102,0.2);
+  transform: none;
 }
 
 .todo-input {
@@ -1408,8 +1427,8 @@ button.recent-activity-item {
 }
 
 .todo-tags-input {
-  flex: 1;
-  min-width: 200px;
+  min-width: 0;
+  width: 100%;
 }
 
 .todo-time {

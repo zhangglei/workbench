@@ -1,0 +1,147 @@
+/**
+ * Checkbox 复选框组件样式
+ */
+
+.wb-checkbox,
+.wb-checkbox-group {
+  font-family: var(--font-family-base, 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif);
+}
+
+.wb-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2, 0.5rem);
+  color: var(--color-text-primary, #212121);
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.wb-checkbox__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wb-checkbox__indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  background: var(--color-bg-base, #ffffff);
+  border: 1px solid var(--color-border-medium, #e0e0e0);
+  border-radius: var(--radius-sm, 4px);
+  box-sizing: border-box;
+  transition: var(--transition-all, all 0.2s ease);
+}
+
+.wb-checkbox__indicator::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid var(--color-text-inverse, #ffffff);
+  border-bottom: 2px solid var(--color-text-inverse, #ffffff);
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform 0.15s ease;
+}
+
+.wb-checkbox__label {
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.5;
+}
+
+.wb-checkbox:hover .wb-checkbox__indicator {
+  border-color: var(--color-primary, #2196f3);
+}
+
+.wb-checkbox__input:focus-visible + .wb-checkbox__indicator,
+.wb-checkbox.wb-checkbox--focused .wb-checkbox__indicator {
+  border-color: var(--color-primary, #2196f3);
+  box-shadow: var(--shadow-focus, 0 0 0 3px rgba(33, 150, 243, 0.15));
+}
+
+.wb-checkbox--checked .wb-checkbox__indicator,
+.wb-checkbox--indeterminate .wb-checkbox__indicator {
+  background: var(--color-primary, #2196f3);
+  border-color: var(--color-primary, #2196f3);
+}
+
+.wb-checkbox--checked .wb-checkbox__indicator::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.wb-checkbox--indeterminate .wb-checkbox__indicator::after {
+  width: 8px;
+  height: 0;
+  border-left: none;
+  border-bottom: 2px solid var(--color-text-inverse, #ffffff);
+  transform: scale(1);
+}
+
+.wb-checkbox--disabled,
+.wb-checkbox--readonly {
+  cursor: default;
+}
+
+.wb-checkbox--disabled {
+  opacity: 0.6;
+}
+
+.wb-checkbox--disabled .wb-checkbox__indicator {
+  background: var(--color-bg-muted, #f5f5f5);
+  border-color: var(--color-border-light, #eeeeee);
+}
+
+.wb-checkbox--readonly .wb-checkbox__indicator {
+  background: var(--color-bg-subtle, #fafafa);
+}
+
+.wb-checkbox--sm {
+  gap: var(--spacing-1, 0.25rem);
+}
+
+.wb-checkbox--sm .wb-checkbox__indicator {
+  width: 14px;
+  height: 14px;
+}
+
+.wb-checkbox--sm .wb-checkbox__label {
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.wb-checkbox--lg {
+  gap: var(--spacing-3, 0.75rem);
+}
+
+.wb-checkbox--lg .wb-checkbox__indicator {
+  width: 18px;
+  height: 18px;
+}
+
+.wb-checkbox--lg .wb-checkbox__label {
+  font-size: var(--text-base, 1rem);
+}
+
+.wb-checkbox-group {
+  display: inline-flex;
+  gap: var(--spacing-4, 1rem);
+}
+
+.wb-checkbox-group--vertical {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.wb-checkbox-group--horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wb-checkbox-group--disabled {
+  opacity: 0.7;
+}

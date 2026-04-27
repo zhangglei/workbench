@@ -1,0 +1,224 @@
+/**
+ * Form 表单组件样式
+ */
+
+/* ========== Form 容器 ========== */
+.wb-form {
+  width: 100%;
+}
+
+.wb-form--disabled {
+  cursor: not-allowed;
+}
+
+/* ========== Form 表单项 ========== */
+.wb-form-item {
+  margin-bottom: var(--spacing-5);
+}
+
+.wb-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.wb-form-item--error .wb-form-label {
+  color: var(--color-danger, #ef4444);
+}
+
+.wb-form-item--disabled .wb-form-label {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.wb-form-item--disabled .wb-form-content {
+  opacity: 0.72;
+}
+
+/* ========== Form 标签 ========== */
+.wb-form-label {
+  display: block;
+  margin-bottom: var(--spacing-2);
+  color: var(--color-text-primary, #111827);
+  font-size: var(--font-size-base, 14px);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.wb-form-item--required .wb-form-label::before {
+  content: '*';
+  margin-right: var(--spacing-1);
+  color: var(--color-danger, #ef4444);
+}
+
+/* ========== Form 内容 ========== */
+.wb-form-content {
+  position: relative;
+  min-width: 0;
+}
+
+/* ========== 帮助 / 补充 / 错误文本 ========== */
+.wb-form-help,
+.wb-form-extra,
+.wb-form-error {
+  margin-top: var(--spacing-2);
+  font-size: var(--font-size-sm, 12px);
+  line-height: 1.6;
+}
+
+.wb-form-help,
+.wb-form-extra {
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.wb-form-error {
+  color: var(--color-danger, #ef4444);
+}
+
+/* ========== 水平布局 ========== */
+.wb-form--horizontal .wb-form-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.wb-form--horizontal .wb-form-label {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding-top: 10px;
+  padding-right: var(--spacing-4);
+}
+
+.wb-form--horizontal .wb-form-content {
+  flex: 1;
+}
+
+/* ========== 垂直布局 ========== */
+.wb-form--vertical .wb-form-item {
+  display: block;
+}
+
+.wb-form--vertical .wb-form-label {
+  display: block;
+}
+
+/* ========== 内联布局 ========== */
+.wb-form--inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
+  align-items: flex-start;
+}
+
+.wb-form--inline .wb-form-item {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  margin-bottom: 0;
+}
+
+.wb-form--inline .wb-form-label {
+  margin-bottom: 0;
+  padding-top: 10px;
+  white-space: nowrap;
+}
+
+.wb-form--inline .wb-form-content {
+  min-width: 220px;
+}
+
+/* ========== 操作按钮区域 ========== */
+.wb-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
+}
+
+.wb-form-actions--left {
+  justify-content: flex-start;
+}
+
+.wb-form-actions--center {
+  justify-content: center;
+}
+
+.wb-form-actions--right {
+  justify-content: flex-end;
+}
+
+.wb-form-actions button {
+  min-width: 88px;
+}
+
+/* ========== 表单项组合 ========== */
+.wb-form-item-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+.wb-form-item-group > .wb-form-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* ========== 表单分组 ========== */
+.wb-form-section {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-5);
+  background: var(--color-bg-subtle, rgba(255, 255, 255, 0.72));
+  border: 1px solid var(--color-border-light, rgba(148, 163, 184, 0.2));
+  border-radius: var(--radius-lg, 12px);
+}
+
+.wb-form-section:last-child {
+  margin-bottom: 0;
+}
+
+.wb-form-section-title {
+  margin-bottom: var(--spacing-4);
+  color: var(--color-text-primary, #111827);
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .wb-form--horizontal .wb-form-item,
+  .wb-form--inline .wb-form-item {
+    display: block;
+    width: 100%;
+  }
+
+  .wb-form--horizontal .wb-form-label,
+  .wb-form--inline .wb-form-label {
+    width: auto !important;
+    padding-top: 0;
+    padding-right: 0;
+    margin-bottom: var(--spacing-2);
+    text-align: left !important;
+  }
+
+  .wb-form--inline {
+    display: block;
+  }
+
+  .wb-form--inline .wb-form-content {
+    min-width: 0;
+  }
+
+  .wb-form-item-group {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .wb-form-actions,
+  .wb-form-actions--left,
+  .wb-form-actions--center,
+  .wb-form-actions--right {
+    justify-content: stretch;
+  }
+
+  .wb-form-actions button {
+    width: 100%;
+  }
+}
