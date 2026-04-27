@@ -235,6 +235,33 @@
     return Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0;
   }
 
+  function hasFreshLocalState(incomingUpdatedAt) {
+    return lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt <= lastPersistedStateAt);
+  }
+
+  function buildStateSnapshot(updatedAt) {
+    return {
+      layout: state.layout,
+      bg: state.bg,
+      modules: state.modules,
+      todos: state.todos || [],
+      allowedUsers: state.allowedUsers,
+      guestUsers: state.guestUsers || '',
+      collapsedModules: state.collapsedModules || {},
+      updatedAt: updatedAt || 0
+    };
+  }
+
+  function syncLocalStateCache(snapshot) {
+    try {
+      localStorage.setItem('workbench_allowed_users', snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : '');
+      localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(snapshot ? snapshot.layout : defaultLayout));
+      localStorage.setItem(STORAGE_BG, JSON.stringify(snapshot ? snapshot.bg : defaultBg));
+      localStorage.setItem(STORAGE_TODOS, JSON.stringify(snapshot && snapshot.todos ? snapshot.todos : []));
+      localStorage.setItem(STORAGE_STATE, JSON.stringify(snapshot || buildStateSnapshot(0)));
+    } catch (_) {}
+  }
+
   function markStateChanged() {
     lastStateChangeAt = Date.now();
     return lastStateChangeAt;
@@ -290,36 +317,21 @@
   function persistState() {
     var updatedAt = markStateChanged();
     lastPersistedStateAt = updatedAt;
-    var toSave = {
-      layout: state.layout,
-      bg: state.bg,
-      modules: state.modules,
-      todos: state.todos || [],
-      allowedUsers: state.allowedUsers,
-      guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {},
-      updatedAt: updatedAt
-    };
+    var toSave = buildStateSnapshot(updatedAt);
+
+    syncLocalStateCache(toSave);
+
     if (window.workbenchApi) {
       window.workbenchApi.saveState(toSave).catch(function (e) { console.error(e); });
+      return;
     }
-    try {
-      localStorage.setItem('workbench_allowed_users', state.allowedUsers || '');
-    } catch (_) {}
-    if (!window.workbenchApi) {
-      try {
-        localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(state.layout));
-        localStorage.setItem(STORAGE_BG, JSON.stringify(state.bg));
-        localStorage.setItem(STORAGE_TODOS, JSON.stringify(state.todos || []));
-        localStorage.setItem(STORAGE_STATE, JSON.stringify({ modules: state.modules, todos: state.todos || [], allowedUsers: state.allowedUsers, guestUsers: state.guestUsers || '', collapsedModules: state.collapsedModules || {} }));
-      } catch (_) {}
-      fetchFirstOk(CLOUD_STATE_URLS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toSave)
-      })
-        .catch(function (e) { console.warn('云端保存失败', e); });
-    }
+
+    fetchFirstOk(CLOUD_STATE_URLS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(toSave)
+    })
+      .catch(function (e) { console.warn('云端保存失败', e); });
   }
 
   function canEdit() {
@@ -3015,14 +3027,18 @@
   bindLoginModal();
   bindTodoPanel();
   bindCommandPalette();
-  updateUserUI();
-  applyLayout();
-  applyBackground();
-  renderTodos();
-  renderModules();
-  /* 初始化概览卡片和最近使用 */
-  renderOverviewMetrics();
-  renderRecentActivity();
+  function renderAppShell() {
+    updateUserUI();
+    applyLayout();
+    applyBackground();
+    renderTodos();
+    renderModules();
+    /* 初始化概览卡片和最近使用 */
+    renderOverviewMetrics();
+    renderRecentActivity();
+  }
+
+  renderAppShell();
   
   /* 检查是否需要备份提醒 */
   checkBackupReminder();
@@ -3163,7 +3179,7 @@
     window.workbenchApi.loadState().then(function (data) {
       if (data) {
         var incomingUpdatedAt = getStateUpdatedAt(data);
-        var hasNewerLocalState = lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt < lastPersistedStateAt);
+        var hasNewerLocalState = hasFreshLocalState(incomingUpdatedAt);
         if (lastStateChangeAt > electronStateLoadStartedAt || hasNewerLocalState) {
           return;
         }
@@ -3174,10 +3190,9 @@
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
         lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
       }
-      applyLayout();
-      applyBackground();
-      renderTodos();
-      renderModules();
+      if (data) {
+        renderAppShell();
+      }
     }).catch(function () {});
   } else {
     var rawState = load(STORAGE_STATE, null);
@@ -3201,7 +3216,7 @@
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
           var incomingUpdatedAt = getStateUpdatedAt(data);
-          var hasNewerLocalState = lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt < lastPersistedStateAt);
+          var hasNewerLocalState = hasFreshLocalState(incomingUpdatedAt);
           if (lastStateChangeAt > cloudStateLoadStartedAt || hasNewerLocalState) {
             return;
           }
@@ -3211,10 +3226,7 @@
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
           lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
-          applyLayout();
-          applyBackground();
-          renderTodos();
-          renderModules();
+          renderAppShell();
         }
       })
       .catch(function (e) {
