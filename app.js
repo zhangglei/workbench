@@ -211,6 +211,7 @@
     if (Array.isArray(raw.todos)) state.todos = normalizeTodos(raw.todos);
     state.collapsedModules = raw.collapsedModules || {};
   }
+  lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(raw));
   state.todoFilter = 'all';
   state.todoTagFilter = 'all'; /* 标签筛选状态 */
   var todoUIState = loadTodoUI();
@@ -226,6 +227,47 @@
   ];
 
   var lastCloudSyncError = '';
+  var lastStateChangeAt = 0;
+  var lastPersistedStateAt = 0;
+
+  function getStateUpdatedAt(data) {
+    var updatedAt = Number(data && data.updatedAt);
+    return Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0;
+  }
+
+  function markStateChanged() {
+    lastStateChangeAt = Date.now();
+    return lastStateChangeAt;
+  }
+
+  function removeTodoEntry(targetTodo) {
+    var todos = Array.isArray(state.todos) ? state.todos : [];
+    var before = todos.length;
+    var targetId = targetTodo && targetTodo.id;
+    var targetText = String((targetTodo && targetTodo.text) || '');
+    var targetCreatedAt = Number(targetTodo && targetTodo.createdAt);
+    var targetDateKey = String((targetTodo && targetTodo.dateKey) || '');
+    var removed = false;
+
+    state.todos = todos.filter(function (item) {
+      if (removed) return true;
+      if (targetId && item && item.id === targetId) {
+        removed = true;
+        return false;
+      }
+      if (
+        String((item && item.text) || '') === targetText &&
+        Number(item && item.createdAt) === targetCreatedAt &&
+        String((item && item.dateKey) || '') === targetDateKey
+      ) {
+        removed = true;
+        return false;
+      }
+      return true;
+    });
+
+    return before !== state.todos.length;
+  }
 
   async function fetchFirstOk(urls, init) {
     var lastErr = null;
@@ -246,6 +288,8 @@
   }
 
   function persistState() {
+    var updatedAt = markStateChanged();
+    lastPersistedStateAt = updatedAt;
     var toSave = {
       layout: state.layout,
       bg: state.bg,
@@ -253,7 +297,8 @@
       todos: state.todos || [],
       allowedUsers: state.allowedUsers,
       guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {}
+      collapsedModules: state.collapsedModules || {},
+      updatedAt: updatedAt
     };
     if (window.workbenchApi) {
       window.workbenchApi.saveState(toSave).catch(function (e) { console.error(e); });
@@ -983,7 +1028,11 @@
         renderTodos();
       });
       row.querySelector('[data-action="delete"]').addEventListener('click', function () {
-        state.todos = (state.todos || []).filter(function (x) { return x.id !== item.id; });
+        if (!removeTodoEntry(item)) {
+          renderTodos();
+          showToast('待办不存在或已删除', 'warning');
+          return;
+        }
         persistState();
         renderTodos();
         showToast('待办已删除', 'success');
@@ -1113,7 +1162,11 @@
         renderTodos();
       });
       row.querySelector('[data-action="delete"]').addEventListener('click', function () {
-        state.todos = (state.todos || []).filter(function (x) { return x.id !== item.id; });
+        if (!removeTodoEntry(item)) {
+          renderTodos();
+          showToast('待办不存在或已删除', 'warning');
+          return;
+        }
         persistState();
         renderTodos();
         renderOverviewMetrics();
@@ -3106,13 +3159,20 @@
   });
 
   if (window.workbenchApi) {
+    var electronStateLoadStartedAt = Date.now();
     window.workbenchApi.loadState().then(function (data) {
       if (data) {
+        var incomingUpdatedAt = getStateUpdatedAt(data);
+        var hasNewerLocalState = lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt < lastPersistedStateAt);
+        if (lastStateChangeAt > electronStateLoadStartedAt || hasNewerLocalState) {
+          return;
+        }
         state = migrateState(data);
         if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
         if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
         state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
+        lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
       }
       applyLayout();
       applyBackground();
@@ -3126,11 +3186,13 @@
       if (rawState.allowedUsers !== undefined) state.allowedUsers = rawState.allowedUsers;
       if (Array.isArray(rawState.todos)) state.todos = normalizeTodos(rawState.todos);
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
+      lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(rawState));
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
+    var cloudStateLoadStartedAt = Date.now();
     fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
-      .then(function (pair) { 
-        return pair.res.text(); 
+      .then(function (pair) {
+        return pair.res.text();
       })
       .then(function (text) {
         if (!text || text === 'null') {
@@ -3138,20 +3200,26 @@
         }
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
+          var incomingUpdatedAt = getStateUpdatedAt(data);
+          var hasNewerLocalState = lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt < lastPersistedStateAt);
+          if (lastStateChangeAt > cloudStateLoadStartedAt || hasNewerLocalState) {
+            return;
+          }
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
+          lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
           applyLayout();
           applyBackground();
           renderTodos();
           renderModules();
         }
       })
-      .catch(function (e) { 
+      .catch(function (e) {
         console.warn('云端加载失败', e);
-        showCloudSyncUnavailable(); 
+        showCloudSyncUnavailable();
       });
   }
 
