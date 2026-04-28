@@ -221,6 +221,9 @@
     if (Array.isArray(raw.todos)) state.todos = normalizeTodos(raw.todos);
     state.collapsedModules = raw.collapsedModules || {};
   }
+  if (raw && raw.guestUsers !== undefined) {
+    state.guestUsers = raw.guestUsers;
+  }
   lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(raw));
   state.todoFilter = 'all';
   state.todoTagFilter = 'all'; /* 标签筛选状态 */
@@ -2662,8 +2665,11 @@
         var parts = (line || '').trim().split(':');
         return { user: parts[0] || '', pass: parts[1] || '', role: 'admin' };
       }).filter(function (x) { return x.user && x.pass; });
-      if (guestList.length === 0 && adminList.length === 0) {
+      var noAccountsConfigured = guestList.length === 0 && adminList.length === 0;
+      if (guestList.length === 0) {
         guestList = [{ user: 'admin', pass: 'admin', role: 'guest' }];
+      }
+      if (adminList.length === 0 && noAccountsConfigured) {
         adminList = [{ user: '123', pass: '123', role: 'admin' }];
       }
       var all = guestList.concat(adminList);
@@ -3212,6 +3218,7 @@
     if (rawState) {
       if (rawState.modules) state.modules = rawState.modules;
       if (rawState.allowedUsers !== undefined) state.allowedUsers = rawState.allowedUsers;
+      if (rawState.guestUsers !== undefined) state.guestUsers = rawState.guestUsers;
       if (Array.isArray(rawState.todos)) state.todos = normalizeTodos(rawState.todos);
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
       lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(rawState));
