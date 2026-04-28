@@ -15,6 +15,22 @@
   var lastStateChangeAt = 0;
   var lastPersistedStateAt = 0;
 
+  function loadStringStorage(key, fallback) {
+    try {
+      var s = localStorage.getItem(key);
+      if (s == null || s === '') return fallback;
+      try {
+        var parsed = JSON.parse(s);
+        return typeof parsed === 'string' ? parsed : fallback;
+      } catch (_) {
+        // 兼容旧版本直接写入纯文本账号列表的情况。
+        return s;
+      }
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   function getStateUpdatedAt(data) {
     var updatedAt = Number(data && data.updatedAt);
     return Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0;
@@ -30,12 +46,13 @@
   }
 
   function buildStateSnapshot(state, updatedAt) {
+    var S = WS();
     return {
       layout: state.layout,
       bg: state.bg,
       modules: state.modules,
       todos: state.todos || [],
-      allowedUsers: state.allowedUsers,
+      allowedUsers: S.ensureDefaultAdminAccount(state.allowedUsers || ''),
       guestUsers: state.guestUsers || '',
       collapsedModules: state.collapsedModules || {},
       updatedAt: updatedAt || 0
@@ -47,7 +64,7 @@
     var defaultLayout = S.defaultLayout;
     var defaultBg = S.defaultBg;
     try {
-      localStorage.setItem('workbench_allowed_users', S.ensureDefaultAdminAccount(snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : ''));
+      localStorage.setItem('workbench_allowed_users', JSON.stringify(S.ensureDefaultAdminAccount(snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : '')));
       localStorage.setItem(S.STORAGE_LAYOUT, JSON.stringify(snapshot ? snapshot.layout : defaultLayout));
       localStorage.setItem(S.STORAGE_BG, JSON.stringify(snapshot ? snapshot.bg : defaultBg));
       localStorage.setItem(S.STORAGE_TODOS, JSON.stringify(snapshot && snapshot.todos ? snapshot.todos : []));
@@ -105,13 +122,14 @@
     var state = migrateState(null);
     state.layout = load(S.STORAGE_LAYOUT, S.defaultLayout);
     state.bg = load(S.STORAGE_BG, S.defaultBg);
-    state.allowedUsers = S.ensureDefaultAdminAccount(load('workbench_allowed_users', ''));
+    state.allowedUsers = S.ensureDefaultAdminAccount(loadStringStorage('workbench_allowed_users', ''));
     state.guestUsers = state.guestUsers || '';
     state.todos = S.normalizeTodos(load(S.STORAGE_TODOS, state.todos || []));
     state.collapsedModules = state.collapsedModules || {};
     var raw = load(S.STORAGE_STATE, null);
     if (raw && raw.modules && raw.modules.length && raw.modules[0].items !== undefined) {
       state.modules = raw.modules;
+      if (raw.allowedUsers !== undefined) state.allowedUsers = raw.allowedUsers;
       if (Array.isArray(raw.todos)) state.todos = S.normalizeTodos(raw.todos);
       if (raw.collapsedModules) state.collapsedModules = raw.collapsedModules;
     } else if (raw) {
