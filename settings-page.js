@@ -3,6 +3,8 @@
 
   var state = null;
   var defaultBg;
+  var DEFAULT_GUEST_ACCOUNTS = [{ user: 'admin', pass: 'admin' }];
+  var DEFAULT_ADMIN_ACCOUNTS = [{ user: 'root', pass: 'root' }];
 
   function showToast(message, type) {
     var el = document.getElementById('settingsToast');
@@ -51,9 +53,127 @@
     window.location.replace('./index.html');
   }
 
+  function cloneAccounts(list) {
+    return list.map(function (item) {
+      return { user: item.user, pass: item.pass };
+    });
+  }
+
+  function parseAccountText(text, fallback) {
+    var rows = (text || '')
+      .split('\n')
+      .map(function (line) {
+        var raw = (line || '').trim();
+        if (!raw) return null;
+        var idx = raw.indexOf(':');
+        if (idx < 0) return null;
+        var user = raw.slice(0, idx).trim();
+        var pass = raw.slice(idx + 1).trim();
+        return user && pass ? { user: user, pass: pass } : null;
+      })
+      .filter(Boolean);
+    return rows.length ? rows : cloneAccounts(fallback);
+  }
+
+  function serializeAccounts(rows, fallback) {
+    rows = rows || [];
+    var valid = rows.filter(function (row) {
+      return row.user && row.pass;
+    });
+    if (!valid.length) valid = cloneAccounts(fallback);
+    return valid.map(function (row) {
+      return row.user + ':' + row.pass;
+    }).join('\n');
+  }
+
+  function readAccountsFromTable(tableId, fallback) {
+    var table = document.getElementById(tableId);
+    if (!table) return cloneAccounts(fallback);
+    var rows = [];
+    table.querySelectorAll('tr').forEach(function (tr) {
+      var userInput = tr.querySelector('[data-field="user"]');
+      var passInput = tr.querySelector('[data-field="pass"]');
+      rows.push({
+        user: ((userInput && userInput.value) || '').trim(),
+        pass: ((passInput && passInput.value) || '').trim()
+      });
+    });
+    return rows;
+  }
+
+  function syncAccountRawInputs() {
+    document.getElementById('guestUsers').value = serializeAccounts(
+      readAccountsFromTable('guestUsersTable', DEFAULT_GUEST_ACCOUNTS),
+      DEFAULT_GUEST_ACCOUNTS
+    );
+    document.getElementById('adminUsers').value = serializeAccounts(
+      readAccountsFromTable('adminUsersTable', DEFAULT_ADMIN_ACCOUNTS),
+      DEFAULT_ADMIN_ACCOUNTS
+    );
+  }
+
+  function appendAccountRow(tableId, account) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    var tr = document.createElement('tr');
+    var userTd = document.createElement('td');
+    var passTd = document.createElement('td');
+    var actionTd = document.createElement('td');
+    var userInput = document.createElement('input');
+    var passInput = document.createElement('input');
+    var removeBtn = document.createElement('button');
+
+    userInput.type = 'text';
+    userInput.dataset.field = 'user';
+    userInput.placeholder = '用户名';
+    userInput.value = (account && account.user) || '';
+    passInput.type = 'text';
+    passInput.dataset.field = 'pass';
+    passInput.placeholder = '密码';
+    passInput.value = (account && account.pass) || '';
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-secondary btn-sm account-remove-btn';
+    removeBtn.textContent = '删除';
+    removeBtn.addEventListener('click', function () {
+      tr.remove();
+      syncAccountRawInputs();
+    });
+    userInput.addEventListener('input', syncAccountRawInputs);
+    passInput.addEventListener('input', syncAccountRawInputs);
+
+    userTd.appendChild(userInput);
+    passTd.appendChild(passInput);
+    actionTd.appendChild(removeBtn);
+    tr.appendChild(userTd);
+    tr.appendChild(passTd);
+    tr.appendChild(actionTd);
+    table.appendChild(tr);
+  }
+
+  function renderAccountTable(tableId, rows, fallback) {
+    var table = document.getElementById(tableId);
+    if (!table) return;
+    table.innerHTML = '';
+    (rows && rows.length ? rows : cloneAccounts(fallback)).forEach(function (row) {
+      appendAccountRow(tableId, row);
+    });
+  }
+
+  function ensureAdminDefaultAccount() {
+    var rows = parseAccountText(state && state.allowedUsers || '', DEFAULT_ADMIN_ACCOUNTS);
+    var hasRoot = rows.some(function (row) {
+      return row.user === 'root' && row.pass === 'root';
+    });
+    if (!hasRoot) {
+      rows.unshift({ user: 'root', pass: 'root' });
+      state.allowedUsers = serializeAccounts(rows, DEFAULT_ADMIN_ACCOUNTS);
+    }
+  }
+
   function readFormIntoState() {
     if (!state) return;
     var def = defaultBg;
+    syncAccountRawInputs();
     state.layout = {
       cols: Math.max(1, Math.min(6, parseInt(document.getElementById('layoutCols').value, 10) || 3)),
       gap: Math.max(0, Math.min(48, parseInt(document.getElementById('layoutGap').value, 10) || 16)),
@@ -67,8 +187,8 @@
       image: urlInput || (keepUploaded ? state.bg.image : ''),
       gradient: (document.getElementById('bgGradient').value || '').trim() || def.gradient
     };
-    state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
-    state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
+    state.guestUsers = document.getElementById('guestUsers').value;
+    state.allowedUsers = document.getElementById('adminUsers').value;
   }
 
   function fillFormFromState() {
@@ -80,8 +200,10 @@
     document.getElementById('bgColor').value = state.bg.color;
     document.getElementById('bgImage').value = state.bg.image || '';
     document.getElementById('bgGradient').value = state.bg.gradient || '';
-    document.getElementById('guestUsers').value = state.guestUsers || '';
-    document.getElementById('adminUsers').value = state.allowedUsers || '';
+    ensureAdminDefaultAccount();
+    renderAccountTable('guestUsersTable', parseAccountText(state.guestUsers || '', DEFAULT_GUEST_ACCOUNTS), DEFAULT_GUEST_ACCOUNTS);
+    renderAccountTable('adminUsersTable', parseAccountText(state.allowedUsers || '', DEFAULT_ADMIN_ACCOUNTS), DEFAULT_ADMIN_ACCOUNTS);
+    syncAccountRawInputs();
     if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
       document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
     } else {
@@ -234,6 +356,13 @@
     });
 
     document.getElementById('btnBackToWorkbench').addEventListener('click', goBackToWorkbench);
+    document.getElementById('btnAddGuestUser').addEventListener('click', function () {
+      appendAccountRow('guestUsersTable', { user: '', pass: '' });
+    });
+    document.getElementById('btnAddAdminUser').addEventListener('click', function () {
+      appendAccountRow('adminUsersTable', { user: '', pass: '' });
+    });
+    syncAccountRawInputs();
 
     document.getElementById('bgImageFile').addEventListener('change', function () {
       var file = this.files && this.files[0];

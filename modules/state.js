@@ -53,12 +53,22 @@
     });
   }
 
+  function ensureDefaultAdminAccount(text) {
+    var current = (text || '').trim();
+    var rows = current ? current.split('\n') : [];
+    var hasRoot = rows.some(function (line) {
+      return (line || '').trim() === 'root:root';
+    });
+    if (!hasRoot) rows.unshift('root:root');
+    return rows.filter(Boolean).join('\n');
+  }
+
   /** 将旧版 state 转为新版 */
   function migrateState(data) {
-    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: '', guestUsers: '', todos: [] };
+    if (!data) return { layout: defaultLayout, bg: defaultBg, modules: [], allowedUsers: 'root:root', guestUsers: '', todos: [] };
     var layout = data.layout || defaultLayout;
     var bg = data.bg || defaultBg;
-    var allowedUsers = data.allowedUsers || '';
+    var allowedUsers = ensureDefaultAdminAccount(data.allowedUsers || '');
     var guestUsers = data.guestUsers || '';
     var todos = Array.isArray(data.todos) ? data.todos : [];
     var modules = [];
@@ -139,6 +149,7 @@
     pad2: pad2,
     getDateKey: getDateKey,
     normalizeTodos: normalizeTodos,
+    ensureDefaultAdminAccount: ensureDefaultAdminAccount,
     migrateState: migrateState
   };
 })();

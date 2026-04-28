@@ -2555,23 +2555,25 @@
     }
     document.getElementById('btnCloseLoginModal').addEventListener('click', closeLoginModal);
     document.getElementById('loginModal').addEventListener('click', function (e) { if (e.target.id === 'loginModal') closeLoginModal(); });
+    function parseLoginAccounts(text, role) {
+      return (text || '').split('\n').map(function (line) {
+        var raw = (line || '').trim();
+        var idx = raw.indexOf(':');
+        if (idx < 0) return null;
+        return { user: raw.slice(0, idx).trim(), pass: raw.slice(idx + 1).trim(), role: role };
+      }).filter(function (x) { return x && x.user && x.pass; });
+    }
     function performLogin() {
       var user = (document.getElementById('loginUser').value || '').trim();
       var pass = (document.getElementById('loginPass').value || '').trim();
-      var guestList = (state.guestUsers || '').split('\n').map(function (line) {
-        var parts = (line || '').trim().split(':');
-        return { user: parts[0] || '', pass: parts[1] || '', role: 'guest' };
-      }).filter(function (x) { return x.user && x.pass; });
-      var adminList = (state.allowedUsers || '').split('\n').map(function (line) {
-        var parts = (line || '').trim().split(':');
-        return { user: parts[0] || '', pass: parts[1] || '', role: 'admin' };
-      }).filter(function (x) { return x.user && x.pass; });
-      var noAccountsConfigured = guestList.length === 0 && adminList.length === 0;
+      var guestList = parseLoginAccounts(state.guestUsers || '', 'guest');
+      var adminList = parseLoginAccounts(state.allowedUsers || '', 'admin');
       if (guestList.length === 0) {
         guestList = [{ user: 'admin', pass: 'admin', role: 'guest' }];
       }
-      if (adminList.length === 0 && noAccountsConfigured) {
-        adminList = [{ user: '123', pass: '123', role: 'admin' }];
+      // 默认管理员固定为 root:root，兼容旧数据中未配置管理员的情况。
+      if (!adminList.some(function (x) { return x.user === 'root' && x.pass === 'root'; })) {
+        adminList.unshift({ user: 'root', pass: 'root', role: 'admin' });
       }
       var all = guestList.concat(adminList);
       var matched = all.find(function (x) { return x.user === user && x.pass === pass; });

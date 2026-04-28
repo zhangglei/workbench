@@ -211,7 +211,7 @@ code {
 
 .account-card {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -236,6 +236,61 @@ code {
 .account-card-admin .account-role {
   color: #fed7aa;
   background: rgba(249, 115, 22, 0.16);
+}
+
+.account-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.account-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 360px;
+}
+
+.account-table th,
+.account-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.account-table th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.account-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.account-table input {
+  min-height: 34px;
+  padding: 7px 9px;
+}
+
+.account-table th:last-child,
+.account-table td:last-child {
+  width: 74px;
+  text-align: center;
+}
+
+.account-add-btn {
+  justify-self: start;
+}
+
+.account-remove-btn {
+  min-width: 56px;
+  padding-inline: 10px;
+}
+
+.account-raw-input {
+  display: none;
 }
 
 .theme-selector {

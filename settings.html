@@ -24,20 +24,46 @@
           <div>
             <p class="settings-eyebrow">账号权限</p>
             <h3>添加游客和管理员账号</h3>
-            <p class="setting-hint">每行填写一个账号，格式为 <code>用户名:密码</code>。游客只能评论，管理员拥有全部编辑权限。</p>
+            <p class="setting-hint">通过表格添加账号密码；游客只能评论，管理员拥有全部编辑权限。默认管理员为 <code>root:root</code>。</p>
           </div>
         </div>
         <div class="account-grid">
-          <label class="account-card account-card-guest">
+          <div class="account-card account-card-guest">
             <span class="account-role">游客账号</span>
             <span class="account-desc">只允许评论；不填写则默认游客：admin:admin。</span>
-            <textarea id="guestUsers" rows="4" placeholder="admin:admin"></textarea>
-          </label>
-          <label class="account-card account-card-admin">
+            <div class="account-table-wrap">
+              <table class="account-table" aria-label="游客账号表格">
+                <thead>
+                  <tr>
+                    <th>用户名</th>
+                    <th>密码</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="guestUsersTable"></tbody>
+              </table>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm account-add-btn" id="btnAddGuestUser">添加游客</button>
+            <textarea id="guestUsers" class="account-raw-input" aria-hidden="true" tabindex="-1"></textarea>
+          </div>
+          <div class="account-card account-card-admin">
             <span class="account-role">管理员账号</span>
-            <span class="account-desc">拥有全部编辑权限；当前已填写的账号会被视为管理员。</span>
-            <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
-          </label>
+            <span class="account-desc">拥有全部编辑权限；默认管理员为 root:root，可继续添加多个管理员。</span>
+            <div class="account-table-wrap">
+              <table class="account-table" aria-label="管理员账号表格">
+                <thead>
+                  <tr>
+                    <th>用户名</th>
+                    <th>密码</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTable"></tbody>
+              </table>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm account-add-btn" id="btnAddAdminUser">添加管理员</button>
+            <textarea id="adminUsers" class="account-raw-input" aria-hidden="true" tabindex="-1"></textarea>
+          </div>
         </div>
       </section>
       <section class="setting-section">

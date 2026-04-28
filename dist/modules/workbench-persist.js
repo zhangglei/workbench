@@ -47,7 +47,7 @@
     var defaultLayout = S.defaultLayout;
     var defaultBg = S.defaultBg;
     try {
-      localStorage.setItem('workbench_allowed_users', snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : '');
+      localStorage.setItem('workbench_allowed_users', S.ensureDefaultAdminAccount(snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : ''));
       localStorage.setItem(S.STORAGE_LAYOUT, JSON.stringify(snapshot ? snapshot.layout : defaultLayout));
       localStorage.setItem(S.STORAGE_BG, JSON.stringify(snapshot ? snapshot.bg : defaultBg));
       localStorage.setItem(S.STORAGE_TODOS, JSON.stringify(snapshot && snapshot.todos ? snapshot.todos : []));
@@ -105,7 +105,7 @@
     var state = migrateState(null);
     state.layout = load(S.STORAGE_LAYOUT, S.defaultLayout);
     state.bg = load(S.STORAGE_BG, S.defaultBg);
-    state.allowedUsers = load('workbench_allowed_users', '');
+    state.allowedUsers = S.ensureDefaultAdminAccount(load('workbench_allowed_users', ''));
     state.guestUsers = state.guestUsers || '';
     state.todos = S.normalizeTodos(load(S.STORAGE_TODOS, state.todos || []));
     state.collapsedModules = state.collapsedModules || {};
@@ -125,6 +125,7 @@
       if (Array.isArray(raw.todos)) state.todos = S.normalizeTodos(raw.todos);
       state.collapsedModules = raw.collapsedModules || {};
     }
+    state.allowedUsers = S.ensureDefaultAdminAccount(state.allowedUsers);
     if (raw && raw.guestUsers !== undefined) {
       state.guestUsers = raw.guestUsers;
     }
