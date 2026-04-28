@@ -159,13 +159,23 @@
   var STORAGE_RECENT_ACTIVITY = 'workbench_recent_activity';
   var MAX_RECENT_ITEMS = 20;
 
+  function getRecentActivityStorageKey() {
+    var user = String(currentUser || '').trim();
+    if (!user) return STORAGE_RECENT_ACTIVITY + ':anonymous';
+    try {
+      return STORAGE_RECENT_ACTIVITY + ':user:' + encodeURIComponent(user);
+    } catch (_) {
+      return STORAGE_RECENT_ACTIVITY + ':user:' + user;
+    }
+  }
+
   function loadRecentActivity() {
-    return load(STORAGE_RECENT_ACTIVITY, []);
+    return load(getRecentActivityStorageKey(), []);
   }
 
   function saveRecentActivity(items) {
     try {
-      localStorage.setItem(STORAGE_RECENT_ACTIVITY, JSON.stringify(items));
+      localStorage.setItem(getRecentActivityStorageKey(), JSON.stringify(items));
     } catch (_) {}
   }
 
@@ -2628,6 +2638,7 @@
         localStorage.removeItem(STORAGE_USER_ROLE);
         updateUserUI();
         renderModules();
+        renderRecentActivity();
       } else {
         openLoginModal();
       }
@@ -2665,6 +2676,7 @@
         closeLoginModal();
         updateUserUI();
         renderModules();
+        renderRecentActivity();
         showToast(currentRole === 'admin' ? '管理员登录成功' : '登录成功', 'success');
       } else {
         document.getElementById('loginHint').textContent = '用户名或密码错误，或未在设置中配置允许的用户。';
@@ -2750,6 +2762,7 @@
         localStorage.removeItem(STORAGE_USER_ROLE);
         updateUserUI();
         renderModules();
+        renderRecentActivity();
       });
     } else {
       userArea.innerHTML = '<button type="button" class="btn btn-secondary btn-sm" id="btnLogin">登录</button>';
