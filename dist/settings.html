@@ -5,39 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>工作台设置</title>
   <meta name="theme-color" content="#1a1b26">
-  <link rel="stylesheet" href="styles.css">
-  <style>
-    .settings-standalone { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-    .settings-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-    .settings-topbar h1 { margin: 0; font-size: 1.35rem; }
-    #settingsToast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      padding: 10px 18px; border-radius: 8px; font-size: 14px; z-index: 9999;
-      box-shadow: 0 4px 20px rgba(0,0,0,.2); display: none;
-    }
-    #settingsToast.show { display: block; }
-    #settingsToast.success { background: rgba(34, 197, 94, .95); color: #fff; }
-    #settingsToast.error { background: rgba(239, 68, 68, .95); color: #fff; }
-  </style>
+  <link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <div id="settingsToast" role="status" aria-live="polite"></div>
   <div class="settings-standalone">
     <div class="settings-topbar">
-      <h1>设置</h1>
-      <a href="./index.html" class="btn btn-secondary btn-sm">返回工作台</a>
+      <div>
+        <p class="settings-eyebrow">Workbench</p>
+        <h1>设置</h1>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="btnBackToWorkbench">返回工作台</button>
     </div>
 
-    <div class="panel-body" style="padding: 0;">
-      <section class="setting-section">
-        <h3>游客账号（每行 用户名:密码）</h3>
-        <p class="setting-hint">只允许评论，不能编辑内容；不填写则默认游客：admin:admin。</p>
-        <textarea id="guestUsers" rows="3" placeholder="admin:admin"></textarea>
-      </section>
-      <section class="setting-section">
-        <h3>管理员账号（每行 用户名:密码）</h3>
-        <p class="setting-hint">拥有全部编辑权限；当前已填写的账号会被视为管理员。</p>
-        <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
+    <div class="panel-body">
+      <section class="setting-section account-section">
+        <div class="account-section-head">
+          <div>
+            <p class="settings-eyebrow">账号权限</p>
+            <h3>添加游客和管理员账号</h3>
+            <p class="setting-hint">每行填写一个账号，格式为 <code>用户名:密码</code>。游客只能评论，管理员拥有全部编辑权限。</p>
+          </div>
+        </div>
+        <div class="account-grid">
+          <label class="account-card account-card-guest">
+            <span class="account-role">游客账号</span>
+            <span class="account-desc">只允许评论；不填写则默认游客：admin:admin。</span>
+            <textarea id="guestUsers" rows="4" placeholder="admin:admin"></textarea>
+          </label>
+          <label class="account-card account-card-admin">
+            <span class="account-role">管理员账号</span>
+            <span class="account-desc">拥有全部编辑权限；当前已填写的账号会被视为管理员。</span>
+            <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
+          </label>
+        </div>
       </section>
       <section class="setting-section">
         <h3>主题</h3>

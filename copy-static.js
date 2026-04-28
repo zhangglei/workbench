@@ -34,6 +34,7 @@ const filesToCopy = [
   'knowledge.js',
   'settings.html',
   'settings-page.js',
+  'settings.css',
 ];
 
 // 图标文件

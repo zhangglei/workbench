@@ -2739,7 +2739,12 @@
 
   function openSettings() {
     try {
-      window.open('settings.html', 'workbench-settings', 'noopener,noreferrer');
+      var settingsWindow = window.open('settings.html', 'workbench-settings');
+      if (settingsWindow) {
+        settingsWindow.focus();
+      } else {
+        window.location.href = 'settings.html';
+      }
     } catch (e) {
       window.location.href = 'settings.html';
     }

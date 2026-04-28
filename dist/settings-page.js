@@ -30,6 +30,27 @@
     document.getElementById('bgGradientWrap').classList.toggle('hidden', type !== 'gradient');
   }
 
+  function notifyWorkbenchSettingsSaved() {
+    try {
+      if (window.opener && !window.opener.closed && typeof window.opener.postMessage === 'function') {
+        window.opener.postMessage({ type: 'workbench-settings-saved' }, '*');
+      }
+    } catch (_) {}
+  }
+
+  function goBackToWorkbench() {
+    notifyWorkbenchSettingsSaved();
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.focus();
+        // 独立设置窗口返回时直接关闭，避免重新加载工作台导致卡顿。
+        window.close();
+        return;
+      }
+    } catch (_) {}
+    window.location.replace('./index.html');
+  }
+
   function readFormIntoState() {
     if (!state) return;
     var def = defaultBg;
@@ -208,13 +229,11 @@
           obsidianSyncFolder: (document.getElementById('obsidianSyncFolderInput') ? document.getElementById('obsidianSyncFolderInput').value : 'WorkbenchSync').trim() || 'WorkbenchSync'
         });
       }
-      try {
-        if (window.opener && typeof window.opener.postMessage === 'function') {
-          window.opener.postMessage({ type: 'workbench-settings-saved' }, '*');
-        }
-      } catch (_) {}
+      notifyWorkbenchSettingsSaved();
       showToast('设置已保存', 'success');
     });
+
+    document.getElementById('btnBackToWorkbench').addEventListener('click', goBackToWorkbench);
 
     document.getElementById('bgImageFile').addEventListener('change', function () {
       var file = this.files && this.files[0];
