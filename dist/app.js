@@ -224,7 +224,7 @@
   if (raw && raw.guestUsers !== undefined) {
     state.guestUsers = raw.guestUsers;
   }
-  lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(raw));
+  WorkbenchPersist.bumpLastPersistedAtFromData(raw);
   state.todoFilter = 'all';
   state.todoTagFilter = 'all'; /* 标签筛选状态 */
   var todoUIState = loadTodoUI();
@@ -233,52 +233,6 @@
   state.todoCalendarMonth = todoUIState.calendarMonth;
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
-
-  var CLOUD_STATE_URLS = [
-    '/api/workbench-state',
-    '/.netlify/functions/workbench-state'
-  ];
-
-  var lastCloudSyncError = '';
-  var lastStateChangeAt = 0;
-  var lastPersistedStateAt = 0;
-
-  function getStateUpdatedAt(data) {
-    var updatedAt = Number(data && data.updatedAt);
-    return Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0;
-  }
-
-  function hasFreshLocalState(incomingUpdatedAt) {
-    return lastPersistedStateAt > 0 && (!incomingUpdatedAt || incomingUpdatedAt <= lastPersistedStateAt);
-  }
-
-  function buildStateSnapshot(updatedAt) {
-    return {
-      layout: state.layout,
-      bg: state.bg,
-      modules: state.modules,
-      todos: state.todos || [],
-      allowedUsers: state.allowedUsers,
-      guestUsers: state.guestUsers || '',
-      collapsedModules: state.collapsedModules || {},
-      updatedAt: updatedAt || 0
-    };
-  }
-
-  function syncLocalStateCache(snapshot) {
-    try {
-      localStorage.setItem('workbench_allowed_users', snapshot && snapshot.allowedUsers ? snapshot.allowedUsers : '');
-      localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(snapshot ? snapshot.layout : defaultLayout));
-      localStorage.setItem(STORAGE_BG, JSON.stringify(snapshot ? snapshot.bg : defaultBg));
-      localStorage.setItem(STORAGE_TODOS, JSON.stringify(snapshot && snapshot.todos ? snapshot.todos : []));
-      localStorage.setItem(STORAGE_STATE, JSON.stringify(snapshot || buildStateSnapshot(0)));
-    } catch (_) {}
-  }
-
-  function markStateChanged() {
-    lastStateChangeAt = Date.now();
-    return lastStateChangeAt;
-  }
 
   function removeTodoEntry(targetTodo) {
     var todos = Array.isArray(state.todos) ? state.todos : [];
@@ -309,42 +263,8 @@
     return before !== state.todos.length;
   }
 
-  async function fetchFirstOk(urls, init) {
-    var lastErr = null;
-    for (var i = 0; i < urls.length; i++) {
-      try {
-        var res = await fetch(urls[i], init);
-        if (res && res.ok) {
-          lastCloudSyncError = '';
-          return { res: res, url: urls[i] };
-        }
-        lastErr = new Error('HTTP ' + (res ? res.status : 'unknown'));
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-    lastCloudSyncError = String(lastErr && lastErr.message ? lastErr.message : lastErr || '');
-    throw lastErr || new Error('All endpoints failed');
-  }
-
   function persistState() {
-    var updatedAt = markStateChanged();
-    lastPersistedStateAt = updatedAt;
-    var toSave = buildStateSnapshot(updatedAt);
-
-    syncLocalStateCache(toSave);
-
-    if (window.workbenchApi) {
-      window.workbenchApi.saveState(toSave).catch(function (e) { console.error(e); });
-      return;
-    }
-
-    fetchFirstOk(CLOUD_STATE_URLS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toSave)
-    })
-      .catch(function (e) { console.warn('云端保存失败', e); });
+    WorkbenchPersist.persistState(state);
   }
 
   function canEdit() {
@@ -394,25 +314,6 @@
   /* 最近使用 DOM */
   var recentActivityEmpty = document.getElementById('recentActivityEmpty');
   var recentActivityList = document.getElementById('recentActivityList');
-
-  var BG_LIBRARY = (function () {
-    function svgDataUri(svg) {
-      return 'data:image/svg+xml,' + encodeURIComponent(svg);
-    }
-    var w = 1920, h = 1080;
-    function svg(body) {
-      return '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' + body + '</svg>';
-    }
-    function grad(id, stops) {
-      var s = stops.map(function (x) { return '<stop offset="' + x[0] + '" stop-color="' + x[1] + '"/>'; }).join('');
-      return '<defs><linearGradient id="' + id + '" x1="0%" y1="0%" x2="100%" y2="100%">' + s + '</linearGradient></defs><rect width="100%" height="100%" fill="url(#' + id + ')"/>';
-    }
-    return [
-      { name: '深蓝夜', url: svgDataUri(svg(grad('g1', [['0%', '#0f0c29'], ['50%', '#302b63'], ['100%', '#24243e']]))) },
-      { name: '湖蓝', url: svgDataUri(svg(grad('g2', [['0%', '#2193b0'], ['100%', '#6dd5ed']]))) },
-      { name: '灰蓝', url: svgDataUri(svg(grad('g8', [['0%', '#1a1b26'], ['100%', '#414868']]))) }
-    ];
-  })();
 
   function applyLayout() {
     var l = state.layout;
@@ -2836,207 +2737,14 @@
     _syncFooter();
   };
 
-  var settingsPanel = document.getElementById('settingsPanel');
-  var settingsOverlay = document.getElementById('settingsOverlay');
   function openSettings() {
-    document.getElementById('layoutCols').value = state.layout.cols;
-    document.getElementById('layoutGap').value = state.layout.gap;
-    document.getElementById('layoutAlign').value = state.layout.align;
-    document.getElementById('bgType').value = state.bg.type;
-    document.getElementById('bgColor').value = state.bg.color;
-    document.getElementById('bgImage').value = state.bg.image || '';
-    document.getElementById('bgGradient').value = state.bg.gradient || '';
-    document.getElementById('guestUsers').value = state.guestUsers || '';
-    document.getElementById('adminUsers').value = state.allowedUsers || '';
-
-    if (state.bg.image && state.bg.image.indexOf('data:') === 0) {
-      document.getElementById('bgUploadHint').textContent = '当前使用本地上传的图片';
-    } else {
-      document.getElementById('bgUploadHint').textContent = '';
+    try {
+      window.open('settings.html', 'workbench-settings', 'noopener,noreferrer');
+    } catch (e) {
+      window.location.href = 'settings.html';
     }
-    document.getElementById('bgImageFile').value = '';
-    toggleBgInputs(state.bg.type);
-    var gallery = document.getElementById('bgGallery');
-    if (gallery) {
-      gallery.innerHTML = '';
-      BG_LIBRARY.forEach(function (item) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'bg-gallery-item' + (state.bg.type === 'image' && state.bg.image === item.url ? ' active' : '');
-        btn.title = item.name;
-        btn.innerHTML = '<img src="' + item.url + '" alt="">';
-        btn.addEventListener('click', function () {
-          state.bg.type = 'image';
-          state.bg.image = item.url;
-          persistState();
-          applyBackground();
-          openSettings();
-        });
-        gallery.appendChild(btn);
-      });
-    }
-    /* 初始化主题选择器 */
-    var themeSelector = document.getElementById('themeSelector');
-    if (themeSelector && window.ThemeSystem) {
-      var currentTheme = window.ThemeSystem.getCurrentTheme();
-      var themes = window.ThemeSystem.getThemeList();
-      themeSelector.innerHTML = themes.map(function(theme) {
-        return '<button type="button" class="theme-card' + (theme.key === currentTheme ? ' active' : '') + '" data-theme="' + theme.key + '">' +
-          '<div class="theme-card-icon">' + theme.icon + '</div>' +
-          '<div class="theme-card-name">' + theme.name + '</div>' +
-        '</button>';
-      }).join('');
-      
-      /* 绑定主题切换事件 */
-      themeSelector.querySelectorAll('.theme-card').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var themeKey = btn.dataset.theme;
-          window.ThemeSystem.applyTheme(themeKey);
-          /* 更新激活状态 */
-          themeSelector.querySelectorAll('.theme-card').forEach(function(b) {
-            b.classList.toggle('active', b.dataset.theme === themeKey);
-          });
-          showToast('主题已切换', 'success');
-        });
-      });
-    }
-    
-    if (window.workbenchApi) {
-      document.getElementById('dataPathSection').style.display = '';
-      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
-      window.workbenchApi.getConfig().then(function (cfg) {
-        document.getElementById('dataPathInput').value = (cfg && cfg.dataPath) || '';
-        if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
-        if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
-      });
-    }
-    settingsPanel.classList.add('open');
-    settingsOverlay.classList.add('show');
-  }
-  function closeSettings() {
-    settingsPanel.classList.remove('open');
-    settingsOverlay.classList.remove('show');
-  }
-  function toggleBgInputs(type) {
-    document.getElementById('bgColorWrap').classList.toggle('hidden', type !== 'color');
-    document.getElementById('bgImageWrap').classList.toggle('hidden', type !== 'image');
-    document.getElementById('bgGradientWrap').classList.toggle('hidden', type !== 'gradient');
   }
   document.getElementById('btnSettings').addEventListener('click', openSettings);
-  document.getElementById('btnCloseSettings').addEventListener('click', closeSettings);
-  settingsOverlay.addEventListener('click', closeSettings);
-  document.getElementById('bgType').addEventListener('change', function () { toggleBgInputs(this.value); });
-  document.getElementById('btnApplySettings').addEventListener('click', function () {
-    state.layout = {
-      cols: Math.max(1, Math.min(6, parseInt(document.getElementById('layoutCols').value, 10) || 3)),
-      gap: Math.max(0, Math.min(48, parseInt(document.getElementById('layoutGap').value, 10) || 16)),
-      align: document.getElementById('layoutAlign').value
-    };
-    var urlInput = (document.getElementById('bgImage').value || '').trim();
-    var keepUploaded = !urlInput && state.bg.image && state.bg.image.indexOf('data:') === 0;
-    state.bg = {
-      type: document.getElementById('bgType').value,
-      color: document.getElementById('bgColor').value,
-      image: urlInput || (keepUploaded ? state.bg.image : ''),
-      gradient: (document.getElementById('bgGradient').value || '').trim() || defaultBg.gradient
-    };
-    state.guestUsers = (document.getElementById('guestUsers').value || '').trim();
-    state.allowedUsers = (document.getElementById('adminUsers').value || '').trim();
-
-    persistState();
-    if (window.workbenchApi) {
-      window.workbenchApi.setConfig({
-        dataPath: (document.getElementById('dataPathInput').value || '').trim(),
-        obsidianVaultPath: (document.getElementById('obsidianVaultPathInput') ? document.getElementById('obsidianVaultPathInput').value : '').trim(),
-        obsidianSyncFolder: (document.getElementById('obsidianSyncFolderInput') ? document.getElementById('obsidianSyncFolderInput').value : 'WorkbenchSync').trim() || 'WorkbenchSync'
-      });
-    }
-    applyLayout();
-    applyBackground();
-    closeSettings();
-  });
-  document.getElementById('bgImageFile').addEventListener('change', function () {
-    var file = this.files && this.files[0];
-    if (!file || !file.type.match(/^image\//)) return;
-    var hint = document.getElementById('bgUploadHint');
-    hint.textContent = '处理中…';
-    var img = new Image();
-    var url = URL.createObjectURL(file);
-    img.onload = function () {
-      URL.revokeObjectURL(url);
-      var w = img.width, h = img.height, maxW = 1920, maxH = 1080;
-      if (w > maxW || h > maxH) {
-        var r = Math.min(maxW / w, maxH / h);
-        w = Math.round(w * r);
-        h = Math.round(h * r);
-      }
-      var canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      try {
-        state.bg.type = 'image';
-        state.bg.image = canvas.toDataURL('image/jpeg', 0.85);
-        persistState();
-        applyBackground();
-        hint.textContent = '已使用本地上传的图片';
-      } catch (_) { hint.textContent = '上传失败'; }
-      this.value = '';
-    };
-    img.onerror = function () { URL.revokeObjectURL(url); hint.textContent = '上传失败'; };
-    img.src = url;
-  });
-
-    var btnExportState = document.getElementById('btnExportState');
-    if (btnExportState) btnExportState.addEventListener('click', function () {
-      exportStateToFile(false);
-      showToast('数据已导出', 'success');
-    });
-
-  var btnImportState = document.getElementById('btnImportState');
-  var importStateFile = document.getElementById('importStateFile');
-  if (btnImportState && importStateFile) {
-    btnImportState.addEventListener('click', function () { importStateFile.click(); });
-    importStateFile.addEventListener('change', function () {
-      var f = this.files && this.files[0];
-      if (!f) return;
-            importStateFromFile(f)
-        .then(function () { showToast('导入成功', 'success'); })
-        .catch(function () { showToast('导入失败：文件格式不正确', 'error'); })
-        .finally(function () { importStateFile.value = ''; });
-
-    });
-  }
-
-  if (window.workbenchApi) {
-    window.workbenchApi.getConfig().then(function (cfg) {
-      if (document.getElementById('dataPathSection')) document.getElementById('dataPathSection').style.display = '';
-      if (document.getElementById('obsidianPathSection')) document.getElementById('obsidianPathSection').style.display = '';
-      if (document.getElementById('dataPathInput') && cfg && cfg.dataPath) document.getElementById('dataPathInput').value = cfg.dataPath;
-      if (document.getElementById('obsidianVaultPathInput')) document.getElementById('obsidianVaultPathInput').value = (cfg && cfg.obsidianVaultPath) || '';
-      if (document.getElementById('obsidianSyncFolderInput')) document.getElementById('obsidianSyncFolderInput').value = (cfg && cfg.obsidianSyncFolder) || 'WorkbenchSync';
-    }).catch(function () {});
-
-    var chooseBtn = document.getElementById('btnChooseDataPath');
-    if (chooseBtn) chooseBtn.addEventListener('click', function () {
-      window.workbenchApi.chooseDataPath().then(function (path) {
-        if (!path) return;
-        window.workbenchApi.setConfig({ dataPath: path });
-        document.getElementById('dataPathInput').value = path;
-      });
-    });
-
-    var chooseObsidianBtn = document.getElementById('btnChooseObsidianVaultPath');
-    if (chooseObsidianBtn) chooseObsidianBtn.addEventListener('click', function () {
-      window.workbenchApi.chooseObsidianVaultPath().then(function (vaultPath) {
-        if (!vaultPath) return;
-        var syncFolderInput = document.getElementById('obsidianSyncFolderInput');
-        var syncFolder = ((syncFolderInput && syncFolderInput.value) || 'WorkbenchSync').trim() || 'WorkbenchSync';
-        window.workbenchApi.setConfig({ obsidianVaultPath: vaultPath, obsidianSyncFolder: syncFolder });
-        document.getElementById('obsidianVaultPathInput').value = vaultPath;
-      });
-    });
-  }
 
   bindModuleModal();
   bindItemModal();
@@ -3058,6 +2766,34 @@
   }
 
   renderAppShell();
+
+  window.addEventListener('storage', function (e) {
+    if (!e.key || e.storageArea !== localStorage) return;
+    var syncKeys = ['workbench_state', 'workbench_layout', 'workbench_bg', 'workbench_allowed_users', 'workbench_todos'];
+    if (syncKeys.indexOf(e.key) === -1) return;
+    try {
+      WorkbenchPersist.refreshAppStateFromLocalStorage(state);
+      applyLayout();
+      applyBackground();
+      renderTodos();
+      renderModules();
+      renderOverviewMetrics();
+    } catch (err) {
+      console.warn('storage sync', err);
+    }
+  });
+
+  window.addEventListener('message', function (ev) {
+    try {
+      if (!ev.data || ev.data.type !== 'workbench-settings-saved') return;
+      WorkbenchPersist.refreshAppStateFromLocalStorage(state);
+      applyLayout();
+      applyBackground();
+      renderTodos();
+      renderModules();
+      renderOverviewMetrics();
+    } catch (_) {}
+  });
   
   /* 检查是否需要备份提醒 */
   checkBackupReminder();
@@ -3180,10 +2916,6 @@
           break;
         }
       }
-      if (!closed && settingsPanel && settingsPanel.classList.contains('open')) {
-        closeSettings();
-        closed = true;
-      }
       if (!closed && searchInput && searchInput.value) {
         searchInput.value = '';
         renderModules();
@@ -3197,9 +2929,9 @@
     var electronStateLoadStartedAt = Date.now();
     window.workbenchApi.loadState().then(function (data) {
       if (data) {
-        var incomingUpdatedAt = getStateUpdatedAt(data);
-        var hasNewerLocalState = hasFreshLocalState(incomingUpdatedAt);
-        if (lastStateChangeAt > electronStateLoadStartedAt || hasNewerLocalState) {
+        var incomingUpdatedAt = WorkbenchPersist.getStateUpdatedAt(data);
+        var hasNewerLocalState = WorkbenchPersist.hasFreshLocalState(incomingUpdatedAt);
+        if (WorkbenchPersist.getLastStateChangeAt() > electronStateLoadStartedAt || hasNewerLocalState) {
           return;
         }
         state = migrateState(data);
@@ -3207,7 +2939,7 @@
         if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
         state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
         if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
-        lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
+        WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), incomingUpdatedAt));
       }
       if (data) {
         renderAppShell();
@@ -3221,11 +2953,11 @@
       if (rawState.guestUsers !== undefined) state.guestUsers = rawState.guestUsers;
       if (Array.isArray(rawState.todos)) state.todos = normalizeTodos(rawState.todos);
       if (rawState.collapsedModules) state.collapsedModules = rawState.collapsedModules;
-      lastPersistedStateAt = Math.max(lastPersistedStateAt, getStateUpdatedAt(rawState));
+      WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), WorkbenchPersist.getStateUpdatedAt(rawState)));
     }
     if (typeof state.allowedUsers !== 'string') state.allowedUsers = '';
     var cloudStateLoadStartedAt = Date.now();
-    fetchFirstOk(CLOUD_STATE_URLS, { method: 'GET' })
+    WorkbenchPersist.fetchFirstOk(WorkbenchPersist.CLOUD_STATE_URLS, { method: 'GET' })
       .then(function (pair) {
         return pair.res.text();
       })
@@ -3235,9 +2967,9 @@
         }
         var data = JSON.parse(text);
         if (data && (data.modules || data.layout || data.allowedUsers != null || data.guestUsers != null)) {
-          var incomingUpdatedAt = getStateUpdatedAt(data);
-          var hasNewerLocalState = hasFreshLocalState(incomingUpdatedAt);
-          if (lastStateChangeAt > cloudStateLoadStartedAt || hasNewerLocalState) {
+          var incomingUpdatedAt = WorkbenchPersist.getStateUpdatedAt(data);
+          var hasNewerLocalState = WorkbenchPersist.hasFreshLocalState(incomingUpdatedAt);
+          if (WorkbenchPersist.getLastStateChangeAt() > cloudStateLoadStartedAt || hasNewerLocalState) {
             return;
           }
           state = migrateState(data);
@@ -3245,7 +2977,7 @@
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
-          lastPersistedStateAt = Math.max(lastPersistedStateAt, incomingUpdatedAt);
+          WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), incomingUpdatedAt));
           renderAppShell();
         }
       })

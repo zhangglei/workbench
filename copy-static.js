@@ -32,6 +32,8 @@ const filesToCopy = [
   'theme-glass.css',
   'theme-glass.js',
   'knowledge.js',
+  'settings.html',
+  'settings-page.js',
 ];
 
 // 图标文件
@@ -53,6 +55,13 @@ filesToCopy.forEach(file => {
     console.warn(`File ${file} does not exist, skipping`);
   }
 });
+
+// 复制 modules 目录（状态、持久化、背景库等）
+const modulesDir = path.join(srcDir, 'modules');
+if (fs.existsSync(modulesDir)) {
+  copyDirRecursive(modulesDir, path.join(destDir, 'modules'));
+  console.log('Copied modules directory');
+}
 
 // 复制 api 目录（如果存在）
 const apiDir = path.join(srcDir, 'api');

@@ -325,86 +325,6 @@
     </div>
   </div>
 
-  <!-- 设置面板 -->
-  <aside class="panel" id="settingsPanel">
-    <div class="panel-header">
-      <h2>设置</h2>
-      <button type="button" class="btn btn-icon btn-close" id="btnCloseSettings">×</button>
-    </div>
-    <div class="panel-body">
-      <section class="setting-section">
-        <h3>游客账号（每行 用户名:密码）</h3>
-        <p class="setting-hint">只允许评论，不能编辑内容；不填写则默认游客：admin:admin。</p>
-        <textarea id="guestUsers" rows="3" placeholder="admin:admin"></textarea>
-      </section>
-      <section class="setting-section">
-        <h3>管理员账号（每行 用户名:密码）</h3>
-        <p class="setting-hint">拥有全部编辑权限；当前已填写的账号会被视为管理员。</p>
-        <textarea id="adminUsers" rows="4" placeholder="123:123&#10;zhangsan:123456"></textarea>
-      </section>
-      <section class="setting-section">
-        <h3>主题</h3>
-        <p class="setting-hint">选择界面主题，立即生效</p>
-        <div class="theme-selector" id="themeSelector"></div>
-      </section>
-      <section class="setting-section">
-        <h3>排版</h3>
-        <label>列数 <input type="number" id="layoutCols" min="1" max="6" value="3"></label>
-        <label>间距 <input type="number" id="layoutGap" min="0" max="48" value="16"> px</label>
-        <label>对齐 <select id="layoutAlign">
-          <option value="start">左对齐</option>
-          <option value="center">居中</option>
-          <option value="end">右对齐</option>
-        </select></label>
-      </section>
-      <section class="setting-section">
-        <h3>背景</h3>
-        <label>类型 <select id="bgType">
-          <option value="color">纯色</option>
-          <option value="image">图片</option>
-          <option value="gradient">渐变</option>
-        </select></label>
-        <div id="bgColorWrap">
-          <label>颜色 <input type="color" id="bgColor" value="#1a1b26"></label>
-        </div>
-        <div id="bgImageWrap" class="hidden">
-          <p class="setting-label">资源库（点击即换）</p>
-          <div class="bg-gallery" id="bgGallery"></div>
-          <label class="mt">本地上传 <input type="file" id="bgImageFile" accept="image/*"></label>
-          <p class="setting-hint" id="bgUploadHint"></p>
-          <label class="mt">自定义图片地址 <input type="url" id="bgImage" placeholder="https://..."></label>
-        </div>
-        <div id="bgGradientWrap" class="hidden">
-          <label>渐变 CSS <input type="text" id="bgGradient" placeholder="linear-gradient(...)"></label>
-        </div>
-      </section>
-      <section class="setting-section">
-        <h3>数据迁移 / 备份</h3>
-        <p class="setting-hint">用于把旧站点（如 Netlify）数据导出并导入到当前站点（如 Vercel）。</p>
-        <div class="item-content-actions">
-          <button type="button" class="btn btn-secondary btn-sm" id="btnExportState">导出数据</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btnImportState">导入数据</button>
-          <input type="file" id="importStateFile" accept=".json" style="display:none;">
-        </div>
-      </section>
-      <section class="setting-section" id="dataPathSection" style="display: none;">
-        <h3>数据保存路径</h3>
-        <label>目录 <input type="text" id="dataPathInput" readonly></label>
-        <button type="button" class="btn btn-secondary" id="btnChooseDataPath">选择文件夹</button>
-      </section>
-      <section class="setting-section" id="obsidianPathSection" style="display: none;">
-        <h3>Obsidian 双向同步</h3>
-        <p class="setting-hint">仅桌面版可用。选择 Vault 目录后，工作台会在其中的 <code>WorkbenchSync</code> 子目录中同步 Markdown 笔记，并继续同步现有知识库数据。</p>
-        <label>Vault 目录 <input type="text" id="obsidianVaultPathInput" readonly></label>
-        <label>同步子目录 <input type="text" id="obsidianSyncFolderInput" value="WorkbenchSync" placeholder="WorkbenchSync"></label>
-        <button type="button" class="btn btn-secondary" id="btnChooseObsidianVaultPath">选择 Vault 文件夹</button>
-      </section>
-
-      <button type="button" class="btn btn-secondary" id="btnApplySettings">应用设置</button>
-    </div>
-  </aside>
-  <div class="overlay" id="settingsOverlay"></div>
-
   <!-- 添加/编辑 模块 弹窗 -->
   <div class="modal" id="moduleModal" role="dialog" aria-modal="true" aria-labelledby="moduleModalTitle">
     <div class="modal-content">
@@ -602,6 +522,7 @@
   <!-- 模块化拆分：先加载工具和状态管理 -->
   <script src="modules/utils.js"></script>
   <script src="modules/state.js"></script>
+  <script src="modules/workbench-persist.js"></script>
   <script src="modules/advanced-search.js"></script>
   <script src="modules/note-templates.js"></script>
   <script src="modules/theme-system.js"></script>
