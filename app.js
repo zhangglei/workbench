@@ -260,6 +260,30 @@
   state.todoCalendarMonth = todoUIState.calendarMonth;
   var currentUser = localStorage.getItem(STORAGE_USER) || '';
   var currentRole = localStorage.getItem(STORAGE_USER_ROLE) || '';
+  var mappedFolderTreeCache = {};
+
+  function getMappedFolderTreeCached(mappedPath) {
+    if (!mappedPath || !window.workbenchApi || typeof window.workbenchApi.getMappedFolderTree !== 'function') {
+      return Promise.resolve(null);
+    }
+    if (mappedFolderTreeCache[mappedPath]) {
+      return mappedFolderTreeCache[mappedPath];
+    }
+    mappedFolderTreeCache[mappedPath] = window.workbenchApi.getMappedFolderTree(mappedPath)
+      .then(function (tree) {
+        return Array.isArray(tree) ? tree : null;
+      })
+      .catch(function () {
+        delete mappedFolderTreeCache[mappedPath];
+        return null;
+      });
+    return mappedFolderTreeCache[mappedPath];
+  }
+
+  function invalidateMappedFolderTreeCache(mappedPath) {
+    if (!mappedPath) return;
+    delete mappedFolderTreeCache[mappedPath];
+  }
 
   function removeTodoEntry(targetTodo) {
     var todos = Array.isArray(state.todos) ? state.todos : [];
@@ -415,6 +439,40 @@
       keywords: normalizeCommandKeywords(keywords),
       run: run
     };
+  }
+
+  function getAttachmentNamesText(attachments) {
+    return (Array.isArray(attachments) ? attachments : []).map(function (att) {
+      return (att && att.name) ? att.name : '';
+    }).filter(Boolean).join(' ');
+  }
+
+  function openCommandPaletteItemTarget(mod, it) {
+    if (typeof window.showView === 'function') window.showView('dashboard');
+    addRecentActivity('module', it.id, it.title || '未命名', mod.name || '');
+    if (canEdit()) {
+      openItemModal(mod.id, it);
+      return;
+    }
+    if (it.url && it.url.trim()) {
+      var targetUrl = it.url.trim();
+      if (it.newTab === false) {
+        window.location.href = targetUrl;
+      } else {
+        window.open(targetUrl, '_blank', 'noopener');
+      }
+      return;
+    }
+    var attachments = Array.isArray(it.attachments) ? it.attachments.filter(Boolean) : [];
+    if (attachments.length === 1) {
+      openAttachmentViewWindow(attachments[0]);
+      return;
+    }
+    if (attachments.length > 1) {
+      openAttachmentsModal(it);
+      return;
+    }
+    openViewContentModal(it);
   }
 
   function openCommandPalette(initialQuery) {
@@ -602,15 +660,15 @@
       (mod.items || []).forEach(function (it) {
         var contentText = stripHtml(linkify(it.content || ''));
         var itemTitle = (it && it.title) ? it.title : '未命名内容';
+        var attachmentNamesText = getAttachmentNamesText(it.attachments);
         items.push(createCommandPaletteItem(
           'item',
           itemTitle,
           modName,
           (it.url && it.content) ? '链接 + 正文' : (it.url ? '链接' : '正文'),
-          [itemTitle, modName, it.url, it.content, '内容 item link'],
+          [itemTitle, modName, it.url, it.content, attachmentNamesText, '内容 item link 附件 attachment'],
           function () {
-            if (typeof window.showView === 'function') window.showView('dashboard');
-            openItemModal(mod.id, it);
+            openCommandPaletteItemTarget(mod, it);
           }
         ));
         if (contentText) {
@@ -1773,7 +1831,7 @@
       var attachments = window._currentAttachments || [];
       var att = attachments.find(function(a) { return a.id === decodedId; });
       if (att) {
-        openAttachmentWindow(att);
+        openAttachmentViewWindow(att);
       } else {
         console.error('未找到附件，ID:', decodedId);
       }
@@ -2395,8 +2453,8 @@
 
     var promises = sorted.map(function (mod) {
       if (mod.mappedPath && window.workbenchApi) {
-        return window.workbenchApi.getMappedFolderTree(mod.mappedPath).then(function (tree) {
-          return { mod: mod, tree: Array.isArray(tree) ? tree : null };
+        return getMappedFolderTreeCached(mod.mappedPath).then(function (tree) {
+          return { mod: mod, tree: tree };
         }).catch(function () { return { mod: mod, tree: null }; });
       }
       return Promise.resolve({ mod: mod, tree: null });
@@ -2440,7 +2498,15 @@
       var visibleToAll = document.getElementById('moduleVisibleToAll').checked;
       if (idVal) {
         var m = state.modules.find(function (x) { return x.id === idVal; });
-        if (m) { m.name = nameVal; m.mappedPath = mappedPath || undefined; m.visibleToAll = visibleToAll; }
+        if (m) {
+          var oldMappedPath = m.mappedPath;
+          m.name = nameVal;
+          m.mappedPath = mappedPath || undefined;
+          m.visibleToAll = visibleToAll;
+          if (oldMappedPath && oldMappedPath !== m.mappedPath) {
+            invalidateMappedFolderTreeCache(oldMappedPath);
+          }
+        }
       } else {
         state.modules.push({
           id: id(),
@@ -2788,10 +2854,14 @@
   bindLoginModal();
   bindTodoPanel();
   bindCommandPalette();
-  function renderAppShell() {
+  function renderShellChrome() {
     updateUserUI();
     applyLayout();
     applyBackground();
+  }
+
+  function renderAppShell() {
+    renderShellChrome();
     renderTodos();
     renderModules();
     /* 初始化概览卡片和最近使用 */
@@ -2799,7 +2869,11 @@
     renderRecentActivity();
   }
 
-  renderAppShell();
+  if (window.workbenchApi) {
+    renderShellChrome();
+  } else {
+    renderAppShell();
+  }
 
   window.addEventListener('storage', function (e) {
     if (!e.key || e.storageArea !== localStorage) return;
@@ -2965,20 +3039,19 @@
       if (data) {
         var incomingUpdatedAt = WorkbenchPersist.getStateUpdatedAt(data);
         var hasNewerLocalState = WorkbenchPersist.hasFreshLocalState(incomingUpdatedAt);
-        if (WorkbenchPersist.getLastStateChangeAt() > electronStateLoadStartedAt || hasNewerLocalState) {
-          return;
+        if (!(WorkbenchPersist.getLastStateChangeAt() > electronStateLoadStartedAt || hasNewerLocalState)) {
+          state = migrateState(data);
+          if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
+          if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
+          state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
+          if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
+          WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), incomingUpdatedAt));
         }
-        state = migrateState(data);
-        if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
-        if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
-        state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
-        if (data.collapsedModules) state.collapsedModules = data.collapsedModules;
-        WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), incomingUpdatedAt));
       }
-      if (data) {
-        renderAppShell();
-      }
-    }).catch(function () {});
+      renderAppShell();
+    }).catch(function () {
+      renderAppShell();
+    });
   } else {
     var rawState = load(STORAGE_STATE, null);
     if (rawState) {
@@ -3007,13 +3080,17 @@
           if (WorkbenchPersist.getLastStateChangeAt() > cloudStateLoadStartedAt || hasNewerLocalState) {
             return;
           }
+          var currentStateUpdatedAt = WorkbenchPersist.getStateUpdatedAt(state);
+          var shouldRerenderShell = !rawState || incomingUpdatedAt > currentStateUpdatedAt;
           state = migrateState(data);
           if (data.allowedUsers !== undefined) state.allowedUsers = ensureDefaultAdminAccount(data.allowedUsers);
           if (data.guestUsers !== undefined) state.guestUsers = data.guestUsers;
           state.todos = normalizeTodos(Array.isArray(data.todos) ? data.todos : (state.todos || []));
           if (data.collapsedModules) state.collapsedModules = data.collapsedModules || {};
           WorkbenchPersist.setLastPersistedStateAt(Math.max(WorkbenchPersist.getLastPersistedStateAt(), incomingUpdatedAt));
-          renderAppShell();
+          if (shouldRerenderShell) {
+            renderAppShell();
+          }
         }
       })
       .catch(function (e) {
