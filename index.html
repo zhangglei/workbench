@@ -40,8 +40,10 @@
   <script>
     (function () {
       try {
-        if (localStorage.getItem('workbench_user')) {
+        var hasUser = !!localStorage.getItem('workbench_user');
+        if (hasUser) {
           document.documentElement.classList.add('wb-has-user');
+          document.documentElement.classList.add('wb-app-booting');
         }
       } catch (_) {}
     })();
@@ -49,6 +51,9 @@
   <style>
     html.wb-has-user #loginOverlay {
       display: none;
+    }
+    html.wb-app-booting #app {
+      visibility: hidden;
     }
   </style>
 </head>

@@ -872,6 +872,15 @@
     
     /* 知识库笔记总数 */
     var notes = window.KnowledgeBase && window.KnowledgeBase.getNotes ? window.KnowledgeBase.getNotes() : [];
+    if (!Array.isArray(notes) || !notes.length) {
+      try {
+        var rawKnowledgeNotes = localStorage.getItem('workbench_knowledge');
+        var parsedKnowledgeNotes = rawKnowledgeNotes ? JSON.parse(rawKnowledgeNotes) : [];
+        notes = Array.isArray(parsedKnowledgeNotes) ? parsedKnowledgeNotes : [];
+      } catch (e) {
+        notes = [];
+      }
+    }
     overviewKnowledgeCount.textContent = String(notes.length);
     
     /* 本周新增笔记：最近7天创建的笔记数 */
@@ -2854,6 +2863,12 @@
   bindLoginModal();
   bindTodoPanel();
   bindCommandPalette();
+  function finishAppBoot() {
+    try {
+      document.documentElement.classList.remove('wb-app-booting');
+    } catch (_) {}
+  }
+
   function renderShellChrome() {
     updateUserUI();
     applyLayout();
@@ -2867,6 +2882,7 @@
     /* 初始化概览卡片和最近使用 */
     renderOverviewMetrics();
     renderRecentActivity();
+    finishAppBoot();
   }
 
   if (window.workbenchApi) {
