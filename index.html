@@ -37,6 +37,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"
         media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"></noscript>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('workbench_user')) {
+          document.documentElement.classList.add('wb-has-user');
+        }
+      } catch (_) {}
+    })();
+  </script>
+  <style>
+    html.wb-has-user #loginOverlay {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <div class="login-overlay" id="loginOverlay">
