@@ -12,6 +12,9 @@ if (!fs.existsSync(destDir)) {
 // 要复制的文件列表
 const filesToCopy = [
   'index.html',
+  'portal.html',
+  'portal.css',
+  'portal.js',
   'app.js',
   'styles.css',
   'manifest.json',

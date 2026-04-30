@@ -19,6 +19,9 @@
       "main.js",
       "preload.js",
       "index.html",
+      "portal.html",
+      "portal.css",
+      "portal.js",
       "styles.css",
       "app.js",
       "manifest.json"

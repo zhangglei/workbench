@@ -631,6 +631,7 @@ File Name: X4U-2.10.2.6610.z
         persistNotesLocal(state.notes, mergedTs);
         renderTagBar();
         renderNoteList();
+        refreshOverviewMetrics();
 
         pushNotesToCloud(state.notes, mergedTs);
         pushNotesToObsidian(state.notes);
@@ -639,6 +640,7 @@ File Name: X4U-2.10.2.6610.z
         state.notes = localNotes;
         renderTagBar();
         renderNoteList();
+        refreshOverviewMetrics();
         if (onDone) onDone();
       });
       return;
@@ -671,6 +673,7 @@ File Name: X4U-2.10.2.6610.z
           } catch (e) {}
           renderTagBar();
           renderNoteList();
+          refreshOverviewMetrics();
         } else {
           /* 本地更新或远端为空 → 把本地推到远端 */
           fetchKnowledgeApi({
@@ -698,6 +701,7 @@ File Name: X4U-2.10.2.6610.z
       persistNotesLocal(state.notes, payload && payload.ts ? payload.ts : Date.now());
       renderTagBar();
       renderNoteList();
+      refreshOverviewMetrics();
       if (state.currentNoteId) openNoteDetail(state.currentNoteId);
       showToast('已同步 Obsidian 笔记变更', 'success');
       pushNotesToCloud(state.notes, payload && payload.ts ? payload.ts : Date.now());
@@ -769,6 +773,14 @@ File Name: X4U-2.10.2.6610.z
     if (window.WorkbenchUI && typeof window.WorkbenchUI.showToast === 'function') {
       window.WorkbenchUI.showToast(message, type || 'success');
     }
+  }
+
+  /* 刷新首页概览卡片，保证知识库统计与笔记数据同步 */
+  function refreshOverviewMetrics() {
+    if (typeof window.renderOverviewMetrics !== 'function') return;
+    try {
+      window.renderOverviewMetrics();
+    } catch (e) {}
   }
 
     function confirmAction(options) {
@@ -1524,6 +1536,7 @@ File Name: X4U-2.10.2.6610.z
     bindObsidianSync();
     renderTagBar();
     renderNoteList();
+    refreshOverviewMetrics();
 
     /* 根据角色决定新建 / 导入按钮可见性 */
     var role = '';

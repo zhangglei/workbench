@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作台 Portal</title>
+  <meta name="theme-color" content="#061225">
+  <meta name="description" content="工作台的亮眼欢迎入口，快速进入模块、知识库和今日待办。">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"
+        media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css"></noscript>
+  <link rel="stylesheet" href="portal.css">
+</head>
+<body>
+  <div class="portal-bg" aria-hidden="true">
+    <span class="portal-orb portal-orb--cyan"></span>
+    <span class="portal-orb portal-orb--violet"></span>
+    <span class="portal-orb portal-orb--gold"></span>
+    <span class="portal-grid"></span>
+  </div>
+
+  <main class="portal-shell">
+    <header class="portal-header" aria-label="Portal 顶部导航">
+      <a class="portal-brand" href="index.html#dashboard" aria-label="进入我的工作台">
+        <span class="portal-brand-logo"><i class="ri-sparkling-2-line"></i></span>
+        <span>
+          <strong>Workbench Portal</strong>
+          <em id="portalUserLabel">轻奢玻璃工作入口</em>
+        </span>
+      </a>
+      <nav class="portal-nav" aria-label="快捷入口">
+        <a href="index.html#dashboard"><i class="ri-dashboard-3-line"></i> 工作台</a>
+        <a href="index.html#knowledge"><i class="ri-book-open-line"></i> 知识库</a>
+        <a href="index.html#dashboard" data-scroll-target="todo"><i class="ri-checkbox-circle-line"></i> 今日待办</a>
+      </nav>
+    </header>
+
+    <section class="portal-hero" aria-labelledby="portalTitle">
+      <div class="portal-hero-main">
+        <div class="portal-kicker">
+          <i class="ri-flashlight-line"></i>
+          <span>亮眼入口 · 简单操作 · 长期耐看</span>
+        </div>
+        <h1 id="portalTitle">把模块、待办和知识库，收进一个高级入口。</h1>
+        <p class="portal-hero-desc">
+          一个更醒目的欢迎页：打开就能看到核心数据、常用入口和快速搜索，不改变原工作台使用方式。
+        </p>
+
+        <div class="portal-search" role="search">
+          <i class="ri-search-2-line" aria-hidden="true"></i>
+          <input id="portalSearchInput" type="search" placeholder="搜索模块、内容、笔记；回车打开第一个结果" autocomplete="off">
+          <span class="portal-search-key">Enter</span>
+        </div>
+        <div class="portal-search-results" id="portalSearchResults" aria-live="polite"></div>
+
+        <div class="portal-actions" aria-label="主要操作">
+          <a class="portal-btn portal-btn--primary" href="index.html#dashboard">
+            <i class="ri-rocket-line"></i>
+            进入工作台
+          </a>
+          <a class="portal-btn portal-btn--ghost" href="index.html#knowledge">
+            <i class="ri-book-read-line"></i>
+            打开知识库
+          </a>
+        </div>
+      </div>
+
+      <aside class="portal-hero-card" aria-label="今日概览">
+        <div class="portal-card-glow"></div>
+        <div class="portal-status-pill">
+          <i class="ri-pulse-line"></i>
+          <span id="portalTodayLabel">今日概览</span>
+        </div>
+        <div class="portal-score">
+          <span id="portalFocusScore">88</span>
+          <small>Focus</small>
+        </div>
+        <p id="portalFocusText">数据正在读取，准备进入你的工作流。</p>
+        <div class="portal-mini-chart" aria-hidden="true">
+          <span style="--h: 42%"></span>
+          <span style="--h: 68%"></span>
+          <span style="--h: 54%"></span>
+          <span style="--h: 86%"></span>
+          <span style="--h: 63%"></span>
+          <span style="--h: 78%"></span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="portal-metrics" aria-label="核心数据">
+      <article class="portal-metric-card">
+        <i class="ri-apps-2-line"></i>
+        <span>模块入口</span>
+        <strong id="portalModuleCount">0</strong>
+        <em>统一收纳</em>
+      </article>
+      <article class="portal-metric-card">
+        <i class="ri-links-line"></i>
+        <span>内容条目</span>
+        <strong id="portalItemCount">0</strong>
+        <em>快速触达</em>
+      </article>
+      <article class="portal-metric-card">
+        <i class="ri-book-marked-line"></i>
+        <span>知识笔记</span>
+        <strong id="portalNoteCount">0</strong>
+        <em>持续沉淀</em>
+      </article>
+      <article class="portal-metric-card">
+        <i class="ri-checkbox-multiple-line"></i>
+        <span>待办事项</span>
+        <strong id="portalTodoCount">0</strong>
+        <em>今日推进</em>
+      </article>
+    </section>
+
+    <section class="portal-entry-grid" aria-label="主要入口">
+      <a class="portal-entry portal-entry--dashboard" href="index.html#dashboard">
+        <span class="portal-entry-icon"><i class="ri-dashboard-horizontal-line"></i></span>
+        <strong>工作台总览</strong>
+        <em>模块、待办、最近活动集中查看</em>
+        <b>进入 <i class="ri-arrow-right-up-line"></i></b>
+      </a>
+      <a class="portal-entry portal-entry--knowledge" href="index.html#knowledge">
+        <span class="portal-entry-icon"><i class="ri-brain-line"></i></span>
+        <strong>知识库中心</strong>
+        <em>搜索笔记、沉淀经验、回看资料</em>
+        <b>打开 <i class="ri-arrow-right-up-line"></i></b>
+      </a>
+      <a class="portal-entry portal-entry--focus" href="index.html#dashboard">
+        <span class="portal-entry-icon"><i class="ri-focus-3-line"></i></span>
+        <strong>今日专注</strong>
+        <em>先看待办，再进入高频模块</em>
+        <b>开始 <i class="ri-arrow-right-up-line"></i></b>
+      </a>
+    </section>
+
+    <section class="portal-lower-grid">
+      <div class="portal-panel">
+        <div class="portal-panel-header">
+          <div>
+            <h2><i class="ri-star-smile-line"></i> 常用模块</h2>
+            <p>根据当前本地数据自动展示前几个模块入口。</p>
+          </div>
+          <a href="index.html#dashboard">全部模块</a>
+        </div>
+        <div class="portal-module-list" id="portalModuleList"></div>
+      </div>
+
+      <div class="portal-panel portal-panel--timeline">
+        <div class="portal-panel-header">
+          <div>
+            <h2><i class="ri-time-line"></i> 轻量动态</h2>
+            <p>不用复杂操作，快速掌握当前工作台状态。</p>
+          </div>
+        </div>
+        <div class="portal-timeline" id="portalTimeline"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="portal.js"></script>
+</body>
+</html>
