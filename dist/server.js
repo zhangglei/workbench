@@ -131,8 +131,14 @@ const server = http.createServer(async (req, res) => {
   /* 优先处理 API 请求 */
   if (await handleApi(req, res)) return;
 
-  let url = req.url === '/' ? '/index.html' : path.normalize(req.url).replace(/^(\.\.(\/|\\|$))+/, '');
-  const filePath = path.join(ROOT, url.split('?')[0]);
+  const rawUrl = req.url || '/';
+  const requestPath = rawUrl.split('?')[0] || '/';
+  // 默认进入更亮眼的 Portal，保留 /workbench 直达原工作台，降低用户操作成本。
+  let url = requestPath === '/' ? '/portal.html' : requestPath;
+  if (url === '/portal') url = '/portal.html';
+  if (url === '/workbench') url = '/index.html';
+  const safePath = path.normalize(url).replace(/^(\.\.(\/|\\|$))+/, '');
+  const filePath = path.join(ROOT, safePath);
 
   if (!filePath.startsWith(ROOT)) {
     res.writeHead(403);
