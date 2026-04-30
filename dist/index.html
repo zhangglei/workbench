@@ -109,10 +109,16 @@
       <!-- 左侧主区域 -->
       <div class="dashboard-main">
         <section class="dashboard-overview" id="dashboardOverview" aria-labelledby="dashboardOverviewTitle">
-          <div class="dashboard-overview-header">
-            <div>
+          <div class="dashboard-overview-header dashboard-hero-header">
+            <div class="dashboard-hero-copy">
+              <span class="dashboard-hero-kicker"><i class="ri-sparkling-2-line"></i> 今日驾驶舱</span>
               <h2 class="dashboard-overview-title" id="dashboardOverviewTitle"><i class="ri-dashboard-line"></i> 工作概览</h2>
               <p class="dashboard-overview-subtitle" id="dashboardOverviewSubtitle">集中查看待办与知识库统计</p>
+              <p class="dashboard-focus-summary" id="dashboardFocusSummary">正在读取今日工作状态…</p>
+            </div>
+            <div class="dashboard-hero-actions" aria-label="今日快捷操作">
+              <a class="dashboard-hero-btn dashboard-hero-btn--primary" href="#mainGrid"><i class="ri-rocket-line"></i> 开始今日工作</a>
+              <a class="dashboard-hero-btn" href="#recentActivityPanel"><i class="ri-history-line"></i> 最近继续</a>
             </div>
           </div>
           <div class="overview-metrics" id="overviewMetrics">
@@ -137,6 +143,37 @@
               <span class="overview-card-meta" id="overviewKnowledgeWeekMeta">最近 7 天沉淀</span>
             </article>
           </div>
+        </section>
+
+        <section class="quick-action-panel" id="quickActionPanel" aria-label="快速行动">
+          <a class="quick-action-card" href="#mainGrid">
+            <i class="ri-apps-2-line"></i>
+            <span>
+              <strong>打开常用模块</strong>
+              <em>从模块启动器继续工作</em>
+            </span>
+          </a>
+          <a class="quick-action-card" href="#todoPanel">
+            <i class="ri-add-circle-line"></i>
+            <span>
+              <strong>新增待办</strong>
+              <em>把下一步先记下来</em>
+            </span>
+          </a>
+          <a class="quick-action-card" href="#headerSearchWrap">
+            <i class="ri-search-2-line"></i>
+            <span>
+              <strong>搜索内容</strong>
+              <em>查模块、链接、附件</em>
+            </span>
+          </a>
+          <button type="button" class="quick-action-card quick-action-card--button" id="btnQuickKnowledge">
+            <i class="ri-book-open-line"></i>
+            <span>
+              <strong>打开知识库</strong>
+              <em>回看沉淀的笔记</em>
+            </span>
+          </button>
         </section>
 
         <section class="todo-panel" id="todoPanel" aria-labelledby="todoPanelTitle">
@@ -199,6 +236,17 @@
           </div>
         </section>
         
+        <section class="module-launcher-panel" id="moduleLauncherPanel" aria-labelledby="moduleLauncherTitle">
+          <div class="module-launcher-header">
+            <div>
+              <span class="module-launcher-kicker"><i class="ri-layout-grid-line"></i> 模块启动器</span>
+              <h2 class="module-launcher-title" id="moduleLauncherTitle">常用入口，一点即达</h2>
+              <p class="module-launcher-subtitle" id="moduleLauncherSubtitle">优先打开模块、链接和附件，管理动作保持在二级入口。</p>
+            </div>
+            <div class="module-launcher-meta" id="moduleLauncherMeta">模块数据读取中</div>
+          </div>
+        </section>
+
         <!-- 模块批量操作工具栏 -->
         <div class="module-toolbar" id="moduleToolbar" style="display: none;">
           <button type="button" class="btn btn-sm module-toolbar-btn" id="btnExpandAll">

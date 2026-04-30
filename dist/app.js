@@ -890,6 +890,23 @@
       return noteDate.getTime() >= weekAgo;
     });
     overviewKnowledgeWeek.textContent = String(weekNotes.length);
+
+    /* P1 今日驾驶舱摘要：只读现有数据，不新增状态，降低实现风险。 */
+    var focusSummary = document.getElementById('dashboardFocusSummary');
+    if (focusSummary) {
+      focusSummary.textContent = '今天新增 ' + todayTodos.length + ' 个待办，仍有 ' + activeTodos.length + ' 个事项进行中，知识库已沉淀 ' + notes.length + ' 条笔记。';
+    }
+  }
+
+  function renderModuleLauncherMeta() {
+    var meta = document.getElementById('moduleLauncherMeta');
+    if (!meta) return;
+    var modules = (state.modules || []).filter(function (mod) { return mod.visibleToAll !== false || canEdit(); });
+    var itemCount = modules.reduce(function (sum, mod) {
+      var items = Array.isArray(mod.items) ? mod.items.filter(function (it) { return it.visibleToAll !== false || canEdit(); }) : [];
+      return sum + items.length;
+    }, 0);
+    meta.textContent = modules.length + ' 个模块 · ' + itemCount + ' 个入口';
   }
 
   /* 渲染最近使用列表 */
@@ -2101,20 +2118,50 @@
     card.draggable = canEdit();
     var q = getSearchText();
     var modNameHtml = highlightMatch(escapeHtml(mod.name || '未命名'), q);
+    var visibleCount = (mod.items || []).filter(function (it) { return it.visibleToAll !== false || canEdit(); }).length;
+    var launcherIcon = mod.icon && mod.icon.trim() ? mod.icon.trim() : 'ri-apps-2-line|#6de7ff';
+    var launcherIconParts = launcherIcon.split('|');
+    var launcherIconClass = launcherIconParts[0] || 'ri-apps-2-line';
+    var launcherIconColor = launcherIconParts[1] || '#6de7ff';
+    var previewItems = items.slice(0, 3).map(function (it) {
+      return '<button type="button" class="module-quick-chip" data-quick-item-id="' + escapeHtml(it.id) + '">' + highlightMatch(escapeHtml(it.title || '未命名'), q) + '</button>';
+    }).join('');
+    var moreCount = Math.max(0, items.length - 3);
     card.innerHTML =
-      '<div class="card-header">' +
+      '<div class="card-header module-launcher-card-header">' +
+        '<div class="module-launcher-icon" style="--module-icon-color:' + escapeHtml(launcherIconColor) + '"><i class="' + escapeHtml(launcherIconClass) + '"></i></div>' +
+        '<div class="module-launcher-title-wrap">' +
+          '<span class="card-title">' + modNameHtml + '</span>' +
+          '<span class="module-launcher-count">' + visibleCount + ' 个入口</span>' +
+        '</div>' +
         '<button type="button" class="btn btn-icon btn-collapse" title="' + (collapsed ? '展开' : '收起') + '">' + (collapsed ? '▶' : '▼') + '</button>' +
         (canEdit() ? '<span class="drag-handle" title="拖动排序">⋮⋮</span>' : '') +
-        '<span class="card-title">' + modNameHtml + '</span>' +
-        (canEdit() ? '<div class="card-actions">' +
+        (canEdit() ? '<div class="card-actions module-admin-actions">' +
           '<button type="button" class="btn btn-icon btn-edit-module" title="编辑">✏️</button>' +
           '<button type="button" class="btn btn-icon btn-danger btn-delete-module" title="删除模块">🗑️</button>' +
         '</div>' : '') +
       '</div>' +
+      '<div class="module-quick-preview" aria-label="模块快捷入口">' + previewItems + (moreCount ? '<span class="module-quick-chip module-quick-chip--more">+' + moreCount + '</span>' : '') + '</div>' +
       '<div class="module-items"></div>' +
       (canEdit() ? '<button type="button" class="btn btn-secondary btn-add-item">+ 添加内容</button>' : '');
     card.querySelector('.btn-collapse').addEventListener('click', function () {
       toggleModuleCollapse(mod.id);
+    });
+    card.querySelectorAll('.module-quick-chip[data-quick-item-id]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var itemId = btn.getAttribute('data-quick-item-id');
+        var target = (mod.items || []).find(function (it) { return it.id === itemId; });
+        if (target) openCommandPaletteItemTarget(mod, target);
+      });
+    });
+    card.querySelectorAll('.module-quick-chip--more').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (state.collapsedModules[mod.id]) toggleModuleCollapse(mod.id);
+      });
     });
     var itemsEl = card.querySelector('.module-items');
     items.forEach(function (it) {
@@ -2422,6 +2469,7 @@
     }
     
     var q = getSearchText();
+    renderModuleLauncherMeta();
     var sorted = state.modules.slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
     sorted = sorted.filter(function (mod) { return mod.visibleToAll !== false || canEdit(); });
     var hasMapped = window.workbenchApi && sorted.some(function (m) { return m.mappedPath; });
@@ -2854,6 +2902,14 @@
     }
   }
   document.getElementById('btnSettings').addEventListener('click', openSettings);
+
+  var btnQuickKnowledge = document.getElementById('btnQuickKnowledge');
+  if (btnQuickKnowledge) {
+    btnQuickKnowledge.addEventListener('click', function () {
+      if (typeof window.showView === 'function') window.showView('knowledge');
+      else window.location.hash = 'knowledge';
+    });
+  }
 
   bindModuleModal();
   bindItemModal();
